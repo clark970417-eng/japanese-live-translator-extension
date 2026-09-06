@@ -1,73 +1,12 @@
-const BRIDGE = "http://127.0.0.1:17381";
-const queue = [];
-let batchTimer;
-
-async function translate(text, direction) {
-  const response = await fetch(`${BRIDGE}/translate`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({text, direction})
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || `翻譯服務回應 ${response.status}`);
-  }
-  const data = await response.json();
-  return data.text;
-}
-
-async function traditionalize(texts) {
-  const response = await fetch(`${BRIDGE}/traditionalize`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({texts})
-  });
-  if (!response.ok) throw new Error("繁體中文轉換失敗");
-  return (await response.json()).texts;
-}
-
-async function translateBatch(items) {
-  return Promise.all(items.map(item => translate(item.text, "ja-zh")));
-}
-
-async function flushBatch() {
-  batchTimer = null;
-  const items = queue.splice(0, 4);
-  if (!items.length) return;
-  try {
-    const translations = await translateBatch(items);
-    items.forEach((item, index) => item.resolve(translations[index]));
-  } catch (error) {
-    items.forEach(item => item.reject(error));
-  }
-  if (queue.length) batchTimer = setTimeout(flushBatch, 100);
-}
-
-function enqueue(text) {
-  return new Promise((resolve, reject) => {
-    if (queue.length > 60) queue.shift()?.reject(new Error("直播訊息過多，已略過較舊內容"));
-    queue.push({text, resolve, reject});
-    if (!batchTimer) batchTimer = setTimeout(flushBatch, 350);
-  });
-}
-
-async function bridge(path, method = "GET") {
-  const response = await fetch(`${BRIDGE}${path}`, {method});
-  if (!response.ok) throw new Error(`字幕服務回應 ${response.status}`);
-  return response.json();
-}
-
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  let task;
-  if (message.type === "translate") task = message.direction === "ja-zh" && !message.priority
-    ? enqueue(message.text)
-    : translate(message.text, message.direction);
-  else if (message.type === "subtitles") task = bridge("/latest");
-  else if (message.type === "subtitle-control") task = bridge(message.action === "stop" ? "/stop" : "/start", "POST");
-  else if (message.type === "health") task = bridge("/health");
-  else return;
-  task
-    .then(text => sendResponse({ok: true, text}))
-    .catch(error => sendResponse({ok: false, error: error.message}));
-  return true;
-});
+const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
+const items=[];let running=false,processing=false,pendingAudio=null,lastError="";
+const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey"]);
+async function request(url,key,body){const r=await fetch(url,{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error?.message||d.detail||`API ${r.status}`);return d}
+async function nvidia(text,from,to){const {nvidiaKey}=await settings();if(!nvidiaKey)throw new Error("請先儲存 NVIDIA Key");const d=await request(`${NVIDIA}/chat/completions`,nvidiaKey,{model:"nvidia/riva-translate-4b-instruct-v2",messages:[{role:"system",content:`${from}-${to}`},{role:"user",content:text}],temperature:0,max_tokens:300});return(d.choices?.[0]?.message?.content||"").trim()}
+async function translate(text,direction){if(direction==="ja-zh"){const en=await nvidia(text,"ja","en");return nvidia(en,"en","zh-tw")}const {openrouterKey}=await settings();if(!openrouterKey)throw new Error("請先儲存 OpenRouter Key");const d=await request(`${OPENROUTER}/chat/completions`,openrouterKey,{model:"google/gemma-4-31b-it:free",messages:[{role:"system",content:"將中文翻成適合對日本 VTuber 留言的自然日文。親切、柔和、有一點可愛並保持禮貌；忠實保留原意，不擅自增加稱呼、告白或表情。只輸出可直接貼出的日文。"},{role:"user",content:text}],temperature:0,max_tokens:300});return(d.choices?.[0]?.message?.content||"").trim()}
+async function transcribe(base64,format){const {openrouterKey}=await settings();if(!openrouterKey)throw new Error("請先儲存 OpenRouter Key");const d=await request(`${OPENROUTER}/audio/transcriptions`,openrouterKey,{model:"nvidia/nemotron-3.5-asr-streaming-multilingual-0.6b",input_audio:{data:base64,format},language:"ja",temperature:0});return(d.text||"").trim()}
+async function processAudio(audio){if(processing){pendingAudio=audio;return}processing=true;try{const original=await transcribe(audio.base64,audio.format);if(original){const item={id:Date.now(),original,translated:"(translating...)",updatedAt:Date.now()/1000};items.push(item);if(items.length>20)items.shift();item.translated=await translate(original,"ja-zh");item.updatedAt=Date.now()/1000;lastError=""}}catch(e){lastError=e.message;items.push({id:Date.now(),original:"語音翻譯失敗",translated:`錯誤：${e.message}`,updatedAt:Date.now()/1000});if(items.length>20)items.shift()}finally{processing=false;if(pendingAudio){const next=pendingAudio;pendingAudio=null;processAudio(next)}}}
+async function ensureOffscreen(){if(await chrome.offscreen.hasDocument())return;await chrome.offscreen.createDocument({url:"offscreen.html",reasons:["USER_MEDIA"],justification:"擷取目前分頁聲音以產生即時字幕"})}
+async function startCapture(tabId){const k=await settings();if(!k.openrouterKey||!k.nvidiaKey)throw new Error("請先儲存兩組 API Key");await ensureOffscreen();const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});items.length=0;lastError="";const reply=await chrome.runtime.sendMessage({type:"offscreen-start",streamId});if(!reply?.ok)throw new Error(reply?.error||"無法擷取目前分頁的聲音");running=true;return{running}}
+async function stopCapture(){running=false;await chrome.runtime.sendMessage({type:"offscreen-stop"}).catch(()=>{});return{running}}
+chrome.runtime.onMessage.addListener((m,s,send)=>{if(m.type==="audio-chunk"){processAudio(m);send({ok:true});return}let task;if(m.type==="translate")task=translate(m.text,m.direction);else if(m.type==="subtitles")task=Promise.resolve({running,items});else if(m.type==="health")task=settings().then(k=>({running,configured:Boolean(k.openrouterKey&&k.nvidiaKey),lastError}));else if(m.type==="subtitle-control")task=m.action==="stop"?stopCapture():startCapture(m.tabId||s.tab?.id);else if(m.type==="save-keys")task=chrome.storage.local.set({openrouterKey:m.openrouterKey,nvidiaKey:m.nvidiaKey}).then(()=>true);else return;Promise.resolve(task).then(text=>send({ok:true,text})).catch(e=>send({ok:false,error:e.message}));return true});

@@ -1,27 +1,3 @@
-const status = document.querySelector("#status");
-const start = document.querySelector("#start");
-const stop = document.querySelector("#stop");
-
-function send(message) {
-  return new Promise((resolve, reject) => chrome.runtime.sendMessage(message, reply => {
-    if (chrome.runtime.lastError || !reply?.ok) reject(new Error(reply?.error || "無法連線"));
-    else resolve(reply.text);
-  }));
-}
-
-async function refresh() {
-  try {
-    const data = await send({type: "health"});
-    status.textContent = data.running ? "● 語音字幕運作中" : "● 本機服務已連線，字幕未啟動";
-    start.disabled = data.running;
-    stop.disabled = !data.running;
-  } catch (_error) {
-    status.textContent = "請先雙擊桌面的「啟動即時字幕」";
-    start.disabled = stop.disabled = true;
-  }
-}
-
-start.addEventListener("click", async () => { status.textContent = "正在啟動…"; await send({type: "subtitle-control", action: "start"}).catch(() => {}); setTimeout(refresh, 1000); });
-stop.addEventListener("click", async () => { await send({type: "subtitle-control", action: "stop"}).catch(() => {}); setTimeout(refresh, 300); });
-refresh();
-setInterval(refresh, 2000);
+const $=s=>document.querySelector(s);const send=m=>new Promise((resolve,reject)=>chrome.runtime.sendMessage(m,r=>chrome.runtime.lastError||!r?.ok?reject(new Error(r?.error||"無法連線")):resolve(r.text)));
+async function refresh(){try{const d=await send({type:"health"});$("#status").textContent=d.lastError?`錯誤：${d.lastError}`:d.running?"● 正在翻譯此分頁":d.configured?"● 已就緒":"請先儲存兩組 Key";$("#start").disabled=d.running||!d.configured;$("#stop").disabled=!d.running}catch(e){$("#status").textContent=e.message}}
+$("#start").onclick=async()=>{const[tab]=await chrome.tabs.query({active:true,currentWindow:true});$("#status").textContent="正在擷取聲音…";await send({type:"subtitle-control",action:"start",tabId:tab.id}).catch(e=>$("#status").textContent=e.message);refresh()};$("#stop").onclick=async()=>{await send({type:"subtitle-control",action:"stop"});refresh()};$("#save").onclick=async()=>{await send({type:"save-keys",openrouterKey:$("#openrouter").value.trim(),nvidiaKey:$("#nvidia").value.trim()});$("#openrouter").value=$("#nvidia").value="";$("#status").textContent="已安全儲存";refresh()};refresh();setInterval(refresh,1500);
