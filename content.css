@@ -3,6 +3,8 @@
 .jtl-compose { border: 0; border-radius: 18px; padding: 7px 12px; margin: 6px 4px; cursor: pointer; color: #fff; background: #2c8c5b; font: inherit; }
 .jtl-compose[disabled] { opacity: .55; cursor: wait; }
 .jtl-status { color: #54d38a; font-size: 12px; padding: 4px; }
+.jtl-comment-action { border: 1px solid #2c8c5b; border-radius: 14px; margin-top: 5px; padding: 3px 9px; color: #54d38a; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+.jtl-comment-action:disabled { opacity: .65; cursor: wait; }
 #jtl-subtitles { position: absolute; z-index: 70; left: 8%; right: 8%; bottom: 9%; display: none; text-align: center; pointer-events: none; text-shadow: 0 2px 5px #000, 0 0 2px #000; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; }
 #jtl-subtitles.jtl-visible { display: block; }
 #jtl-subtitles .jtl-spoken { color: #eee; font-size: clamp(15px, 1.45vw, 25px); line-height: 1.35; }

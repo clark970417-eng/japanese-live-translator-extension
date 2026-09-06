@@ -24,3 +24,4 @@ async function refresh() {
 start.addEventListener("click", async () => { status.textContent = "正在啟動…"; await send({type: "subtitle-control", action: "start"}).catch(() => {}); setTimeout(refresh, 1000); });
 stop.addEventListener("click", async () => { await send({type: "subtitle-control", action: "stop"}).catch(() => {}); setTimeout(refresh, 300); });
 refresh();
+setInterval(refresh, 2000);
