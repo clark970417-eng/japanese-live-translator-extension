@@ -87,7 +87,7 @@
       translate.disabled = true;
       result.textContent = '翻譯中…';
       try {
-        const value = await message({type: 'translate', text: source, direction: 'ja-zh'});
+        const value = await message({type: 'translate', text: source, direction: 'ja-zh', priority: true});
         result.textContent = read(text) === source ? value : '貼文已更新，請再按一次翻譯。';
       } catch (error) { result.textContent = error.message; }
       finally { translate.disabled = false; }
@@ -98,6 +98,7 @@
   }
 
   function installPanel() {
+    if (!isSpaceOpen()) return;
     if (panel?.isConnected) return;
     panel = document.createElement('section');
     panel.className = 'jtl-x-live';
@@ -129,6 +130,23 @@
     document.body.append(panel);
   }
 
+  function isSpaceOpen() {
+    return /\/i\/spaces\//i.test(location.pathname);
+  }
+
+  function syncSpacePanel() {
+    if (isSpaceOpen()) {
+      installPanel();
+    } else if (panel?.isConnected) {
+      panel.remove();
+      panel = null;
+      if (listening) {
+        listening = false;
+        message({type: 'subtitle-control', action: 'stop'}).catch(() => {});
+      }
+    }
+  }
+
   async function poll() {
     if (!listening || polling || !panel?.isConnected) return;
     polling = true;
@@ -148,7 +166,7 @@
   function scan() {
     document.querySelectorAll('[contenteditable="true"][data-testid^="tweetTextarea_"]').forEach(addComposer);
     document.querySelectorAll('[data-testid="tweetText"]').forEach(addPost);
-    installPanel();
+    syncSpacePanel();
   }
   let scheduled = false;
   new MutationObserver(() => {
