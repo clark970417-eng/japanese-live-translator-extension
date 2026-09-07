@@ -121,6 +121,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 let lastSubtitleKey = "";
+let lastNativeCaption = "";
+let nativeCaptionItem = null;
 function renderSubtitle(item) {
   if (!item || Date.now() / 1000 - item.updatedAt > 14) {
     document.querySelector("#jtl-subtitles")?.classList.remove("jtl-visible");
@@ -139,12 +141,29 @@ function renderSubtitle(item) {
 async function pollSubtitles() {
   if (window.top !== window) return;
   try {
+    const nativeText = [...document.querySelectorAll(".ytp-caption-segment")]
+      .map(segment => segment.textContent.trim()).filter(Boolean).join(" ").trim();
+    if (nativeText && hasJapanese(nativeText)) {
+      if (nativeText !== lastNativeCaption) {
+        lastNativeCaption = nativeText;
+        nativeCaptionItem = {id: Date.now(), original: nativeText, translated: "(translating...)", updatedAt: Date.now() / 1000};
+        renderSubtitle(nativeCaptionItem);
+        requestTranslation(nativeText, "ja-zh", true).then(result => {
+          if (lastNativeCaption !== nativeText) return;
+          nativeCaptionItem = {...nativeCaptionItem, translated: result, updatedAt: Date.now() / 1000};
+          renderSubtitle(nativeCaptionItem);
+        }).catch(() => {});
+      } else if (nativeCaptionItem) renderSubtitle(nativeCaptionItem);
+      return;
+    }
+    lastNativeCaption = "";
+    nativeCaptionItem = null;
     const data = await runtimeMessage({type: "subtitles"});
     renderSubtitle(data.items?.[data.items.length - 1]);
   } catch (_error) {}
 }
 chrome.runtime.onMessage.addListener(message => {
-  if (message.type === "subtitle-update" && window.top === window) renderSubtitle(message.item);
+  if (message.type === "subtitle-update" && window.top === window && !lastNativeCaption) renderSubtitle(message.item);
 });
 
 function editableText(box) {

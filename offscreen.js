@@ -33071,8 +33071,25 @@ async function recognize(samples) {
 function cleanTranscript(value) {
   let text = String(value).replace(/\s+/g, " ").trim();
   // Whisper tiny can loop a short phrase across an entire chunk. Keep one copy.
-  text = text.replace(/(.{2,24}?)(?:[、,，]\s*\1){2,}/g, "$1");
-  text = text.replace(/(.{3,32}?)(?:\s+\1){2,}/g, "$1");
+  text = text.replace(/(.)(?:[\s、。，,.!?！？・…]*\1){3,}/gu, "$1");
+  for (let size = 2; size <= Math.min(32, Math.floor(text.length / 3)); size++) {
+    for (let start = 0; start + size * 3 <= text.length; start++) {
+      const unit = text.slice(start, start + size);
+      let cursor = start + size;
+      let repeats = 1;
+      while (cursor < text.length) {
+        const separator = text.slice(cursor).match(/^[\s、。，,.!?！？・…]*/)?.[0] || "";
+        const next = cursor + separator.length;
+        if (text.slice(next, next + size) !== unit) break;
+        repeats++;
+        cursor = next + size;
+      }
+      if (repeats >= 3) {
+        text = `${text.slice(0, start)}${unit}${text.slice(cursor)}`;
+        start = Math.max(-1, start - size);
+      }
+    }
+  }
   if (text.length > 180) text = `${text.slice(0, 177)}…`;
   return text;
 }
@@ -33085,21 +33102,24 @@ function startWhisper() {
   if (!navigator.gpu) throw new Error("\u9019\u53F0\u700F\u89BD\u5668\u6C92\u6709\u555F\u7528 WebGPU");
   const chunks = [];
   let count2 = 0;
+  let sinceLastRecognition = 0;
   sourceNode = audioContext.createMediaStreamSource(stream);
   processor = audioContext.createScriptProcessor(4096, 1, 1);
   processor.onaudioprocess = (e) => {
     const data = new Float32Array(e.inputBuffer.getChannelData(0));
     chunks.push(data);
     count2 += data.length;
-    if (count2 >= audioContext.sampleRate * 2.2) {
+    sinceLastRecognition += data.length;
+    const maxSamples = audioContext.sampleRate * 1.4;
+    while (chunks.length > 1 && count2 - chunks[0].length >= maxSamples) count2 -= chunks.shift().length;
+    if (sinceLastRecognition >= audioContext.sampleRate * 0.7) {
       const merged = new Float32Array(count2);
       let offset = 0;
       for (const c of chunks) {
         merged.set(c, offset);
         offset += c.length;
       }
-      chunks.length = 0;
-      count2 = 0;
+      sinceLastRecognition = 0;
       const samples = downsample(merged, audioContext.sampleRate);
       if (hasSpeech(samples)) recognize(samples);
     }
