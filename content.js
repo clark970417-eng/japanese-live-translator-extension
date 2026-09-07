@@ -44,7 +44,9 @@ async function translateElement(element, className, priority = false) {
 function scan() {
   if (window.top === window) {
     const title = document.querySelector("ytd-watch-metadata h1 yt-formatted-string");
-    document.querySelectorAll(".jtl-title").forEach((line, index) => { if (index) line.remove(); });
+    const titleLines = [...document.querySelectorAll(".jtl-title")];
+    titleLines.slice(1).forEach(line => line.remove());
+    titleLines.forEach(line => { if (!/[\u3400-\u9fff]/.test(line.textContent.replace(/^中[：:]\s*/, ""))) line.remove(); });
     translateElement(title, "jtl-title", true);
     installCommentButtons();
     installSubtitleOverlay();
