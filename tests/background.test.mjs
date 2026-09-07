@@ -1,0 +1,23 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import fs from 'node:fs';
+import {ResultGate} from '../stream-core.mjs';
+test('capture messages require active session and correct offscreen sender; stop clears subtitles',async()=>{
+ let listener,session;const updates=[];
+ const chrome={storage:{local:{get:async()=>({}),set:async()=>{}}},tabs:{sendMessage:async(id,m)=>updates.push(m),onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace("import {ResultGate} from './stream-core.mjs';",'');
+ vm.runInNewContext(src,{chrome,ResultGate,URLSearchParams,AbortSignal,Date,console,fetch:async()=>({ok:true,json:async()=>([[['大家好','こんにちは']]])})});
+ const call=(m,s={})=>new Promise(resolve=>listener(m,s,resolve));
+ await call({type:'subtitle-control',action:'start',tabId:7});
+ listener({type:'speech-result',session,id:1,text:'こんにちは'},{url:'https://evil.example'},()=>{});
+ assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items.length,0);
+ listener({type:'speech-result',session,id:1,text:'こんにちは'},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ await new Promise(r=>setTimeout(r,20));
+ assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items[0].translated,'大家好');
+ assert.equal((await call({type:'subtitles'},{tab:{id:8}})).text.items.length,0);
+ await call({type:'subtitle-control',action:'stop'});
+ assert.equal(updates.at(-1).item,null);
+ listener({type:'speech-result',session,id:2,text:'古い'},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items.length,0);
+});

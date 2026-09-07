@@ -1,3 +1,5 @@
+(() => {
+if(window.__jtlV3)return;window.__jtlV3=true;
 const translated = new WeakMap();
 const cache = new Map();
 
@@ -26,7 +28,7 @@ async function translateElement(element, className, priority = false) {
   translated.set(element, text);
   try {
     const result = await requestTranslation(text, "ja-zh", priority);
-    if (!element.isConnected || !result) return false;
+    if (!element.isConnected || element.textContent.trim() !== text || !result) return false;
     const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
     let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
     if (!line) {
@@ -90,7 +92,9 @@ function runtimeMessage(message) {
 
 function installSubtitleOverlay() {
   const player = document.querySelector("#movie_player");
-  if (!player || document.querySelector("#jtl-subtitles")) return;
+  if(!player)return;
+  const existing=document.querySelector('#jtl-subtitles');
+  if(existing){if(existing.parentElement!==player)player.append(existing);return;}
   const overlay = document.createElement("div");
   overlay.id = "jtl-subtitles";
   overlay.innerHTML = '<div class="jtl-spoken"></div><div class="jtl-chinese"></div>';
@@ -121,11 +125,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 let lastSubtitleKey = "";
+let pollEpoch=0;
+let polling=false;
 let lastNativeCaption = "";
 let nativeCaptionItem = null;
 function renderSubtitle(item) {
-  if (!item || Date.now() / 1000 - item.updatedAt > 14) {
+  if (!item || Date.now() / 1000 - item.updatedAt > 8) {
     document.querySelector("#jtl-subtitles")?.classList.remove("jtl-visible");
+    lastSubtitleKey = "";
     return;
   }
   installSubtitleOverlay();
@@ -135,32 +142,16 @@ function renderSubtitle(item) {
   if (key === lastSubtitleKey) return;
   lastSubtitleKey = key;
   overlay.querySelector(".jtl-spoken").textContent = item.original || "";
-  overlay.querySelector(".jtl-chinese").textContent = item.translated === "(translating...)" ? "翻譯中…" : (item.translated || "");
+  overlay.querySelector(".jtl-chinese").textContent = item.translated || "";
   overlay.classList.toggle("jtl-visible", Boolean(item.original));
 }
 async function pollSubtitles() {
-  if (window.top !== window) return;
+  if (window.top !== window || polling) return;
+  polling=true;const epoch=pollEpoch;
   try {
-    const nativeText = [...document.querySelectorAll(".ytp-caption-segment")]
-      .map(segment => segment.textContent.trim()).filter(Boolean).join(" ").trim();
-    if (nativeText && hasJapanese(nativeText)) {
-      if (nativeText !== lastNativeCaption) {
-        lastNativeCaption = nativeText;
-        nativeCaptionItem = {id: Date.now(), original: nativeText, translated: "(translating...)", updatedAt: Date.now() / 1000};
-        renderSubtitle(nativeCaptionItem);
-        requestTranslation(nativeText, "ja-zh", true).then(result => {
-          if (lastNativeCaption !== nativeText) return;
-          nativeCaptionItem = {...nativeCaptionItem, translated: result, updatedAt: Date.now() / 1000};
-          renderSubtitle(nativeCaptionItem);
-        }).catch(() => {});
-      } else if (nativeCaptionItem) renderSubtitle(nativeCaptionItem);
-      return;
-    }
-    lastNativeCaption = "";
-    nativeCaptionItem = null;
     const data = await runtimeMessage({type: "subtitles"});
-    renderSubtitle(data.items?.[data.items.length - 1]);
-  } catch (_error) {}
+    if(epoch===pollEpoch)renderSubtitle(data.running ? data.items?.at(-1) : null);
+  } catch (_error) {} finally {polling=false;}
 }
 chrome.runtime.onMessage.addListener(message => {
   if (message.type === "subtitle-update" && window.top === window && !lastNativeCaption) renderSubtitle(message.item);
@@ -210,4 +201,11 @@ new MutationObserver(() => {
   timer = setTimeout(scan, 250);
 }).observe(document.documentElement, {childList: true, subtree: true});
 scan();
-if (window.top === window) setInterval(pollSubtitles, 700);
+if (window.top === window) {
+ setInterval(pollSubtitles,700);
+ const reset=()=>{pollEpoch++;lastSubtitleKey='';renderSubtitle(null);runtimeMessage({type:'subtitle-reset'}).catch(()=>{});};
+ document.addEventListener('yt-navigate-start',reset);
+ document.addEventListener('seeking',event=>{if(event.target.tagName==='VIDEO')reset();},true);
+}
+
+})();

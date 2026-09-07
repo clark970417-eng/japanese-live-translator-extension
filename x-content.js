@@ -106,7 +106,7 @@
     panel.setAttribute('aria-label', '日文直播語音字幕');
     const status = document.createElement('div');
     status.className = 'jtl-x-live-status';
-    status.textContent = '直播／Spaces：翻譯 Mac 系統聲音';
+    status.textContent = '直播／Spaces：日文 → 繁中';
     const original = document.createElement('div');
     original.className = 'jtl-x-original';
     const translated = document.createElement('div');
@@ -115,13 +115,14 @@
       toggle.disabled = true;
       try {
         if (listening) {
+          await message({type:'subtitle-control',action:'stop'});
           listening = false;
           original.textContent = translated.textContent = '';
-          status.textContent = '已隱藏 X 字幕；本機錄音可在擴充功能選單停止。';
+          status.textContent = '字幕已停止。';
         } else {
           await message({type: 'subtitle-control', action: 'start'});
           listening = true;
-          status.textContent = '等待日文聲音；系統輸出需選「即時字幕＋喇叭」。';
+          status.textContent = '等待此分頁的日文聲音。';
         }
         toggle.textContent = listening ? '隱藏字幕' : '開始日文語音字幕';
       } catch (error) { status.textContent = error.message; }
@@ -180,12 +181,12 @@
     try {
       const data = await message({type: 'subtitles'});
       const item = data.items?.slice().sort((a, b) => b.id - a.id)[0];
-      const fresh = data.running && item && Date.now() / 1000 - item.updatedAt < 25;
+      const fresh = data.running && item && Date.now() / 1000 - item.updatedAt < 8;
       panel.querySelector('.jtl-x-original').textContent = fresh ? item.original : '';
       panel.querySelector('.jtl-x-translated').textContent = fresh
         ? (item.translated === '(translating...)' ? '翻譯中…' : item.translated) : '';
       panel.querySelector('.jtl-x-live-status').textContent = data.running
-        ? '正在接收 Mac 系統聲音 · 日文 → 繁中' : '本機字幕已停止，可重新開始。';
+        ? '正在接收分頁聲音 · 日文 → 繁中' : '字幕已停止，可重新開始。';
     } catch (error) { panel.querySelector('.jtl-x-live-status').textContent = error.message; }
     finally { polling = false; }
   }
