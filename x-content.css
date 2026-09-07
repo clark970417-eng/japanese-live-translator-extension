@@ -5,7 +5,7 @@
 .jtl-x-controls [hidden] { display: none; }
 .jtl-x-controls > div { width: 100%; white-space: pre-wrap; }
 .jtl-space-host { position: relative !important; }
-.jtl-x-live { position: absolute; left: 14px; right: 14px; bottom: 72px; z-index: 20; box-sizing: border-box; padding: 9px 11px; border: 1px solid #2f7f59; border-radius: 12px; background: rgba(10, 18, 14, .94); color: white; font: 13px/1.4 -apple-system, sans-serif; box-shadow: 0 3px 12px #0005; }
+.jtl-x-live { position: absolute; left: 50%; right: auto; bottom: 72px; z-index: 20; box-sizing: border-box; width: min(520px, calc(100% - 28px)); padding: 8px 10px; transform: translateX(-50%); border: 1px solid #2f7f59; border-radius: 12px; background: rgba(10, 18, 14, .94); color: white; font: 13px/1.4 -apple-system, sans-serif; box-shadow: 0 3px 12px #0005; }
 .jtl-x-live button { padding: 5px 10px; }
 .jtl-x-live-status { display: inline; margin-left: 8px; font-size: 11px; color: #afc9bb; }
 .jtl-x-original { color: #ddd; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

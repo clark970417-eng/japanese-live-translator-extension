@@ -33053,7 +33053,7 @@ async function recognize(samples) {
   try {
     const asr = await getTranscriber();
     status("\u6B63\u5728\u8FA8\u8B58\u65E5\u6587\u2026");
-    const out = await asr(samples, { language: "japanese", task: "transcribe", chunk_length_s: 3, stride_length_s: 0 });
+    const out = await asr(samples, { language: "japanese", task: "transcribe", chunk_length_s: 2.2, stride_length_s: 0 });
     const text = cleanTranscript(out?.text || "");
     if (text) chrome.runtime.sendMessage({ type: "speech-result", text });
     status("\u514D\u8CBB\u6A21\u578B\u904B\u4F5C\u4E2D");
@@ -33091,7 +33091,7 @@ function startWhisper() {
     const data = new Float32Array(e.inputBuffer.getChannelData(0));
     chunks.push(data);
     count2 += data.length;
-    if (count2 >= audioContext.sampleRate * 3) {
+    if (count2 >= audioContext.sampleRate * 2.2) {
       const merged = new Float32Array(count2);
       let offset = 0;
       for (const c of chunks) {
