@@ -89,6 +89,9 @@ function installSubtitleOverlay() {
   const overlay = document.createElement("div");
   overlay.id = "jtl-subtitles";
   overlay.innerHTML = '<div class="jtl-spoken"></div><div class="jtl-chinese"></div>';
+  for (const line of overlay.children) {
+    line.style.cssText = "color:#fff!important;font-size:clamp(15px,1.45vw,25px)!important;font-weight:500!important;line-height:1.35!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-text-stroke:.55px #000!important;text-shadow:-2px -2px 2px #000,2px -2px 2px #000,-2px 2px 2px #000,2px 2px 2px #000!important";
+  }
   player.appendChild(overlay);
 }
 
