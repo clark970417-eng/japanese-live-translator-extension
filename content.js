@@ -93,21 +93,28 @@ function installSubtitleOverlay() {
 }
 
 let lastSubtitleKey = "";
+function renderSubtitle(item) {
+  if (!item) return;
+  installSubtitleOverlay();
+  const overlay = document.querySelector("#jtl-subtitles");
+  if (!overlay) return;
+  const key = `${item.id}:${item.original}:${item.translated}`;
+  if (key === lastSubtitleKey) return;
+  lastSubtitleKey = key;
+  overlay.querySelector(".jtl-spoken").textContent = item.original || "";
+  overlay.querySelector(".jtl-chinese").textContent = item.translated === "(translating...)" ? "翻譯中…" : (item.translated || "");
+  overlay.classList.toggle("jtl-visible", Boolean(item.original));
+}
 async function pollSubtitles() {
   if (window.top !== window) return;
   try {
     const data = await runtimeMessage({type: "subtitles"});
-    const item = data.items?.[data.items.length - 1];
-    const overlay = document.querySelector("#jtl-subtitles");
-    if (!overlay || !item) return;
-    const key = `${item.id}:${item.original}:${item.translated}`;
-    if (key === lastSubtitleKey) return;
-    lastSubtitleKey = key;
-    overlay.querySelector(".jtl-spoken").textContent = item.original || "";
-    overlay.querySelector(".jtl-chinese").textContent = item.translated === "(translating...)" ? "翻譯中…" : (item.translated || "");
-    overlay.classList.toggle("jtl-visible", Boolean(item.original));
+    renderSubtitle(data.items?.[data.items.length - 1]);
   } catch (_error) {}
 }
+chrome.runtime.onMessage.addListener(message => {
+  if (message.type === "subtitle-update" && window.top === window) renderSubtitle(message.item);
+});
 
 function editableText(box) {
   return (box.innerText || box.textContent || "").trim();
