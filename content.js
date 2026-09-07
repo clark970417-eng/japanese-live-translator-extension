@@ -27,11 +27,12 @@ async function translateElement(element, className, priority = false) {
   try {
     const result = await requestTranslation(text, "ja-zh", priority);
     if (!element.isConnected || !result) return false;
-    let line = element.parentElement?.querySelector(`:scope > .${className}`);
+    const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
+    let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
     if (!line) {
       line = document.createElement("div");
       line.className = className;
-      element.insertAdjacentElement("afterend", line);
+      anchor.insertAdjacentElement("afterend", line);
     }
     line.textContent = `中：${result}`;
     return true;

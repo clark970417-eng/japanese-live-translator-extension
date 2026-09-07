@@ -4,7 +4,9 @@
 .jtl-x-controls textarea { box-sizing: border-box; width: 100%; min-height: 76px; padding: 10px; border: 1px solid #329766; border-radius: 8px; font: inherit; color: #ecfff5; background: #17251e; }
 .jtl-x-controls [hidden] { display: none; }
 .jtl-x-controls > div { width: 100%; white-space: pre-wrap; }
-.jtl-x-live { position: fixed; left: 16px; bottom: 16px; z-index: 9999; box-sizing: border-box; width: min(430px, calc(100vw - 32px)); padding: 12px; border: 1px solid #416153; border-radius: 14px; background: rgba(16, 23, 20, .95); color: white; font: 14px/1.5 -apple-system, sans-serif; box-shadow: 0 4px 18px #0004; }
-.jtl-x-live-status { font-size: 11px; color: #afc9bb; margin-top: 6px; }
-.jtl-x-original { color: #ddd; margin-top: 6px; }
-.jtl-x-translated { color: #fff08a; font-size: 18px; font-weight: 600; max-height: 180px; overflow: auto; }
+.jtl-space-host { position: relative !important; }
+.jtl-x-live { position: absolute; left: 14px; right: 14px; bottom: 72px; z-index: 20; box-sizing: border-box; padding: 9px 11px; border: 1px solid #2f7f59; border-radius: 12px; background: rgba(10, 18, 14, .94); color: white; font: 13px/1.4 -apple-system, sans-serif; box-shadow: 0 3px 12px #0005; }
+.jtl-x-live button { padding: 5px 10px; }
+.jtl-x-live-status { display: inline; margin-left: 8px; font-size: 11px; color: #afc9bb; }
+.jtl-x-original { color: #ddd; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jtl-x-translated { color: #fff; margin-top: 2px; font-size: 14px; font-weight: 600; max-height: 42px; overflow: auto; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }

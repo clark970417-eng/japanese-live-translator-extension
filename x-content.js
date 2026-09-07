@@ -98,7 +98,8 @@
   }
 
   function installPanel() {
-    if (!isSpaceOpen()) return;
+    const host = findSpaceHost();
+    if (!host) return;
     if (panel?.isConnected) return;
     panel = document.createElement('section');
     panel.className = 'jtl-x-live';
@@ -127,17 +128,43 @@
       finally { toggle.disabled = false; }
     });
     panel.append(toggle, status, original, translated);
-    document.body.append(panel);
+    host.classList.add('jtl-space-host');
+    host.append(panel);
   }
 
-  function isSpaceOpen() {
-    return /\/i\/spaces\//i.test(location.pathname);
+  function findSpaceHost() {
+    const controls = [...document.querySelectorAll('button')].find(candidate => {
+      if (candidate.closest('.jtl-x-live')) return false;
+      const label = read(candidate);
+      return /^(離開|离开|Leave|開始收聽|开始收听|開始匿名收聽|开始匿名收听|Start listening|Start anonymous listening)$/i.test(label);
+    });
+    if (controls) {
+      const dialog = controls.closest('[role="dialog"], [aria-modal="true"]');
+      if (dialog) return dialog;
+      let ancestor = controls.parentElement;
+      while (ancestor && ancestor !== document.body) {
+        const box = ancestor.getBoundingClientRect();
+        const style = getComputedStyle(ancestor);
+        if ((style.position === 'fixed' || style.position === 'absolute') && box.width >= 360 && box.height >= 260) return ancestor;
+        ancestor = ancestor.parentElement;
+      }
+    }
+    if (/\/i\/spaces\//i.test(location.pathname)) {
+      return document.querySelector('[role="dialog"], main') || document.body;
+    }
+    return null;
   }
 
   function syncSpacePanel() {
-    if (isSpaceOpen()) {
-      installPanel();
+    const host = findSpaceHost();
+    if (host) {
+      if (panel?.isConnected && panel.parentElement !== host) {
+        panel.parentElement?.classList.remove('jtl-space-host');
+        host.classList.add('jtl-space-host');
+        host.append(panel);
+      } else installPanel();
     } else if (panel?.isConnected) {
+      panel.parentElement?.classList.remove('jtl-space-host');
       panel.remove();
       panel = null;
       if (listening) {
