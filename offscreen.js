@@ -33054,7 +33054,7 @@ async function recognize(samples) {
     const asr = await getTranscriber();
     status("\u6B63\u5728\u8FA8\u8B58\u65E5\u6587\u2026");
     const out = await asr(samples, { language: "japanese", task: "transcribe", chunk_length_s: 8, stride_length_s: 0 });
-    const text = (out?.text || "").trim();
+    const text = cleanTranscript(out?.text || "");
     if (text) chrome.runtime.sendMessage({ type: "speech-result", text });
     status("\u514D\u8CBB\u6A21\u578B\u904B\u4F5C\u4E2D");
   } catch (e) {
@@ -33067,6 +33067,14 @@ async function recognize(samples) {
       recognize(next);
     }
   }
+}
+function cleanTranscript(value) {
+  let text = String(value).replace(/\s+/g, " ").trim();
+  // Whisper tiny can loop a short phrase across an entire chunk. Keep one copy.
+  text = text.replace(/(.{2,24}?)(?:[、,，]\s*\1){2,}/g, "$1");
+  text = text.replace(/(.{3,32}?)(?:\s+\1){2,}/g, "$1");
+  if (text.length > 180) text = `${text.slice(0, 177)}…`;
+  return text;
 }
 function startWhisper() {
   if (!navigator.gpu) throw new Error("\u9019\u53F0\u700F\u89BD\u5668\u6C92\u6709\u555F\u7528 WebGPU");
