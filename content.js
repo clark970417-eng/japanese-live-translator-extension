@@ -43,7 +43,9 @@ async function translateElement(element, className, priority = false) {
 
 function scan() {
   if (window.top === window) {
-    document.querySelectorAll("ytd-watch-metadata h1 yt-formatted-string, h1.ytd-watch-metadata").forEach(el => translateElement(el, "jtl-title", true));
+    const title = document.querySelector("ytd-watch-metadata h1 yt-formatted-string");
+    document.querySelectorAll(".jtl-title").forEach((line, index) => { if (index) line.remove(); });
+    translateElement(title, "jtl-title", true);
     installCommentButtons();
     installSubtitleOverlay();
   }
@@ -89,15 +91,38 @@ function installSubtitleOverlay() {
   const overlay = document.createElement("div");
   overlay.id = "jtl-subtitles";
   overlay.innerHTML = '<div class="jtl-spoken"></div><div class="jtl-chinese"></div>';
-  for (const line of overlay.children) {
-    line.style.cssText = "color:#fff!important;font-size:clamp(15px,1.45vw,25px)!important;font-weight:500!important;line-height:1.35!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-text-stroke:.55px #000!important;text-shadow:-2px -2px 2px #000,2px -2px 2px #000,-2px 2px 2px #000,2px 2px 2px #000!important";
-  }
   player.appendChild(overlay);
+  applySubtitleSettings();
 }
+
+const subtitleDefaults = {japaneseColor: "#ffffff", chineseColor: "#ffffff", fontSize: 25, outlineWidth: 2, position: 6};
+function applySubtitleSettings(settings) {
+  const apply = raw => {
+    const s = {...subtitleDefaults, ...(raw || {})};
+    const overlay = document.querySelector("#jtl-subtitles");
+    if (!overlay) return;
+    overlay.style.bottom = `${s.position}%`;
+    const shadow = `${s.outlineWidth}px`;
+    for (const [selector, color] of [[".jtl-spoken", s.japaneseColor], [".jtl-chinese", s.chineseColor]]) {
+      const line = overlay.querySelector(selector);
+      line.style.setProperty("color", color, "important");
+      line.style.setProperty("font-size", `${s.fontSize}px`, "important");
+      line.style.setProperty("-webkit-text-stroke", `${Math.max(.4, s.outlineWidth / 3)}px #000`, "important");
+      line.style.setProperty("text-shadow", `-${shadow} -${shadow} 1px #000,${shadow} -${shadow} 1px #000,-${shadow} ${shadow} 1px #000,${shadow} ${shadow} 1px #000`, "important");
+    }
+  };
+  if (settings) apply(settings); else chrome.storage.local.get("subtitleSettings", ({subtitleSettings}) => apply(subtitleSettings));
+}
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.subtitleSettings) applySubtitleSettings(changes.subtitleSettings.newValue);
+});
 
 let lastSubtitleKey = "";
 function renderSubtitle(item) {
-  if (!item) return;
+  if (!item || Date.now() / 1000 - item.updatedAt > 14) {
+    document.querySelector("#jtl-subtitles")?.classList.remove("jtl-visible");
+    return;
+  }
   installSubtitleOverlay();
   const overlay = document.querySelector("#jtl-subtitles");
   if (!overlay) return;
