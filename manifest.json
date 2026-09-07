@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "日文直播翻譯助手",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "YouTube 與 X Spaces 日文語音字幕、貼文翻譯，以及親切可愛的中文轉日文留言草稿。",
   "icons": {
     "16": "icons/icon-16.png",
@@ -17,8 +17,11 @@
     "offscreen"
   ],
   "host_permissions": [
-    "https://openrouter.ai/*",
-    "https://integrate.api.nvidia.com/*"
+    "https://cdn-lfs-us-1.hf.co/*",
+    "https://cdn-lfs.huggingface.co/*",
+    "https://huggingface.co/*",
+    "https://integrate.api.nvidia.com/*",
+    "https://openrouter.ai/*"
   ],
   "action": {
     "default_title": "日文直播翻譯助手",
@@ -60,5 +63,8 @@
       ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
 }
