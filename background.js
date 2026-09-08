@@ -129,6 +129,7 @@ async function stopCapture(){
  cancelTranslations();
  nativeUntil=0;nativeText='';lastSpeechId=-1;
  running=false;gate.reset();items.length=0;translationPending=null;pushSubtitle(null);
+ await chrome.storage.local.set({captionsHidden:true});
  await chrome.runtime.sendMessage({type:'offscreen-stop'}).catch(()=>{});
  modelStatus='已停止';return{running};
 }
@@ -150,6 +151,7 @@ async function startCapture(tabId){
  running=true;modelStatus='正在擷取分頁聲音';
  const reply=await chrome.runtime.sendMessage({type:'offscreen-start',streamId,mode:'browser',recording:captionMode==='record',session:gate.session});
  if(!reply?.ok){running=false;throw new Error(reply?.error||'無法擷取分頁聲音');}
+ await chrome.storage.local.set({captionsHidden:false});
  return{running};
 }
 chrome.tabs.onRemoved.addListener(id=>{if(id===captureTabId)stopCapture();});

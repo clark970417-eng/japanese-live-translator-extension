@@ -9,7 +9,7 @@ import * as policy from '../translation-policy.mjs';
 test('identical ASR does not extend expiry; later utterance can repeat; native end clears pending results',async()=>{
  let listener,session,now=Date.now(),finish;const updates=[];
  class Clock extends Date{static now(){return now;}}
- const chrome={storage:{local:{get:async()=>({subtitleSettings:{holdSeconds:3,captionMode:'realtime'}})}},tabs:{sendMessage:async(id,m)=>updates.push(m),onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
+ const chrome={storage:{local:{set:async()=>{},get:async()=>({subtitleSettings:{holdSeconds:3,captionMode:'realtime'}})}},tabs:{sendMessage:async(id,m)=>updates.push(m),onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
  const fetch=()=>new Promise(resolve=>finish=()=>resolve({ok:true,json:async()=>[[['今天的天氣']]]}));
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
  vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,...policy,URLSearchParams,AbortSignal,AbortController,Date:Clock,console,fetch});

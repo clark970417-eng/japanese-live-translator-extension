@@ -29,8 +29,3 @@ $('#websiteText').onchange=()=>chrome.storage.local.set({websiteTextEnabled:$('#
 
 $('#exportRecording').onclick=async()=>{const entries=await send({type:'recording-export'});const text=entries.map(e=>new Date(e.createdAt).toLocaleString()+'\n'+e.original+'\n'+(e.translated||'[尚未翻譯]')).join('\n\n');const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='字幕記錄.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('#retryRecording').onclick=async()=>{await send({type:'recording-retry'});refresh();};
-
-let captionsHidden=false;
-function paintVisibility(){const button=$('#toggleCaptions');button.textContent=captionsHidden?'顯示字幕':'隱藏字幕';button.setAttribute('aria-pressed',String(captionsHidden));}
-chrome.storage.local.get('captionsHidden').then(s=>{captionsHidden=Boolean(s.captionsHidden);paintVisibility();});
-$('#toggleCaptions').onclick=async()=>{captionsHidden=!captionsHidden;await chrome.storage.local.set({captionsHidden});paintVisibility();};

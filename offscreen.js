@@ -43,7 +43,7 @@ function restartWorker(s,reason){
  send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
 }
 function initializeWorker(s){
- const worker=s.worker=new Worker('speech-worker.js?v=3.4.5',{type:'module'});
+ const worker=s.worker=new Worker('speech-worker.js?v=3.4.6',{type:'module'});
  worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
  worker.onmessage=({data})=>{
@@ -78,7 +78,7 @@ function initializeWorker(s){
  worker.postMessage({type:'init'});
 }
 function initializeVad(s){
- s.vad=new Worker('vad-worker.js?v=3.4.5',{type:'module'});
+ s.vad=new Worker('vad-worker.js?v=3.4.6',{type:'module'});
  s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入逾時'});stop();}},30000);
  s.vad.onerror=()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入失敗'});stop();}};
  s.vad.onmessage=({data:m})=>{
