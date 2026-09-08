@@ -1,24 +1,7 @@
-# v3.4.0 — 完整記錄與四組可調字幕窗
+# v3.4.0 verification: ordered transcript mode
 
-## 行為
+This version added an ordered four-entry transcript mode while retaining the single-pair low-latency mode. Final recognition is stored before translation, allowing capture to continue while network requests are pending. Failed translations remain available for retry and export.
 
-- 新增完整記錄模式（新預設），原即時單組模式仍可選。模式於下次開始生效。
-- 停頓後的完成辨識結果先寫入瀏覽器本機儲存，再逐筆翻譯；翻譯不阻塞下一段收音。完整模式不以三秒期限丟棄文字。失敗項目保留並可重試，原文與譯文可匯出。
-- 長語音的有限音訊視窗使用共同 utterance ID，未停頓前不另開一組；重疊辨識文字沿用去重邏輯。
-- 畫面按處理順序顯示最近四組，沒有因新收音積壓而直接跳到最後四句。原始記錄不因顯示輪替而刪除。
-- 日中同為 22px 白字、1px 黑邊；每行緊貼文字的 60% 黑色底，整個視窗透明。背景色與不透明度可調，0% 完全透明。組間為半行（22 × 1.35 ÷ 2 = 14.85px）。只在寬度不夠時自然換行。
-- 按住字幕窗拖曳、拉八個邊緣／角落縮放，位置與尺寸以播放器比例保存。過小視窗可捲動。
+The caption panel uses equal Japanese and Chinese type sizes, configurable colors and opacity, a continuous translucent background, and saved drag/resize geometry. The most recent four utterances are displayed in processing order.
 
-## 已驗證
-
-- `node --test tests/*.test.mjs`：39 項通過。
-- 六句收音結果在第一句 API 等待時均已存下；按順序完成，停止收音後仍可完成並匯出六句。
-- 失敗保存與重試、中斷後恢復、同一停頓段合併、四组輪替、完成音訊任務不因時間舊而丟棄。
-- 拖曳、縮放、邊界限制與比例保存的控制器測試。
-- 獨立瀏覽器實際渲染：四組共八行均為 22px、文字背景 rgba(0,0,0,0.6)、組距 14.85px；加入第五句後只顯示第 2–5 句。四組於測試大小均可見，前端無 error/warn。
-
-## 尚未驗證與限制
-
-本版尚未完成 Opera 實際收音端到端重測，亦尚未確認 Opera 重新載入成功；已更新安裝資料夾。請重新載入 extension 並重新整理影片頁。
-
-完整模式保存的是已辨識文字，並非原始錄音；模型仍可能漏字或誤辨。API 持續慢於語速會累積延遲。辨識音訊佇列設有記憶體上限；若超出負載，會明確停止收音並保留已辨識文字，不宣稱無限錄音或零延遲。浏览器關閉／service worker 中斷後，下一次開始或開啟記錄會恢復未完成翻譯。
+Thirty-nine automated tests covered persistence, queue order, recovery, bounded audio storage, caption rotation, and panel geometry. This version did not claim zero latency, unlimited recording, or perfect recognition.

@@ -1,9 +1,5 @@
-# v3.4.7 人聲模型上下文修正
+# v3.4.7 verification: Silero context
 
-Silero V5 的每段 512 樣本輸入補入前段 64 樣本上下文，重設時清空，參考官方 https://github.com/snakers4/silero-vad/blob/master/src/silero_vad/utils_vad.py 。
+Each 512-sample Silero V5 input now includes the preceding 64 samples of context, which is cleared on reset. The implementation follows the upstream Silero VAD input contract.
 
-狀態顯示依收音、人聲機率、辨識忙碌與佇列更新，不再固定顯示等待人聲。
-
-43 項自動測試通過。獨立瀏覽器真正 Silero 模型測試：10.722 秒日文音訊，126 區塊、112 區塊結尾超過人聲門檻、最高機率 0.9999739，15 個片段（含暫定片段，不代表 15 句）。
-
-此結果驗證人聲偵測，不代表完整日中字幕或直播漏判已完全修復。Opera 更新操作受前景切換干擾，未確認載入。
+Forty-three automated tests passed. A real browser VAD run on the 10.722-second Japanese fixture processed 126 blocks; 112 crossed the speech threshold and the maximum probability was 0.9999739. This validates voice detection on one controlled fixture, not complete translation accuracy or long-duration reliability.

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "日文直播翻譯助手",
+  "name": "Japanese Live Caption Translator",
   "version": "3.4.8",
-  "description": "YouTube 與 X Spaces 日文語音字幕、貼文翻譯，以及親切可愛的中文轉日文留言草稿。",
+  "description": "Bilingual Japanese–Traditional Chinese captions and page translation for online video and live audio.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

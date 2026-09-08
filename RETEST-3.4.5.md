@@ -1,7 +1,5 @@
-# v3.4.5
+# v3.4.5 verification: display normalization and sensitivity
 
-顯示層將拉長驚叫縮成「啊～！」，三次以上連續重複詞縮成「やばい…」。正常句子與兩次強調保留；原始記錄和翻譯輸入不變。
+The presentation layer condenses extended exclamations and three-or-more consecutive repetitions while preserving the stored transcript and translation input. Ordinary sentences and deliberate two-word emphasis remain unchanged.
 
-包含 v3.4.4 人聲偵測靈敏度調整：觸發門檻 0.45→0.30，持續門檻 0.25→0.15，起音 96→64 ms。靜音過濾保留。
-
-42 項自動測試通過。安裝檔已同步；Opera 載入確認與真實直播漏判改善仍待實測。
+Voice detection thresholds were lowered and onset detection was shortened from 96 ms to 64 ms. Silence rejection remains active. Forty-two automated tests passed; this was not a long-duration livestream acceptance test.

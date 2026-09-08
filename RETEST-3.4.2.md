@@ -1,7 +1,7 @@
-# v3.4.2
+# v3.4.2 verification: source-first display
 
-排隊中的辨識日文立即顯示，中文完成後補入；解碼暫定文字亦傳送至排隊模式。顯示最新四組，翻譯逾時 15 秒後保留失敗記錄並繼續處理。
+Recognized Japanese is displayed as soon as it is available; the corresponding Traditional Chinese line is filled later. The panel shows the latest four entries and continues after a translation timeout by retaining a failed record.
 
-字幕框可在網頁視窗內移動，單組與四組共用外觀及拖曳縮放。瀏覽器外桌面不在此次支援範圍。
+Single-pair and ordered modes share the same movable, resizable visual system. The panel is constrained to the webpage viewport.
 
-40 項自動測試通過，含新句輪替、翻譯無回應後繼續、視窗邊界拖曳。已在 Opera 管理頁確認 v3.4.2 啟用；尚未完成真實直播長時間收音驗證。暫定日文仍需等辨識器開始解碼，並非零延遲。
+Forty automated tests passed, including queue rotation, translation timeout continuation, and viewport-bound dragging. This remains incremental windowed recognition rather than zero-delay streaming.

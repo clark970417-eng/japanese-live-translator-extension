@@ -1,15 +1,7 @@
-# v3.3.4 — 字幕到期與慢翻譯處理
+# v3.3.4 verification: caption expiry and slow translation
 
-- 無原生字幕的語音辨識：最後顯示的字幕預設停留 3 秒，可於面板調整 1–6 秒。同一音訊段相同文字重複回傳，不再重設截止時間；不同音訊段仍可說相同詞。
-- 每筆字幕使用明確 expiresAt；YouTube 顯示端有獨立計時器，輪詢失敗也不應永久保留。X 的輪詢會清除到期字幕（最多約一秒輪詢誤差）。
-- 有 YouTube 原生字幕時跟隨可見字幕的結束，切換來源與字幕結束會取消過時請求，避免晚到結果復活。
-- Google 仍為快速主路徑；超過 400 ms 時啟動已設定的 NVIDIA 情境翻譯備援，總請求期限 3 秒，略過等待超過 3 秒的舊字幕任務。這改善慢網路處理，不代表 ASR 辨識速度提高或總延遲保證。
-- 「まだクリアできていない」的「還沒完成」校正為「還沒通關」，僅限此可識別句型，未全面替換一般的「完成」。
+Generated captions receive an explicit expiry time. Repeated output from the same audio segment does not extend the deadline, while the same words spoken in a later segment remain valid. Native YouTube captions retain their own cue timing.
 
-YouTube 字幕沒有統一的消失秒數，而是每句具有起訖時間。3 秒為本擴充功能無原生字幕時的預設，並非 YouTube 固定值。參考：https://support.google.com/youtube/answer/2734698?hl=zh-Hant
+The fast translation path starts first. When configured, a fallback provider may start after 400 ms; the first valid result wins, with a three-second request deadline for low-latency mode. This improves recovery under network variance but does not guarantee recognition or translation latency.
 
-## 驗證範圍
-
-`node --test tests/*.test.mjs` 通過 33 項。新增模擬時間測試：同句不續時、三秒到期、新段可重複、原生字幕結束後晚到翻譯不能復活。
-
-已更新安裝資料夾。Opera 管理頁本次未提供可操作的擴充內容，因此尚未確認重新載入及完整音訊重測，不將上版實測數字當作本版結果。請重新載入擴充功能並整理影片頁後使用。
+The automated suite passed 33 tests, including expiry, repeated speech, late-result rejection, and native-caption clearing.

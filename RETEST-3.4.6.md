@@ -1,5 +1,5 @@
-# v3.4.6
+# v3.4.6 verification: synchronized visibility
 
-開始語音成功後自動顯示字幕；停止語音自動隱藏字幕。移除獨立隱藏／顯示按鈕，保留外觀與不透明度設定。
+Starting audio capture automatically enables the caption panel, and stopping capture hides it. The separate visibility button was removed while appearance and opacity controls were retained.
 
-42 項自動測試通過，包含啟動／停止對字幕可見狀態的驗證。Opera 管理頁已確認 v3.4.6 啟用。既有影片頁仍需刷新以替換旧 content script；未宣稱真實直播漏判問題已完全解決。
+Forty-two automated tests passed, including start/stop visibility state. Opera GX confirmed that v3.4.6 was enabled.

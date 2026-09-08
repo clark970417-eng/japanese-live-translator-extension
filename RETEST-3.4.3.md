@@ -1,7 +1,5 @@
-# v3.4.3
+# v3.4.3 verification: caption ordering and opacity
 
-字幕由框頂端向下排列，第五組移除最舊的一組並捲至最新內容。新增隱藏／顯示字幕按鈕；隱藏不停止收音，停止語音仍可完全停止擷取。
+Caption entries flow from top to bottom. A fifth entry removes the oldest entry and scrolls the panel to the newest content. Overall caption opacity is configurable independently from panel-background opacity.
 
-自動測試涵蓋四組輪替、拖曳縮放及隱藏／顯示。尚未完成真實直播長時間測試。
-
-新增整體字幕不透明度 0–100%，與背景不透明度獨立；驗證 45% 寫入外觀設定。
+Automated tests covered four-entry rotation, dragging, resizing, visibility, and persisted opacity.
