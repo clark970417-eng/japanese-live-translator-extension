@@ -33,3 +33,9 @@ test('stalled translation times out and new speech still rotates the visible fou
  assert.deepEqual(q.rows('s').map(e=>e.original),['2','3','4','5']);
  await new Promise(r=>setTimeout(r,40));assert.equal(q.entries[0].state,'failed');assert.equal(q.entries[4].translated,'中5');assert.equal(q.pending,0);
 });
+
+test('soft speech at 35 percent probability triggers while zero probability stays silent',()=>{
+ const voice=new SpeechWindows(),quiet=new SpeechWindows();let captured=false;
+ for(let i=0;i<45;i++){if(voice.push(new Float32Array(512),.35))captured=true;assert.equal(quiet.push(new Float32Array(512),0),null);}
+ assert.equal(captured,true);
+});

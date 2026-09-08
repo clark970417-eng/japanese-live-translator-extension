@@ -30,11 +30,11 @@ export class SpeechWindows {
  reset(){this.pre=[];this.parts=[];this.samples=0;this.clock=0;this.onset=0;this.silent=0;this.voiced=0;this.active=false;this.id=0;this.lastEmission=0;this.overlap=false;this.utterance=0;}
  push(frame,probability,interval=.65){
   const n=frame.length;this.clock+=n;
-  const speech=probability>=(this.active?.25:.45);
+  const speech=probability>=(this.active?.15:.30);
   this.onset=speech?this.onset+n:0;
   if(!this.active){
    this.pre.push(frame);while(this.pre.length>16)this.pre.shift();
-   if(this.onset<1536)return null;
+   if(this.onset<1024)return null;
    this.active=true;this.id++;this.utterance++;this.parts=this.pre.slice();this.samples=this.parts.reduce((a,b)=>a+b.length,0);
    this.start=this.clock-this.samples;this.speechStart=this.clock-this.onset;this.voiced=this.onset;this.silent=0;this.lastEmission=this.clock;this.overlap=false;
    return null;
