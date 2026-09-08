@@ -3,6 +3,9 @@
  window.JtlCaptionWindow=class {
   constructor(root,key){
    this.root=root;this.key=key;root.classList.add('jtl-caption-window');
+   const visibility=hidden=>root.style.setProperty('visibility',hidden?'hidden':'visible','important');
+   chrome.storage.local.get('captionsHidden').then(s=>visibility(Boolean(s.captionsHidden)));
+   chrome.storage.onChanged?.addListener((changes,area)=>{if(area==='local'&&changes.captionsHidden)visibility(Boolean(changes.captionsHidden.newValue));});
    root.replaceChildren();this.lines=document.createElement('div');this.lines.className='jtl-lines';root.append(this.lines);
    for(const side of ['n','s','e','w','ne','nw','se','sw']){const handle=document.createElement('div');handle.className='jtl-resize jtl-'+side;handle.dataset.side=side;root.append(handle);}
    root.addEventListener('pointerdown',e=>this.begin(e));
@@ -11,7 +14,7 @@
    chrome.storage.local.get(['subtitleSettings','captionStyleV34',key]).then(s=>{let prefs=s.subtitleSettings||{};if(!s.captionStyleV34){prefs={...prefs,fontSize:22,japaneseColor:'#ffffff',chineseColor:'#ffffff',outlineWidth:1,backgroundColor:'#000000',backgroundOpacity:60};chrome.storage.local.set({subtitleSettings:prefs,captionStyleV34:true});}this.apply(prefs);if(s[key])this.place(s[key]);});
   }
   place(rect){const r=this.root;r.style.left=(rect.x*100)+'%';r.style.top=(rect.y*100)+'%';r.style.width=(rect.w*100)+'%';r.style.height=(rect.h*100)+'%';r.style.right='auto';r.style.bottom='auto';r.style.transform='none';}
-  apply(raw={}){const s={fontSize:22,backgroundColor:'#000000',backgroundOpacity:60,japaneseColor:'#ffffff',chineseColor:'#ffffff',outlineWidth:1,...raw};this.root.style.setProperty('--jtl-size',s.fontSize+'px');this.root.style.setProperty('--jtl-ja',s.japaneseColor);this.root.style.setProperty('--jtl-zh',s.chineseColor);this.root.style.setProperty('--jtl-outline',s.outlineWidth+'px');const hex=/^#[0-9a-f]{6}$/i.test(s.backgroundColor)?s.backgroundColor:'#000000';const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));this.root.style.setProperty('--jtl-bg',`rgba(${rgb.join(',')},${Math.max(0,Math.min(100,Number(s.backgroundOpacity)))/100})`);}
+  apply(raw={}){const s={fontSize:22,captionOpacity:100,backgroundColor:'#000000',backgroundOpacity:60,japaneseColor:'#ffffff',chineseColor:'#ffffff',outlineWidth:1,...raw};this.root.style.setProperty('opacity',String(Math.max(0,Math.min(100,Number(s.captionOpacity)))/100));this.root.style.setProperty('--jtl-size',s.fontSize+'px');this.root.style.setProperty('--jtl-ja',s.japaneseColor);this.root.style.setProperty('--jtl-zh',s.chineseColor);this.root.style.setProperty('--jtl-outline',s.outlineWidth+'px');const hex=/^#[0-9a-f]{6}$/i.test(s.backgroundColor)?s.backgroundColor:'#000000';const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));this.root.style.setProperty('--jtl-bg',`rgba(${rgb.join(',')},${Math.max(0,Math.min(100,Number(s.backgroundOpacity)))/100})`);}
   render(rows){
    const signature=JSON.stringify(rows);if(signature===this.signature)return;this.signature=signature;
    this.lines.replaceChildren(...rows.slice(-4).map(row=>{const pair=document.createElement('div');pair.className='jtl-pair';for(const [cls,text] of [['jtl-spoken',row.original],['jtl-chinese',row.translated]]){const line=document.createElement('div');line.className=cls;const value=(text||'').replace(/\s+/g,' ').trim();if(value){const backing=document.createElement('span');backing.textContent=value;line.append(backing);}pair.append(line);}return pair;}));
