@@ -27,7 +27,7 @@ export class SpeechGain {
 }
 export class SpeechWindows {
  constructor(){this.reset();}
- reset(){this.pre=[];this.parts=[];this.samples=0;this.clock=0;this.onset=0;this.silent=0;this.voiced=0;this.active=false;this.id=0;this.lastEmission=0;this.overlap=false;}
+ reset(){this.pre=[];this.parts=[];this.samples=0;this.clock=0;this.onset=0;this.silent=0;this.voiced=0;this.active=false;this.id=0;this.lastEmission=0;this.overlap=false;this.utterance=0;}
  push(frame,probability,interval=.65){
   const n=frame.length;this.clock+=n;
   const speech=probability>=(this.active?.25:.45);
@@ -35,7 +35,7 @@ export class SpeechWindows {
   if(!this.active){
    this.pre.push(frame);while(this.pre.length>16)this.pre.shift();
    if(this.onset<1536)return null;
-   this.active=true;this.id++;this.parts=this.pre.slice();this.samples=this.parts.reduce((a,b)=>a+b.length,0);
+   this.active=true;this.id++;this.utterance++;this.parts=this.pre.slice();this.samples=this.parts.reduce((a,b)=>a+b.length,0);
    this.start=this.clock-this.samples;this.speechStart=this.clock-this.onset;this.voiced=this.onset;this.silent=0;this.lastEmission=this.clock;this.overlap=false;
    return null;
   }
@@ -46,7 +46,7 @@ export class SpeechWindows {
   let job=null;
   if(this.voiced>=3584 && ((ended||cut) || (this.samples>=12800&&this.clock-this.lastEmission>=interval*16000))){
    const audio=new Float32Array(this.samples);let at=0;for(const part of this.parts){audio.set(part,at);at+=part.length;}
-   job={id:this.id,audio,final:ended||cut,overlap:this.overlap,voicedSeconds:this.voiced/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
+   job={id:this.id,utteranceId:this.utterance,utteranceEnd:ended,audio,final:ended||cut,overlap:this.overlap,voicedSeconds:this.voiced/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
    this.lastEmission=this.clock;
   }
   if(ended){this.active=false;this.parts=[];this.samples=0;this.pre=[];this.onset=0;}
@@ -104,17 +104,19 @@ export class Agreement {
  }
 }
 export class DecodeQueue {
- constructor(){this.jobs=[];this.dropped=0;}
+ constructor({retainFinals=false}={}){this.jobs=[];this.dropped=0;this.retainFinals=retainFinals;}
  clear(){this.jobs=[];}
  push(job){
+  if(this.retainFinals&&!job.final)return;
+  if(this.retainFinals&&this.jobs.length>=60)throw new Error('辨識積壓超過上限，已停止收音以保護已記錄內容');
   this.jobs=this.jobs.filter(x=>x.id!==job.id);
   this.jobs.push(job);
   // Keep one final and the newest revision. Never accumulate an unbounded delay.
-  while(this.jobs.length>2){this.jobs.shift();this.dropped++;}
+  while(!this.retainFinals&&this.jobs.length>2){this.jobs.shift();this.dropped++;}
  }
  shift(){return this.jobs.shift();}
  takeFresh(now,epoch){
-  while(this.jobs.length){const job=this.shift();if(job.epoch===epoch&&now-job.audioEndAt<=4000)return job;this.dropped++;}
+  while(this.jobs.length){const job=this.shift();if(job.epoch===epoch&&(this.retainFinals||now-job.audioEndAt<=4000))return job;this.dropped++;}
   return null;
  }
 }

@@ -5,9 +5,6 @@
 .jtl-status { color: #54d38a; font-size: 12px; padding: 4px; }
 .jtl-comment-action { border: 1px solid #2c8c5b; border-radius: 14px; margin-top: 5px; padding: 3px 9px; color: #54d38a; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
 .jtl-comment-action:disabled { opacity: .65; cursor: wait; }
-#jtl-subtitles { position: absolute; z-index: 70; left: 6%; right: 6%; bottom: 8%; display: none; text-align: center; pointer-events: none; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; }
-#jtl-subtitles.jtl-visible { display: block; }
-#jtl-subtitles .jtl-spoken, #jtl-subtitles .jtl-chinese { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-#jtl-subtitles .jtl-spoken, #jtl-subtitles .jtl-chinese { color: #fff; font-size: clamp(15px, 1.45vw, 25px); font-weight: 500; line-height: 1.35; -webkit-text-stroke: .55px #000; text-shadow: -2px -2px 2px #000, 2px -2px 2px #000, -2px 2px 2px #000, 2px 2px 2px #000; }
-#jtl-subtitles .jtl-chinese { margin-top: 3px; }
+#jtl-subtitles {display:none;}
+#jtl-subtitles.jtl-visible{display:block;}
 #movie_player.jtl-native-active .ytp-caption-window-container { opacity: 0; }

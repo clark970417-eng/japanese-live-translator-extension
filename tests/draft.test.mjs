@@ -1,3 +1,4 @@
+import {RecordingQueue} from '../recording-queue.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -13,7 +14,7 @@ test('draft mode exposes plain fallback and uses the viewer prompt when a provid
   return {ok:true,json:async()=>[[['明日は来られないかもしれません。']]]};
  };
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(src,{chrome,ResultGate,CueCursor,...policy,URLSearchParams,AbortSignal,AbortController,Date,fetch});
+ vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,...policy,URLSearchParams,AbortSignal,AbortController,Date,fetch});
  const call=text=>new Promise(resolve=>listener({type:'make-draft',text},{},resolve));
  const fallback=await call('我明天可能沒辦法來看');assert.equal(fallback.ok,true);assert.match(fallback.text.mode,/一般機翻/);
  configured=true;
@@ -29,7 +30,7 @@ test('NVIDIA draft uses supported non-thinking model and never exposes truncated
   return {ok:true,json:async()=>[[['また明日。']]]};
  };
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(src,{chrome,ResultGate,CueCursor,...policy,URLSearchParams,AbortSignal,AbortController,Date,fetch});
+ vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,...policy,URLSearchParams,AbortSignal,AbortController,Date,fetch});
  const call=text=>new Promise(resolve=>listener({type:'make-draft',text},{},resolve));
  assert.equal((await call('明天也很期待你的新遊戲直播')).text.mode,'可愛禮貌');
  assert.equal(bodies[0].model,'nvidia/nemotron-3.5-lightning-30b-a3b');

@@ -13,9 +13,9 @@ function resetAudio(s){
  s.vad?.postMessage({type:'reset',epoch:s.epoch,origin:s.origin,rate:s.context.sampleRate});
 }
 function decode(s,job){
- if(!s.ready||job.epoch!==s.epoch)return;
- if(s.busy){s.queue.push(job);return;}
- if(Date.now()-job.audioEndAt>4000){s.expired++;return;}
+ if(!s.ready||job.epoch!==s.epoch||(s.recording&&!job.final))return;
+ if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
+ if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
  s.busy=job;s.started=performance.now();s.metrics.add('queueMs',Date.now()-job.audioEndAt);
  s.timeout=setTimeout(()=>restartWorker(s,'辨識逾時'),15000);
  s.worker.postMessage({type:'decode',id:job.id,audio:job.audio},[job.audio.buffer]);
@@ -32,17 +32,18 @@ function sample(s,data){
  if(!s.ready||!s.vadReady)return;
  if(s.nativeUntil){if(Date.now()<s.nativeUntil)return;s.nativeUntil=0;resetAudio(s);}
  if(!s.receiving){s.receiving=true;resetAudio(s);}
- if(s.vadQueue.length>=12){s.overruns++;resetAudio(s);}
+ if(s.vadQueue.length>=(s.recording?120:12)){if(s.recording){send(s,'speech-error',{error:'收音處理積壓，已停止收音；已辨識文字仍保留'});stop();return;}s.overruns++;resetAudio(s);}
  s.vadQueue.push(data);drainVad(s);
 }
 function restartWorker(s,reason){
  if(active!==s)return;
+ if(s.recording&&s.busy){send(s,'speech-error',{error:reason+'；已停止收音，已辨識文字仍保留'});stop();return;}
  if(s.restarts++>=1){send(s,'speech-error',{error:reason+'，請重新開始'});stop();return;}
  clearTimeout(s.timeout);s.worker?.terminate();s.ready=false;s.busy=null;s.receiving=false;resetAudio(s);
  send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
 }
 function initializeWorker(s){
- const worker=s.worker=new Worker('speech-worker.js?v=3.3.4',{type:'module'});
+ const worker=s.worker=new Worker('speech-worker.js?v=3.4.0',{type:'module'});
  worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
  worker.onmessage=({data})=>{
@@ -51,6 +52,7 @@ function initializeWorker(s){
   if(data.type==='ready'){clearTimeout(s.timeout);s.ready=true;s.model=data.model;s.dtype=data.dtype;send(s,'model-status',{text:data.model+' 已就緒，等待人聲'});return;}
   if(data.type==='error'){restartWorker(s,data.error);return;}
   if(data.type==='partial'){
+   if(s.recording)return;
    const job=s.busy;
    if(!job||data.id!==job.id||job.epoch!==s.epoch||s.nativeUntil||Date.now()-job.audioEndAt>=5000)return;
    const text=cleanText(data.text);
@@ -63,13 +65,13 @@ function initializeWorker(s){
   if(data.type!=='result')return;
   clearTimeout(s.timeout);s.decodeMs=performance.now()-s.started;s.metrics.add('decodeMs',s.decodeMs);
   const job=s.busy;s.busy=null;
-  if(job&&job.epoch===s.epoch&&!s.nativeUntil&&Date.now()-job.audioEndAt<5000){
+  if(job&&job.epoch===s.epoch&&!s.nativeUntil&&(s.recording||Date.now()-job.audioEndAt<5000)){
    const text=s.filter.accept(data.text,job);
    const result=text?s.agreement.accept(text,job):null;
    if(result){
     if(s.lastId!==job.id){s.metrics.add('firstJapaneseMs',Date.now()-job.speechAt);s.lastId=job.id;}
     s.metrics.add('audioLagMs',Date.now()-job.audioEndAt);
-    send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,final:job.final,decodeMs:Math.round(s.decodeMs),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
+    send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,final:job.final,utteranceId:s.epoch*1000000+job.utteranceId,utteranceEnd:job.utteranceEnd,decodeMs:Math.round(s.decodeMs),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
    }else s.rejected++;
   }
   const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);
@@ -77,7 +79,7 @@ function initializeWorker(s){
  worker.postMessage({type:'init'});
 }
 function initializeVad(s){
- s.vad=new Worker('vad-worker.js?v=3.3.4',{type:'module'});
+ s.vad=new Worker('vad-worker.js?v=3.4.0',{type:'module'});
  s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入逾時'});stop();}},30000);
  s.vad.onerror=()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入失敗'});stop();}};
  s.vad.onmessage=({data:m})=>{
@@ -90,7 +92,7 @@ function initializeVad(s){
  s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate});
 }
 async function start(m){
- stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,frames:0,level:0,decodeMs:650,queue:new DecodeQueue(),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
+ stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording)}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
  try{
   s.stream=await navigator.mediaDevices.getUserMedia({audio:{mandatory:{chromeMediaSource:'tab',chromeMediaSourceId:m.streamId}},video:false});
   if(active!==s){s.stream.getTracks().forEach(t=>t.stop());return;}

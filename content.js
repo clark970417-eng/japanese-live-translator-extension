@@ -101,26 +101,19 @@ function installSubtitleOverlay() {
   if(existing){if(existing.parentElement!==player)player.append(existing);return;}
   const overlay = document.createElement("div");
   overlay.id = "jtl-subtitles";
-  overlay.innerHTML = '<div class="jtl-spoken"></div><div class="jtl-chinese"></div>';
+  overlay.captionWindow=new window.JtlCaptionWindow(overlay,'youtubeCaptionRect');
   player.appendChild(overlay);
   applySubtitleSettings();
 }
 
-const subtitleDefaults = {japaneseColor: "#ffffff", chineseColor: "#ffffff", fontSize: 25, outlineWidth: 2, position: 6};
+const subtitleDefaults = {japaneseColor: "#ffffff", chineseColor: "#ffffff", fontSize: 22, outlineWidth: 1, position: 6};
 function applySubtitleSettings(settings) {
   const apply = raw => {
     const s = {...subtitleDefaults, ...(raw || {})};
     const overlay = document.querySelector("#jtl-subtitles");
     if (!overlay) return;
     overlay.style.bottom = `${s.position}%`;
-    const shadow = `${s.outlineWidth}px`;
-    for (const [selector, color] of [[".jtl-spoken", s.japaneseColor], [".jtl-chinese", s.chineseColor]]) {
-      const line = overlay.querySelector(selector);
-      line.style.setProperty("color", color, "important");
-      line.style.setProperty("font-size", `${s.fontSize}px`, "important");
-      line.style.setProperty("-webkit-text-stroke", `${Math.max(.4, s.outlineWidth / 3)}px #000`, "important");
-      line.style.setProperty("text-shadow", `-${shadow} -${shadow} 1px #000,${shadow} -${shadow} 1px #000,-${shadow} ${shadow} 1px #000,${shadow} ${shadow} 1px #000`, "important");
-    }
+    overlay.captionWindow?.apply(s);
   };
   if (settings) apply(settings); else chrome.storage.local.get("subtitleSettings", ({subtitleSettings}) => apply(subtitleSettings));
 }
@@ -143,6 +136,7 @@ function readNativeCaption(){
  document.querySelector('#movie_player')?.classList.toggle('jtl-native-active',hasJapanese(text));
 }
 function renderSubtitle(item) {
+  if(item?.recordingRows){clearTimeout(subtitleExpiryTimer);installSubtitleOverlay();const overlay=document.querySelector('#jtl-subtitles');if(overlay){overlay.captionWindow.render(item.recordingRows);overlay.classList.toggle('jtl-visible',item.recordingRows.length>0);}return;}
   clearTimeout(subtitleExpiryTimer);
   const expiresAt=item?.expiresAt??(item?.updatedAt+3);
   if (!item || item.expired || Date.now()/1000 >= expiresAt) {
@@ -158,8 +152,7 @@ function renderSubtitle(item) {
   const key = `${item.id}:${item.original}:${item.translated}:${item.provisional}`;
   if (key === lastSubtitleKey) return;
   lastSubtitleKey = key;
-  overlay.querySelector(".jtl-spoken").textContent = item.original || "";
-  overlay.querySelector(".jtl-chinese").textContent = item.translated || "";
+  overlay.captionWindow.render([item]);
   overlay.dataset.state=item.provisional?'provisional':'final';
   overlay.title=item.provisional?'暫定字幕，句尾會校正':'已確認字幕';
   overlay.classList.toggle("jtl-visible", Boolean(item.original));

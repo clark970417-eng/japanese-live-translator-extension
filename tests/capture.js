@@ -19,9 +19,10 @@ document.querySelector('#full-test').onclick=async event=>{
   status.textContent='播放音檔並記錄字幕';video.currentTime=0;await video.play();
   await new Promise(resolve=>video.addEventListener('ended',resolve,{once:true}));
   status.textContent='檢查播放結束後 12 秒的字幕清空';await new Promise(r=>setTimeout(r,12000));
+  const mode=(await chrome.runtime.sendMessage({type:'health'})).text.captionMode;
   const visible=document.querySelector('#jtl-subtitles')?.classList.contains('jtl-visible');
   const count=document.querySelectorAll('#events tr').length;
-  status.textContent=`音檔完成；字幕更新 ${count} 次；結束後字幕${visible?'仍顯示（需檢查）':'已清空'}；自動隱藏與截止時間相差 ${hideDrift===null?'未測得':hideDrift+' ms'}。`;
+  status.textContent=mode==='record'?`完整模式：音檔結束，顯示 ${document.querySelectorAll('.jtl-pair').length} 組記錄（最多四組），不按秒數消失。`:`音檔完成；字幕更新 ${count} 次；結束後字幕${visible?'仍顯示（需檢查）':'已清空'}；自動隱藏與截止時間相差 ${hideDrift===null?'未測得':hideDrift+' ms'}。`;
  }catch(error){status.textContent='測試未通過：'+error.message;}
  finally{video.pause();await chrome.runtime.sendMessage({type:'subtitle-control',action:'stop'});event.target.disabled=false;}
 };

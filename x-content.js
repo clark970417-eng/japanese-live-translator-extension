@@ -3,7 +3,7 @@
   let websiteTextEnabled=false;
   const composers = new WeakMap();
   const posts = new WeakMap();
-  let panel;
+  let panel,captionBox;
   let listening = false;
   let polling = false;
 
@@ -120,7 +120,7 @@
         if (listening) {
           await message({type:'subtitle-control',action:'stop'});
           listening = false;
-          original.textContent = translated.textContent = '';
+          original.textContent = translated.textContent = '';if(captionBox)captionBox.hidden=true;
           status.textContent = '字幕已停止。';
         } else {
           await message({type: 'subtitle-control', action: 'start'});
@@ -131,7 +131,8 @@
       } catch (error) { status.textContent = error.message; }
       finally { toggle.disabled = false; }
     });
-    panel.append(toggle, status, original, translated);
+    panel.append(toggle, status);
+    captionBox=document.createElement('div');captionBox.className='jtl-caption-window';captionBox.hidden=true;captionBox.controller=new window.JtlCaptionWindow(captionBox,'xCaptionRect');host.append(captionBox);
     host.classList.add('jtl-space-host');
     host.append(panel);
   }
@@ -165,11 +166,11 @@
       if (panel?.isConnected && panel.parentElement !== host) {
         panel.parentElement?.classList.remove('jtl-space-host');
         host.classList.add('jtl-space-host');
-        host.append(panel);
+        host.append(panel);if(captionBox)host.append(captionBox);
       } else installPanel();
     } else if (panel?.isConnected) {
       panel.parentElement?.classList.remove('jtl-space-host');
-      panel.remove();
+      panel.remove();captionBox?.remove();captionBox=null;
       panel = null;
       if (listening) {
         listening = false;
@@ -179,15 +180,14 @@
   }
 
   async function poll() {
-    if (!listening || polling || !panel?.isConnected) return;
+    if (polling || !panel?.isConnected) return;
     polling = true;
     try {
-      const data = await message({type: 'subtitles'});
+      const data = await message({type: 'subtitles'});listening=Boolean(data.running);panel.querySelector('button').textContent=listening?'停止語音字幕':'開始日文語音字幕';
       const item = data.items?.slice().sort((a, b) => b.id - a.id)[0];
       const fresh = data.running && item && !item.expired && Date.now()/1000 < (item.expiresAt??item.updatedAt+3);
-      panel.querySelector('.jtl-x-original').textContent = fresh ? item.original : '';
-      panel.querySelector('.jtl-x-translated').textContent = fresh
-        ? (item.translated === '(translating...)' ? '翻譯中…' : item.translated) : '';
+      const rows=data.running?(item?.recordingRows||(fresh?[item]:[])):[];
+      if(captionBox){captionBox.controller.render(rows);captionBox.hidden=!rows.length;}
       panel.querySelector('.jtl-x-live-status').textContent = data.running
         ? '正在接收分頁聲音 · 日文 → 繁中' : '字幕已停止，可重新開始。';
     } catch (error) { panel.querySelector('.jtl-x-live-status').textContent = error.message; }
@@ -210,6 +210,7 @@
   chrome.storage.onChanged.addListener((changes,area)=>{
     if(area==='local'&&changes.websiteTextEnabled)setWebsiteText(changes.websiteTextEnabled.newValue!==false);
   });
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.subtitleSettings)captionBox?.controller.apply(changes.subtitleSettings.newValue);});
   let scheduled = false;
   new MutationObserver(() => {
     if (scheduled) return;

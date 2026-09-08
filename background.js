@@ -1,8 +1,9 @@
+import {RecordingQueue} from './recording-queue.mjs';
 import {ResultGate} from './stream-core.mjs';
 import {CueCursor} from './cue-cursor.mjs';
 import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
 const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
-let captionHold=3;
+let captionMode='record',captionHold=3;
 const setHold=value=>{captionHold=Math.max(1,Math.min(6,Number(value)||3));};
 chrome.storage.onChanged?.addListener((changes,area)=>{if(area==='local'&&changes.subtitleSettings)setHold(changes.subtitleSettings.newValue?.holdSeconds);});
 const fresh=item=>item&&!item.expired&&Date.now()/1000<(item.expiresAt??item.updatedAt+3);
@@ -50,6 +51,21 @@ async function translate(text,direction,priority=false){
   return translateCaption(text);
  });
 }
+let recordingReady;
+const recording=new RecordingQueue({
+ save:entries=>chrome.storage.local.set({recordedCaptions:entries}),
+ translate:text=>textMemo.run('record:'+text,async()=>{const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;try{return await styledTranslation(text,'ja-zh');}catch(_){return translateCaption(text);}}),
+ onChange:()=>{if(captionMode==='record'&&running)pushSubtitle(recordingItem());},
+ onError:()=>{lastError='字幕記錄無法儲存，請匯出記錄並檢查儲存空間';if(running)stopCapture();}
+});
+function initRecording(){return recordingReady??=chrome.storage.local.get('recordedCaptions').then(s=>recording.restore(Array.isArray(s.recordedCaptions)?s.recordedCaptions:[]));}
+function recordingItem(){return {id:'recording',recordingRows:recording.rows(gate.session),original:'',translated:'',updatedAt:Date.now()/1000};}
+function recordTranscript(m){
+ if(m.source!=='native'&&!m.final)return;
+ const text=String(m.text||'').replace(/\s+/g,' ').trim();if(!text)return;
+ const key=gate.session+':'+(m.source==='native'?'native-'+(++outputSequence):m.id);
+ recording.add({key,session:gate.session,group:gate.session+':'+(m.utteranceId??key),original:text,createdAt:Date.now()}).catch(()=>{});
+}
 const gate=new ResultGate();
 const cueCursor=new CueCursor();
 let nativeUntil=0, nativeText='', outputSequence=0, lastSpeechId=-1;
@@ -85,6 +101,7 @@ async function translateItem(job){
 }
 function addTranscript(m){
  m={...m,text:String(m.text||'').trim()};
+ if(captionMode==='record'){if(m.source!=='native'&&Date.now()<nativeUntil)return;recordTranscript(m);return;}
  if(m.source!=='native'&&(Date.now()<nativeUntil||m.id<lastSpeechId))return;
  // Translate exactly the short source cue displayed, retaining the full ASR
  // hypothesis in the worker for agreement and overlap alignment.
@@ -106,6 +123,7 @@ function addTranscript(m){
 }
 async function ensureOffscreen(){if(await chrome.offscreen.hasDocument())return;await chrome.offscreen.createDocument({url:'offscreen.html',reasons:['USER_MEDIA'],justification:'擷取目前分頁音訊以產生字幕'});}
 async function stopCapture(){
+ if(captionMode==='record'&&nativeText){const text=nativeText;nativeText='';recordTranscript({text,source:'native'});}
  cueCursor.reset();
  cancelTranslations();
  nativeUntil=0;nativeText='';lastSpeechId=-1;
@@ -125,11 +143,11 @@ async function resetCapture(){
 }
 async function startCapture(tabId){
  if(!Number.isInteger(tabId))throw new Error('請先選擇影片分頁');
- await stopCapture();setHold((await settings()).subtitleSettings?.holdSeconds);captureTabId=tabId;diagnostics={};lastError='';
+ await stopCapture();const prefs=(await settings()).subtitleSettings;setHold(prefs?.holdSeconds);captionMode=prefs?.captionMode==='realtime'?'realtime':'record';if(captionMode==='record')await initRecording();captureTabId=tabId;diagnostics={};lastError='';
  await ensureOffscreen();
  const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});
  running=true;modelStatus='正在擷取分頁聲音';
- const reply=await chrome.runtime.sendMessage({type:'offscreen-start',streamId,mode:'browser',session:gate.session});
+ const reply=await chrome.runtime.sendMessage({type:'offscreen-start',streamId,mode:'browser',recording:captionMode==='record',session:gate.session});
  if(!reply?.ok){running=false;throw new Error(reply?.error||'無法擷取分頁聲音');}
  return{running};
 }
@@ -150,16 +168,18 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
   if(text && /[\u3040-\u30ff]/.test(text)){
    nativeUntil=Date.now()+1800;
    chrome.runtime.sendMessage({type:'offscreen-native',session:gate.session}).catch(()=>{});
-   if(text!==nativeText){if(!nativeText){cancelTranslations();items.length=0;pushSubtitle(null);}nativeText=text;addTranscript({session:gate.session,text,source:'native'});}
+   if(text!==nativeText){if(captionMode==='record'){if(nativeText&&!text.startsWith(nativeText))recordTranscript({text:nativeText,source:'native'});nativeText=text;}else{if(!nativeText){cancelTranslations();items.length=0;pushSubtitle(null);}nativeText=text;addTranscript({session:gate.session,text,source:'native'});}}
    if(gate.latest?.source==='native')gate.latest.expiresAt=Date.now()/1000+1.8;
    modelStatus='使用 YouTube 日文字幕';
-  } else {nativeUntil=0;nativeText='';if(gate.latest?.source==='native')gate.latest.expired=true;for(const [job,controller] of captionRequests){if(job.item.source==='native'){job.item.expired=true;controller.abort();}}if(translationPending?.item.source==='native')translationPending=null;if(items[0]?.source==='native'){items[0].expired=true;items.length=0;pushSubtitle(null);}}
+  } else {if(captionMode==='record'&&nativeText)recordTranscript({text:nativeText,source:'native'});nativeUntil=0;nativeText='';if(gate.latest?.source==='native')gate.latest.expired=true;for(const [job,controller] of captionRequests){if(job.item.source==='native'){job.item.expired=true;controller.abort();}}if(translationPending?.item.source==='native')translationPending=null;if(items[0]?.source==='native'){items[0].expired=true;items.length=0;pushSubtitle(null);}}
   send({ok:true,text:{running}});return;
  }
+ else if(m.type==='recording-export')task=initRecording().then(()=>recording.entries);
+ else if(m.type==='recording-retry')task=initRecording().then(()=>recording.retry()).then(()=>({pending:recording.pending}));
  else if(m.type==='make-draft')task=makeDraft(m.text);
  else if(m.type==='translate')task=translate(m.text,m.direction,Boolean(m.priority));
- else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?items.filter(fresh):[]});
- else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,diagnostics,captureTabId});
+ else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?(captionMode==='record'?[recordingItem()]:items.filter(fresh)):[]});
+ else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,diagnostics,captureTabId,captionMode,recordingPending:recording.pending,recordingFailed:recording.failed});
  else if(m.type==='subtitle-reset'){
   if(s.tab?.id!==captureTabId)return;
   task=resetCapture();
