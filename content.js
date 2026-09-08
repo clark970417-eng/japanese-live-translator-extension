@@ -1,7 +1,7 @@
 (() => {
 if(window.__jtlV3)return;window.__jtlV3=true;
 let translated = new WeakMap();
-let websiteTextEnabled=false, textEpoch=0;
+let websiteTextEnabled=false, textEpoch=0, contextInvalid=false;
 const cache = new Map();
 
 const hasJapanese = text => /[\u3040-\u30ff]/.test(text);
@@ -47,6 +47,7 @@ async function translateElement(element, className, priority = false) {
 }
 
 function scan() {
+  if(contextInvalid)return;
   if (window.top === window) installSubtitleOverlay();
   if (!websiteTextEnabled) return;
   if (window.top === window) {
@@ -124,7 +125,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 let lastSubtitleKey = "", subtitleExpiryTimer;
 let pollEpoch=0;
-let polling=false;
+let polling=false,pollTimer,nativeTimer;
 let lastNativeCaption = "", nativeChangedAt=0, captionRunning=false;
 function readNativeCaption(){
  if(!captionRunning)return;
@@ -141,6 +142,7 @@ function renderSubtitle(item) {
   const expiresAt=item?.expiresAt??(item?.updatedAt+3);
   if (!item || item.expired || Date.now()/1000 >= expiresAt) {
     document.querySelector("#jtl-subtitles")?.classList.remove("jtl-visible");
+    document.querySelector('#jtl-subtitles')?.captionWindow?.render([]);
     lastSubtitleKey = "";
     return;
   }
@@ -165,7 +167,7 @@ async function pollSubtitles() {
     captionRunning=data.running;
     if(!captionRunning)document.querySelector('#movie_player')?.classList.remove('jtl-native-active');
     if(epoch===pollEpoch)renderSubtitle(data.running ? data.items?.at(-1) : null);
-  } catch (_error) {} finally {polling=false;}
+  } catch (error) {if(!chrome.runtime?.id){contextInvalid=true;captionRunning=false;clearInterval(pollTimer);clearInterval(nativeTimer);document.querySelector('#jtl-subtitles')?.remove();}} finally {polling=false;}
 }
 chrome.runtime.onMessage.addListener(message => {
   if (message.type === "subtitle-update" && window.top === window) renderSubtitle(message.item);
@@ -223,8 +225,8 @@ new MutationObserver(() => {
 }).observe(document.documentElement, {childList: true, subtree: true});
 scan();
 if (window.top === window) {
- setInterval(pollSubtitles,700);
- setInterval(readNativeCaption,350);
+ pollTimer=setInterval(pollSubtitles,700);
+ nativeTimer=setInterval(readNativeCaption,350);
  const reset=()=>{pollEpoch++;lastNativeCaption='';nativeChangedAt=0;lastSubtitleKey='';renderSubtitle(null);runtimeMessage({type:'subtitle-reset'}).catch(()=>{});};
  document.addEventListener('yt-navigate-start',reset);
  document.addEventListener('seeking',event=>{if(event.target.tagName==='VIDEO')reset();},true);

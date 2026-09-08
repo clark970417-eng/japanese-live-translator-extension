@@ -13,12 +13,13 @@ function resetAudio(s){
  s.vad?.postMessage({type:'reset',epoch:s.epoch,origin:s.origin,rate:s.context.sampleRate});
 }
 function decode(s,job){
- if(!s.ready||job.epoch!==s.epoch||(s.recording&&!job.final))return;
+ if(job.epoch!==s.epoch||(s.recording&&!job.final))return;
+ if(!s.ready){if(s.recording){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}}return;}
  if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
  s.busy=job;s.started=performance.now();s.metrics.add('queueMs',Date.now()-job.audioEndAt);
  s.timeout=setTimeout(()=>restartWorker(s,'辨識逾時'),15000);
- s.worker.postMessage({type:'decode',id:job.id,audio:job.audio},[job.audio.buffer]);
+ const audio=job.audio.slice();s.worker.postMessage({type:'decode',id:job.id,audio},[audio.buffer]);
 }
 function drainVad(s){
  if(s.vadBusy||!s.vadReady)return;
@@ -37,19 +38,18 @@ function sample(s,data){
 }
 function restartWorker(s,reason){
  if(active!==s)return;
- if(s.recording&&s.busy){send(s,'speech-error',{error:reason+'；已停止收音，已辨識文字仍保留'});stop();return;}
  if(s.restarts++>=1){send(s,'speech-error',{error:reason+'，請重新開始'});stop();return;}
- clearTimeout(s.timeout);s.worker?.terminate();s.ready=false;s.busy=null;s.receiving=false;resetAudio(s);
+ clearTimeout(s.timeout);if(s.recording&&s.busy)s.queue.jobs.unshift(s.busy);s.worker?.terminate();s.ready=false;s.busy=null;s.receiving=false;if(!s.recording)resetAudio(s);
  send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
 }
 function initializeWorker(s){
- const worker=s.worker=new Worker('speech-worker.js?v=3.4.7',{type:'module'});
+ const worker=s.worker=new Worker('speech-worker.js?v=3.4.8',{type:'module'});
  worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
  worker.onmessage=({data})=>{
   if(active!==s||s.worker!==worker)return;
   if(data.type==='progress'){clearTimeout(s.timeout);s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);if(Date.now()-(s.lastProgress||0)>1000){s.lastProgress=Date.now();send(s,'model-status',{text:'下載辨識模型 '+data.progress+'%…'});}return;}
-  if(data.type==='ready'){clearTimeout(s.timeout);s.ready=true;s.model=data.model;s.dtype=data.dtype;send(s,'model-status',{text:data.model+' 已就緒，等待人聲'});return;}
+  if(data.type==='ready'){clearTimeout(s.timeout);s.ready=true;s.model=data.model;s.dtype=data.dtype;send(s,'model-status',{text:data.model+' 已就緒，等待人聲'});const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);return;}
   if(data.type==='error'){restartWorker(s,data.error);return;}
   if(data.type==='partial'){
    const job=s.busy;
@@ -78,7 +78,7 @@ function initializeWorker(s){
  worker.postMessage({type:'init'});
 }
 function initializeVad(s){
- s.vad=new Worker('vad-worker.js?v=3.4.7',{type:'module'});
+ s.vad=new Worker('vad-worker.js?v=3.4.8',{type:'module'});
  s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入逾時'});stop();}},30000);
  s.vad.onerror=()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入失敗'});stop();}};
  s.vad.onmessage=({data:m})=>{

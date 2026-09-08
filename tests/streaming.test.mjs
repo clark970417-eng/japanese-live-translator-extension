@@ -24,10 +24,10 @@ test('non-speech never emits, including loud non-speech; short speech ends promp
 test('continuous speech bounded with real overlapping samples and increasing times',()=>{
  const w=new SpeechWindows(),jobs=[];
  for(let i=0;i<600;i++){const j=w.push(new Float32Array(512).fill(i),.9);if(j)jobs.push(j);}
- assert.ok(jobs.every(j=>j.audio.length<=192512));
+ assert.ok(jobs.every(j=>j.audio.length<=80512));
  const final=jobs.find(j=>j.final),next=jobs.find(j=>j.id===final.id+1);
  assert.ok(next.overlap);assert.ok(next.startSample<final.endSample);
- assert.equal(next.audio[0],final.audio[final.audio.length-32768]);
+ assert.equal(next.audio[0],final.audio[final.audio.length-16384]);
 });
 test('local agreement confirms prefixes and rejects out-of-order revisions',()=>{
  assert.equal(trimOverlap('ありがとうございます。','ありがとうございます、またね'),'またね');

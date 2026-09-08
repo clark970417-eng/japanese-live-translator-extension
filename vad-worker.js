@@ -1,5 +1,5 @@
 import {ort} from './whisper-runtime.js';
-import {Resampler,SpeechWindows,SpeechGain} from './streaming.mjs?v=3.4.7';
+import {Resampler,SpeechWindows,SpeechGain} from './streaming.mjs?v=3.4.8';
 ort.env.wasm.wasmPaths=new URL('./ort/',import.meta.url).href;
 ort.env.wasm.numThreads=1;
 let context=new Float32Array(64);

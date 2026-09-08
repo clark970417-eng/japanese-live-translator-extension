@@ -18,7 +18,7 @@ document.querySelector('#full-test').onclick=async event=>{
   }
   status.textContent='播放音檔並記錄字幕';video.currentTime=0;await video.play();
   await new Promise(resolve=>video.addEventListener('ended',resolve,{once:true}));
-  status.textContent='檢查播放結束後 12 秒的字幕清空';await new Promise(r=>setTimeout(r,12000));
+  status.textContent='等待辨識與翻譯完成（最多 60 秒）';await new Promise(r=>setTimeout(r,60000));
   const mode=(await chrome.runtime.sendMessage({type:'health'})).text.captionMode;
   const visible=document.querySelector('#jtl-subtitles')?.classList.contains('jtl-visible');
   const count=document.querySelectorAll('#events tr').length;
@@ -33,7 +33,7 @@ setInterval(()=>{
  if(!started)return;
  if(!overlay?.classList.contains('jtl-visible')){if(lastExpiry){hideDrift=Math.round(Date.now()-lastExpiry*1000);lastExpiry=0;}return;}
  lastExpiry=Number(overlay.dataset.expiresAt)||0;
- const ja=overlay.querySelector('.jtl-spoken').textContent,zh=overlay.querySelector('.jtl-chinese').textContent,key=ja+'|'+zh;
+ const ja=[...overlay.querySelectorAll('.jtl-spoken')].map(e=>e.textContent).join(' / '),zh=[...overlay.querySelectorAll('.jtl-chinese')].map(e=>e.textContent).join(' / '),key=ja+'|'+zh;
  if(key===last)return;last=key;
  const row=document.createElement('tr');for(const text of [((performance.now()-started)/1000).toFixed(2),ja,zh]){const cell=document.createElement('td');cell.textContent=text;row.append(cell);}document.querySelector('#events').append(row);
 },150);
