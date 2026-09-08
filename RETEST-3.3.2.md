@@ -1,0 +1,11 @@
+# 3.3.2 caption regression retest
+
+The complete ASR output could lose sentence punctuation and reintroduce an older paragraph after a newer short cue. A per-utterance display cursor now aligns the current cue inside an expanding hypothesis before selecting the visible clause. It preserves genuine repetition and resets across utterances and capture resets. Stale results cannot advance it. This addresses presentation rewind; it does not make Whisper a native streaming model or guarantee recognition accuracy.
+
+The internal capture harness now waits for model readiness, plays the same 10.7-second Japanese fixture, records visible bilingual changes, checks clearing 12 seconds after playback, and stops capture. Browser tab-capture authorization still requires invoking the toolbar extension first.
+
+30 automated tests pass, including the observed unpunctuated-paragraph regression and real repeated speech. Opera showed version 3.3.2 and Reloaded. The pre-fix real pipeline run produced its first bilingual cue at 1.62 seconds, 14 changes, and confirmed clearing/stopping; it reproduced the old paragraph at 11.68 seconds. These are observations from one synthetic fixture under browser load, not general live latency guarantees.
+
+A second run exposed a revised-ending variant (待ってくれ → 待ってください). The cursor now also accepts a matching four-character cue opening and waits rather than showing fewer than four new characters after a completed sentence. Regression assertions cover both recorded cases.
+
+After copying the final runtime and confirming another Opera Reloaded state, the final actual tab-capture run completed with 11 visible bilingual updates. First pair: 1.71 seconds (皆さん / 大家), greeting: 2.16 seconds, final thanks: 12.05 seconds. Model decode P50/P95: 740/1067 ms, queue P50/P95: 112/263 ms. The visible history did not move back to an earlier cue in this run. The test page reported subtitles cleared 12 seconds after playback ended and health reported stopped. Long expanding provisional clauses and recognition corrections remain visible; this is not a broad translation accuracy test, proof of zero repeats on all streams, or a YouTube live soak test. No API-style quality claim is added.

@@ -1,4 +1,5 @@
 import {ResultGate} from './stream-core.mjs';
+import {CueCursor} from './cue-cursor.mjs';
 import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
 const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
 const items=[];let running=false,lastError="",captureTabId=null;
@@ -41,6 +42,7 @@ async function translate(text,direction,priority=false){
  });
 }
 const gate=new ResultGate();
+const cueCursor=new CueCursor();
 let nativeUntil=0, nativeText='', outputSequence=0, lastSpeechId=-1;
 let diagnostics={}, modelStatus='', controlBusy=false, translationPending=null, publishedId=-1;
 const captionRequests=new Map();
@@ -73,12 +75,11 @@ async function translateItem(job){
 }
 function addTranscript(m){
  m={...m,text:String(m.text||'').trim()};
+ if(m.source!=='native'&&(Date.now()<nativeUntil||m.id<lastSpeechId))return;
  // Translate exactly the short source cue displayed, retaining the full ASR
  // hypothesis in the worker for agreement and overlap alignment.
  if(m.source!=='native'){
-  const clauses=m.text.match(/[^。！？!?]+[。！？!?]?/gu)||[m.text];
-  m.text=clauses.at(-1).trim();
-  if(m.text.length<4&&clauses.length>1)m.text=clauses.at(-2).trim()+m.text;
+  m.text=cueCursor.select(m.text,m.id);
   // Keep the whole clause for translation; CSS controls visible line length.
   // Cutting the last 44 characters here discarded subjects and negation.
  }
@@ -95,6 +96,7 @@ function addTranscript(m){
 }
 async function ensureOffscreen(){if(await chrome.offscreen.hasDocument())return;await chrome.offscreen.createDocument({url:'offscreen.html',reasons:['USER_MEDIA'],justification:'擷取目前分頁音訊以產生字幕'});}
 async function stopCapture(){
+ cueCursor.reset();
  cancelTranslations();
  nativeUntil=0;nativeText='';lastSpeechId=-1;
  running=false;gate.reset();items.length=0;translationPending=null;pushSubtitle(null);
@@ -102,6 +104,7 @@ async function stopCapture(){
  modelStatus='已停止';return{running};
 }
 async function resetCapture(){
+ cueCursor.reset();
  if(!running)return {running:false};
  cancelTranslations();
  nativeUntil=0;nativeText='';lastSpeechId=-1;
