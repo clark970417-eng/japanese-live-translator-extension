@@ -9,3 +9,15 @@ import {Segmenter} from '../stream-core.mjs';
 test('quiet voice captured; silence does not create subtitles',()=>{const s=new Segmenter(1000);for(let i=0;i<30;i++)assert.equal(s.push(new Float32Array(100),0),null);let result;for(let i=0;i<15;i++){const j=s.push(new Float32Array(100).fill(.0015),.0015);if(j)result=j;}assert.ok(result);});
 test('short phrase flushed on silence even before regular decode interval',()=>{const s=new Segmenter(1000);let result;for(let i=0;i<4;i++)s.push(new Float32Array(100),.02,3);for(let i=0;i<5;i++){const j=s.push(new Float32Array(100),0,3);if(j)result=j;}assert.ok(result.final);assert.equal(result.id,1);});
 test('continuous audio bounded and final decode never lost to interval',()=>{const s=new Segmenter(1000);const jobs=[];for(let i=0;i<100;i++){const j=s.push(new Float32Array(100),.03,3);if(j)jobs.push(j);}assert.ok(jobs.some(x=>x.final));assert.ok(jobs.every(x=>x.audio.length<=4000));assert.ok(jobs.at(-1).id>1);});
+
+import {SpeechResultFilter} from '../stream-core.mjs';
+test('silence hallucination needs independent evidence; genuine speech is retained',()=>{
+ const f=new SpeechResultFilter();
+ const j={id:1,voicedSeconds:1,sampleCount:16000};
+ assert.equal(f.accept('ご視聴ありがとうございました',j),'');
+ assert.equal(f.accept('ご視聴ありがとうございました',j),'');
+ assert.equal(f.accept('ご視聴ありがとうございました',{...j,sampleCount:24000}),'ご視聴ありがとうございました');
+ f.reset();assert.equal(f.accept('ご視聴ありがとうございました',{...j,id:2}),'');
+ assert.equal(f.accept('こんにちは',{...j,voicedSeconds:.1}),'');
+ assert.equal(f.accept('こんにちは',j),'こんにちは');
+});

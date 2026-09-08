@@ -6,9 +6,9 @@ Opera GX／Chromium 擴充功能，可直接擷取 YouTube 或 X Spaces 分頁�
 
 ## 主要功能
 
-- 免費 WebGPU Whisper：直接在擴充功能內辨識分頁日文語音，不需要另開程式或 OpenRouter。
+- WebGPU Whisper small（FP32）：在擴充功能內辨識日文語音；Silero V5 先判斷人聲，不需另外開啟程式。
 - 日文翻繁中優先使用 Google 翻譯端點；失敗時可使用已儲存的 NVIDIA Key。
-- 音訊在瀏覽器 WebGPU 處理；3.0.2 不提供雲端語音模式。
+- 音訊在瀏覽器 WebGPU 處理；目前不提供雲端語音模式。
 - YouTube 標題、直播聊天與一般留言翻譯。
 - X／Twitter Spaces 字幕、貼文翻譯與回覆草稿。
 - 中文轉自然、稍微可愛並保持禮貌的日文；所有內容由使用者確認後自行送出。
@@ -16,9 +16,9 @@ Opera GX／Chromium 擴充功能，可直接擷取 YouTube 或 X Spaces 分頁�
 
 ## 免費模式
 
-在播放日文影片的分頁按「開始」。第一次使用會下載 Whisper tiny 模型並存入瀏覽器快取。需要支援 WebGPU 的瀏覽器；辨識會使用本機 GPU，並非零延遲。文字翻譯需要網路，第三方免費端點可能限流或失效。
+在播放日文影片的分頁按「開始」。第一次使用會下載 Whisper small 模型並存入瀏覽器快取，需要較多下載時間和 GPU 記憶體。Silero V5 模型隨擴充功能提供。需要支援 WebGPU 的瀏覽器；辨識會使用本機 GPU，並非零延遲。文字翻譯需要網路，第三方免費端點可能限流或失效。
 
-3.0.2 使用 AudioWorklet 擷取音訊、獨立 worker 辨識、限制待處理佇列，並阻止過期翻譯覆蓋新字幕。字幕維持日文與繁中各一行，顏色、字級、黑色描邊可調。測試範圍及限制見 [測試紀錄](V3-TEST-STATUS.md)。
+3.2.1 使用 AudioWorklet 擷取、獨立 VAD 與辨識 worker、依連續兩次假設共同前綴判斷穩定文字，並補償低音量輸入（最多 12 倍，不改變播放音量）。每段音訊最多約 12 秒，長段保留約 2 秒重疊；暫定字幕在段落結束前更新。翻譯最多兩個並行請求，等待區只保留最新一句；已完成的日中配對維持顯示，直到較新的配對完成，避免慢網路造成字幕一直空白。字幕維持日文與繁中各一行。已開啟的 YouTube 日文 CC 會優先使用；沒有 CC 的直播直接辨識語音。測試範圍及限制見 [測試紀錄](V3-TEST-STATUS.md)。
 
 ## 安裝
 
@@ -36,7 +36,15 @@ API Key 儲存在瀏覽器的 `chrome.storage.local`，不包含於原始碼、G
 
 - `background.js`：翻譯、字幕狀態與模式控制。
 - `offscreen.*`：分頁音訊擷取及 WebGPU Whisper。
+- `vad-worker.js`、`vendor/silero/`：本機人聲偵測。
+- `streaming.mjs`：持續重採樣、重疊視窗、共同前綴與延遲統計。
 - `ort/`：ONNX Runtime WebGPU／WASM 執行檔。
 - `content.*`：YouTube 翻譯與字幕介面。
 - `x-content.*`：X／Spaces 翻譯介面。
 - `popup.*`：字幕外觀、診斷與啟停控制。
+
+## 測試
+
+執行 `node --test tests/*.test.mjs`。模型測試可用 `python3 -m http.server 8766 --bind 127.0.0.1` 啟動，再於支援 WebGPU 的瀏覽器開啟 `http://127.0.0.1:8766/tests/browser.html`。這會真正載入 Silero 和 Whisper，但不是直播端到端測試。
+
+`tests/japanese-fixture.wav` 是 macOS Kyoko 合成語音，內容為：「みなさん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。来てくれてありがとうございます。」不含使用者錄音。

@@ -32995,7 +32995,7 @@ var stdout_write = apis.IS_PROCESS_AVAILABLE ? (x) => process.stdout.write(x) : 
 var CONCRETE_DTYPES = Object.keys(DEFAULT_DTYPE_SUFFIX_MAPPING);
 
 
-export { pipeline2 as pipeline, env2 as env };
+export { pipeline2 as pipeline, env2 as env, ONNX as ort };
 
 /*! Bundled license information:
 

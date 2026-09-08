@@ -7,7 +7,7 @@ test('capture messages require active session and correct offscreen sender; stop
  let listener,session;const updates=[];
  const chrome={storage:{local:{get:async()=>({}),set:async()=>{}}},tabs:{sendMessage:async(id,m)=>updates.push(m),onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace("import {ResultGate} from './stream-core.mjs';",'');
- vm.runInNewContext(src,{chrome,ResultGate,URLSearchParams,AbortSignal,Date,console,fetch:async()=>({ok:true,json:async()=>([[['大家好','こんにちは']]])})});
+ vm.runInNewContext(src,{chrome,ResultGate,URLSearchParams,AbortSignal,AbortController,Date,console,fetch:async()=>({ok:true,json:async()=>([[['大家好','こんにちは']]])})});
  const call=(m,s={})=>new Promise(resolve=>listener(m,s,resolve));
  await call({type:'subtitle-control',action:'start',tabId:7});
  listener({type:'speech-result',session,id:1,text:'こんにちは'},{url:'https://evil.example'},()=>{});
@@ -16,6 +16,17 @@ test('capture messages require active session and correct offscreen sender; stop
  await new Promise(r=>setTimeout(r,20));
  assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items[0].translated,'大家好');
  assert.equal((await call({type:'subtitles'},{tab:{id:8}})).text.items.length,0);
+ const sender={tab:{id:7},frameId:0,url:'https://www.youtube.com/watch?v=test'};
+ await call({type:'native-caption',text:'今日はいい天気ですね'},sender);
+ await new Promise(r=>setTimeout(r,0));
+ listener({type:'speech-result',session,id:2,text:'古い音声結果'},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items[0].original,'今日はいい天気ですね');
+ await call({type:'native-caption',text:'別のタブ'}, {...sender,tab:{id:8}});
+ assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items[0].original,'今日はいい天気ですね');
+ await call({type:'native-caption',text:''},sender);
+ listener({type:'speech-result',session,id:3,text:'音声に戻りました'},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ await new Promise(r=>setTimeout(r,0));
+ assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items[0].original,'音声に戻りました');
  await call({type:'subtitle-control',action:'stop'});
  assert.equal(updates.at(-1).item,null);
  listener({type:'speech-result',session,id:2,text:'古い'},{url:'chrome-extension://test/offscreen.html'},()=>{});

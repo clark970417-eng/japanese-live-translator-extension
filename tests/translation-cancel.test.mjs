@@ -1,0 +1,25 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import fs from 'node:fs';
+import {ResultGate} from '../stream-core.mjs';
+test('slow translation still publishes paired captions; queue coalesces and stop aborts',async()=>{
+ let listener,session;const requests=[];
+ const chrome={storage:{local:{get:async()=>({})}},tabs:{sendMessage:async()=>{},onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace("import {ResultGate} from './stream-core.mjs';",'');
+ const fetch=(_,options)=>new Promise((resolve,reject)=>{requests.push({signal:options.signal,finish:text=>resolve({ok:true,json:async()=>[[[text]]]})});options.signal.addEventListener('abort',()=>reject(new Error('aborted')));});
+ vm.runInNewContext(src,{chrome,ResultGate,URLSearchParams,AbortSignal,AbortController,Date,console,fetch});
+ const call=m=>new Promise(resolve=>listener(m,{},resolve));await call({type:'subtitle-control',action:'start',tabId:7});
+ for(let id=1;id<=4;id++)listener({type:'speech-result',session,id,text:'こんにちは'+id},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ assert.equal(requests.length,2);assert.equal(requests[0].signal.aborted,false);
+ const flush=()=>new Promise(r=>setTimeout(r,0));
+ const current=()=>new Promise(resolve=>listener({type:'subtitles'},{tab:{id:7}},r=>resolve(r.text.items[0])));
+ requests[1].finish('你好二');await flush();
+ assert.equal((await current()).original,'こんにちは2');assert.equal((await current()).translated,'你好二');
+ assert.equal(requests.length,3);
+ requests[0].finish('你好一');await flush();
+ assert.equal((await current()).original,'こんにちは2','late older translation cannot replace newer pair');
+ requests[2].finish('你好四');await flush();assert.equal((await current()).original,'こんにちは4');
+ listener({type:'speech-result',session,id:5,text:'こんにちは5'},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ await call({type:'subtitle-control',action:'stop'});assert.equal(requests.at(-1).signal.aborted,true);
+});

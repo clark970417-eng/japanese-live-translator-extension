@@ -127,8 +127,16 @@ chrome.storage.onChanged.addListener((changes, area) => {
 let lastSubtitleKey = "";
 let pollEpoch=0;
 let polling=false;
-let lastNativeCaption = "";
-let nativeCaptionItem = null;
+let lastNativeCaption = "", nativeChangedAt=0, captionRunning=false;
+function readNativeCaption(){
+ if(!captionRunning)return;
+ const video=document.querySelector('#movie_player video');
+ const text=video&&!video.paused ? [...document.querySelectorAll('#movie_player .ytp-caption-window-container .ytp-caption-segment')].map(el=>el.textContent).join(' ').replace(/\s+/g,' ').trim() : '';
+ if(text!==lastNativeCaption){lastNativeCaption=text;nativeChangedAt=Date.now();}
+ // A stuck DOM caption must not disable recognition indefinitely.
+ runtimeMessage({type:'native-caption',text:Date.now()-nativeChangedAt<6000?text:''}).catch(()=>{});
+ document.querySelector('#movie_player')?.classList.toggle('jtl-native-active',hasJapanese(text)&&Date.now()-nativeChangedAt<6000);
+}
 function renderSubtitle(item) {
   if (!item || Date.now() / 1000 - item.updatedAt > 8) {
     document.querySelector("#jtl-subtitles")?.classList.remove("jtl-visible");
@@ -138,11 +146,13 @@ function renderSubtitle(item) {
   installSubtitleOverlay();
   const overlay = document.querySelector("#jtl-subtitles");
   if (!overlay) return;
-  const key = `${item.id}:${item.original}:${item.translated}`;
+  const key = `${item.id}:${item.original}:${item.translated}:${item.provisional}`;
   if (key === lastSubtitleKey) return;
   lastSubtitleKey = key;
   overlay.querySelector(".jtl-spoken").textContent = item.original || "";
   overlay.querySelector(".jtl-chinese").textContent = item.translated || "";
+  overlay.dataset.state=item.provisional?'provisional':'final';
+  overlay.title=item.provisional?'暫定字幕，句尾會校正':'已確認字幕';
   overlay.classList.toggle("jtl-visible", Boolean(item.original));
 }
 async function pollSubtitles() {
@@ -150,11 +160,13 @@ async function pollSubtitles() {
   polling=true;const epoch=pollEpoch;
   try {
     const data = await runtimeMessage({type: "subtitles"});
+    captionRunning=data.running;
+    if(!captionRunning)document.querySelector('#movie_player')?.classList.remove('jtl-native-active');
     if(epoch===pollEpoch)renderSubtitle(data.running ? data.items?.at(-1) : null);
   } catch (_error) {} finally {polling=false;}
 }
 chrome.runtime.onMessage.addListener(message => {
-  if (message.type === "subtitle-update" && window.top === window && !lastNativeCaption) renderSubtitle(message.item);
+  if (message.type === "subtitle-update" && window.top === window) renderSubtitle(message.item);
 });
 
 function editableText(box) {
@@ -203,7 +215,8 @@ new MutationObserver(() => {
 scan();
 if (window.top === window) {
  setInterval(pollSubtitles,700);
- const reset=()=>{pollEpoch++;lastSubtitleKey='';renderSubtitle(null);runtimeMessage({type:'subtitle-reset'}).catch(()=>{});};
+ setInterval(readNativeCaption,350);
+ const reset=()=>{pollEpoch++;lastNativeCaption='';nativeChangedAt=0;lastSubtitleKey='';renderSubtitle(null);runtimeMessage({type:'subtitle-reset'}).catch(()=>{});};
  document.addEventListener('yt-navigate-start',reset);
  document.addEventListener('seeking',event=>{if(event.target.tagName==='VIDEO')reset();},true);
 }
