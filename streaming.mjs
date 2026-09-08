@@ -68,6 +68,27 @@ export function trimOverlap(previous,text){
 export class Agreement {
  constructor(){this.reset();}
  reset(){this.id=null;this.previous='';this.stable='';this.tail='';this.prefixTail='';this.lastSample=-1;}
+ preview(text,job){
+  if(this.id!==null&&job.id<this.id)return null;
+  const tail=this.id===job.id?this.prefixTail:job.overlap?this.tail:'';
+  text=tail?trimOverlap(tail,text):text;
+  if(!text)return null;
+  if(this.id===job.id&&text.length<=this.previous.length)return null;
+  if(this.id===job.id){
+   const boundary=Math.max(this.previous.lastIndexOf('。'),this.previous.lastIndexOf('！'),this.previous.lastIndexOf('？'));
+   if(boundary>=0){
+    const prefix=this.previous.slice(0,boundary+1).replace(/[\p{P}\s]/gu,'');
+    let normalized='',end=0;
+    for(let i=0;i<text.length&&normalized.length<prefix.length;i++){if(!/[\p{P}\s]/u.test(text[i]))normalized+=text[i];end=i+1;}
+    if(normalized===prefix)text=text.slice(end).replace(/^[\p{P}\s]+/u,'');
+    // A changed earlier sentence cannot be aligned safely during generation.
+    // Wait for the completed decode instead of redisplaying old sentences.
+    else return null;
+   }
+  }
+  if(!text)return null;
+  return {text,stableText:'',provisional:true,revision:job.sampleCount};
+ }
  accept(text,job){
   if(this.id!==null&&job.id<this.id)return null;
   if(this.id!==job.id){this.prefixTail=job.overlap?this.tail:'';this.id=job.id;this.previous='';this.stable='';this.lastSample=-1;}
@@ -92,6 +113,10 @@ export class DecodeQueue {
   while(this.jobs.length>2){this.jobs.shift();this.dropped++;}
  }
  shift(){return this.jobs.shift();}
+ takeFresh(now,epoch){
+  while(this.jobs.length){const job=this.shift();if(job.epoch===epoch&&now-job.audioEndAt<=4000)return job;this.dropped++;}
+  return null;
+ }
 }
 export class Measurements {
  constructor(){this.values={};}

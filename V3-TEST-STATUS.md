@@ -1,4 +1,25 @@
-# 3.2.1 verification — 2026-09-08
+# 3.3.0 incremental output verification — 2026-09-08
+
+The same Whisper small FP32 model now emits decoded Japanese during generation, before the full inference returns. This is incremental output from windowed Whisper, not a native stateful streaming acoustic model; encoder work across windows is still repeated. No model fine-tuning was performed.
+
+Changes: 300 ms throttled token previews, incomplete-character protection, no rewind to shorter prefixes from a new decode, provisional/final correction through the existing paired translation scheduler, and draining expired audio jobs without blocking fresh queued work. Reset/seek rejects in-flight old previews. Diagnostics distinguish provisional first text from completed recognition.
+
+Controlled warm A/B/A/B in Opera on the same 10.7-second synthetic Japanese input:
+
+| Mode | First text | Full inference | Preview updates |
+| --- | ---: | ---: | ---: |
+| Wait for complete result | 1045 ms | 1045 ms | 0 |
+| Incremental output | 441 ms | 1073 ms | 3 |
+| Wait for complete result | 1100 ms | 1100 ms | 0 |
+| Incremental output | 457 ms | 1093 ms | 3 |
+
+The complete transcriptions matched. An earlier pair measured 1167 ms baseline versus 516 ms first incremental text / 1156 ms completion. These measure inference on already-available audio, excluding audio collection, translation and rendering. Digital silence still produced zero VAD segments; 1% volume fixture still produced speech segments.
+
+22 automated tests cover the controller and streamer in addition to the prior regressions. The controller test uses mocked audio/worker surfaces; actual model runs use the browser harness. The new `tests/capture.html` runs the normal extension capture, translation and overlay against a known WAV, for a separate end-to-end check.
+
+Actual tab-capture runs rendered changing Japanese/Chinese pairs. In the later run, the first Japanese appeared at 3.71 seconds and Chinese at 3.86 seconds after playback; the overlay was absent after the file ended while the history remained. Decode P50/P95 was 2336/3416 ms. These are one synthetic input under concurrent browser use, not a live accuracy benchmark. This run still reproduced earlier-sentence rewind when the model changed kana/kanji spelling, and a final recognition error. Preview alignment now suppresses any ambiguous changed completed prefix, with a regression assertion, rather than only long unpunctuated drafts. That last safeguard passes automated tests but has not yet been reloaded and rechecked in Opera. Version 3.3.0 was observed in the popup before that final safeguard. The installed directory contains the final files; runtime reload remains required. This is a prerelease, not completed live acceptance or native stateful streaming.
+
+## Previous 3.2.1 verification
 
 ## Implemented
 

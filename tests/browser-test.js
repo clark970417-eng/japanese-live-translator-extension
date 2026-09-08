@@ -1,4 +1,4 @@
-const log=x=>document.querySelector('#log').textContent+='\n'+x;
+const log=x=>{const line=document.createElement('div');line.textContent=x;document.querySelector('#log').append(line);};
 document.querySelector('#run').onclick=async()=>{
  document.querySelector('#run').disabled=true;
  const runId=Date.now();const vad=new Worker('../vad-worker.js?test='+runId,{type:'module'}),asr=new Worker('../speech-worker.js?test='+runId,{type:'module'});
@@ -27,6 +27,14 @@ document.querySelector('#run').onclick=async()=>{
   }
   log('載入 WebGPU Whisper…');const ready=await wait(asr,'ready',()=>asr.postMessage({type:'init'}));log('Whisper 已就緒 '+JSON.stringify(ready));
   const fullStart=performance.now();const full=await wait(asr,'result',()=>asr.postMessage({type:'decode',id:0,audio:pcm}));log('完整音訊基準 '+Math.round(performance.now()-fullStart)+' ms：'+full.text);
+  for(const stream of [false,true,false,true]){
+   const began=performance.now();let first=null,count=0;
+   const onPartial=e=>{if(e.data.type==='partial'){first??=performance.now()-began;count++;}};
+   asr.addEventListener('message',onPartial);
+   const result=await wait(asr,'result',()=>asr.postMessage({type:'decode',id:100,audio:pcm,stream}));
+   asr.removeEventListener('message',onPartial);
+   log(`${stream?'逐步輸出':'等整段完成'}：首次文字 ${Math.round(first??performance.now()-began)} ms；完成 ${Math.round(performance.now()-began)} ms；更新 ${count} 次；${result.text}`);
+  }
   for(const job of finalJobs.slice(0,5)){
    const start=performance.now();const result=await wait(asr,'result',()=>asr.postMessage({type:'decode',id:job.id,audio:job.audio}));
    log(Math.round(performance.now()-start)+' ms / '+(job.audio.length/16000).toFixed(2)+' 秒音訊：'+result.text);

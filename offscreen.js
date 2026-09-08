@@ -1,4 +1,4 @@
-import {SpeechResultFilter} from './stream-core.mjs';
+import {SpeechResultFilter,cleanText} from './stream-core.mjs';
 import {Agreement,DecodeQueue,Measurements} from './streaming.mjs';
 let active=null;
 const send=(s,type,extra={})=>{if(active===s)chrome.runtime.sendMessage({type,session:s.session,...extra}).catch(()=>{});};
@@ -9,7 +9,7 @@ function stop(){
  s.stream?.getTracks().forEach(t=>t.stop());s.context?.close().catch(()=>{});
 }
 function resetAudio(s){
- s.epoch++;s.queue.clear();s.filter.reset();s.agreement.reset();s.vadQueue=[];s.lastId=null;s.origin=Date.now();
+ s.epoch++;s.queue.clear();s.filter.reset();s.agreement.reset();s.vadQueue=[];s.lastId=null;s.previewId=null;s.origin=Date.now();
  s.vad?.postMessage({type:'reset',epoch:s.epoch,origin:s.origin,rate:s.context.sampleRate});
 }
 function decode(s,job){
@@ -42,7 +42,7 @@ function restartWorker(s,reason){
  send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
 }
 function initializeWorker(s){
- const worker=s.worker=new Worker('speech-worker.js?v=3.2.1',{type:'module'});
+ const worker=s.worker=new Worker('speech-worker.js?v=3.3.0',{type:'module'});
  worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
  worker.onmessage=({data})=>{
@@ -50,6 +50,16 @@ function initializeWorker(s){
   if(data.type==='progress'){clearTimeout(s.timeout);s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);if(Date.now()-(s.lastProgress||0)>1000){s.lastProgress=Date.now();send(s,'model-status',{text:'下載辨識模型 '+data.progress+'%…'});}return;}
   if(data.type==='ready'){clearTimeout(s.timeout);s.ready=true;s.model=data.model;s.dtype=data.dtype;send(s,'model-status',{text:data.model+' 已就緒，等待人聲'});return;}
   if(data.type==='error'){restartWorker(s,data.error);return;}
+  if(data.type==='partial'){
+   const job=s.busy;
+   if(!job||data.id!==job.id||job.epoch!==s.epoch||s.nativeUntil||Date.now()-job.audioEndAt>=5000)return;
+   const text=cleanText(data.text);
+   if(!text||job.voicedSeconds<.4||/視聴|チャンネル登録/.test(text))return;
+   const result=s.agreement.preview(text,job);if(!result)return;
+   if(s.previewId!==job.id){s.previewId=job.id;s.metrics.add('firstTokenMs',Date.now()-job.speechAt);}
+   send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,partial:true,decodeMs:Math.round(performance.now()-s.started),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
+   return;
+  }
   if(data.type!=='result')return;
   clearTimeout(s.timeout);s.decodeMs=performance.now()-s.started;s.metrics.add('decodeMs',s.decodeMs);
   const job=s.busy;s.busy=null;
@@ -62,12 +72,12 @@ function initializeWorker(s){
     send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,final:job.final,decodeMs:Math.round(s.decodeMs),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
    }else s.rejected++;
   }
-  const next=s.queue.shift();if(next)decode(s,next);
+  const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);
  };
  worker.postMessage({type:'init'});
 }
 function initializeVad(s){
- s.vad=new Worker('vad-worker.js?v=3.2.1',{type:'module'});
+ s.vad=new Worker('vad-worker.js?v=3.3.0',{type:'module'});
  s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入逾時'});stop();}},30000);
  s.vad.onerror=()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入失敗'});stop();}};
  s.vad.onmessage=({data:m})=>{

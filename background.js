@@ -43,7 +43,7 @@ async function translateItem(job){
  finally{captionRequests.delete(job);if(translationPending&&captionRequests.size<2){const next=translationPending;translationPending=null;if(next.session===gate.session)translateItem(next);}}
 }
 function addTranscript(m){
- m={...m,text:m.stableText||m.text};
+ m={...m,text:String(m.text||'').trim()};
  // Translate exactly the short source cue displayed, retaining the full ASR
  // hypothesis in the worker for agreement and overlap alignment.
  if(m.source!=='native'){
