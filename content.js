@@ -129,7 +129,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.subtitleSettings) applySubtitleSettings(changes.subtitleSettings.newValue);
 });
 
-let lastSubtitleKey = "";
+let lastSubtitleKey = "", subtitleExpiryTimer;
 let pollEpoch=0;
 let polling=false;
 let lastNativeCaption = "", nativeChangedAt=0, captionRunning=false;
@@ -138,12 +138,14 @@ function readNativeCaption(){
  const video=document.querySelector('#movie_player video');
  const text=video&&!video.paused ? [...document.querySelectorAll('#movie_player .ytp-caption-window-container .ytp-caption-segment')].map(el=>el.textContent).join(' ').replace(/\s+/g,' ').trim() : '';
  if(text!==lastNativeCaption){lastNativeCaption=text;nativeChangedAt=Date.now();}
- // A stuck DOM caption must not disable recognition indefinitely.
- runtimeMessage({type:'native-caption',text:Date.now()-nativeChangedAt<6000?text:''}).catch(()=>{});
- document.querySelector('#movie_player')?.classList.toggle('jtl-native-active',hasJapanese(text)&&Date.now()-nativeChangedAt<6000);
+ // Follow the visible native cue; its end is authoritative.
+ runtimeMessage({type:'native-caption',text}).catch(()=>{});
+ document.querySelector('#movie_player')?.classList.toggle('jtl-native-active',hasJapanese(text));
 }
 function renderSubtitle(item) {
-  if (!item || Date.now() / 1000 - item.updatedAt > 8) {
+  clearTimeout(subtitleExpiryTimer);
+  const expiresAt=item?.expiresAt??(item?.updatedAt+3);
+  if (!item || item.expired || Date.now()/1000 >= expiresAt) {
     document.querySelector("#jtl-subtitles")?.classList.remove("jtl-visible");
     lastSubtitleKey = "";
     return;
@@ -151,6 +153,8 @@ function renderSubtitle(item) {
   installSubtitleOverlay();
   const overlay = document.querySelector("#jtl-subtitles");
   if (!overlay) return;
+  overlay.dataset.expiresAt=expiresAt;
+  subtitleExpiryTimer=setTimeout(()=>renderSubtitle(null),Math.max(0,expiresAt*1000-Date.now()));
   const key = `${item.id}:${item.original}:${item.translated}:${item.provisional}`;
   if (key === lastSubtitleKey) return;
   lastSubtitleKey = key;

@@ -1,9 +1,9 @@
-let started=0,last='';
+let started=0,last='',lastExpiry=0,hideDrift=null;
 document.querySelector('#full-test').onclick=async event=>{
  const status=document.querySelector('#test-status'),video=document.querySelector('video');
  event.target.disabled=true;
  try{
-  document.querySelector('#events').replaceChildren();last='';started=0;
+  document.querySelector('#events').replaceChildren();last='';started=0;lastExpiry=0;hideDrift=null;
   const tab=await chrome.tabs.getCurrent();
   const reply=await chrome.runtime.sendMessage({type:'subtitle-control',action:'start',tabId:tab.id});
   if(!reply?.ok)throw Error(reply?.error||'啟動失敗');
@@ -21,7 +21,7 @@ document.querySelector('#full-test').onclick=async event=>{
   status.textContent='檢查播放結束後 12 秒的字幕清空';await new Promise(r=>setTimeout(r,12000));
   const visible=document.querySelector('#jtl-subtitles')?.classList.contains('jtl-visible');
   const count=document.querySelectorAll('#events tr').length;
-  status.textContent=`音檔完成；字幕更新 ${count} 次；結束後字幕${visible?'仍顯示（需檢查）':'已清空'}。`;
+  status.textContent=`音檔完成；字幕更新 ${count} 次；結束後字幕${visible?'仍顯示（需檢查）':'已清空'}；自動隱藏與截止時間相差 ${hideDrift===null?'未測得':hideDrift+' ms'}。`;
  }catch(error){status.textContent='測試未通過：'+error.message;}
  finally{video.pause();await chrome.runtime.sendMessage({type:'subtitle-control',action:'stop'});event.target.disabled=false;}
 };
@@ -29,7 +29,9 @@ document.querySelector('video').addEventListener('play',()=>{started=performance
 setInterval(()=>{
  chrome.runtime.sendMessage({type:'health'},reply=>{if(reply?.ok)document.querySelector('#health').textContent=reply.text.modelStatus+' / '+JSON.stringify(reply.text.diagnostics?.metrics||{});});
  const overlay=document.querySelector('#jtl-subtitles');
- if(!started||!overlay?.classList.contains('jtl-visible'))return;
+ if(!started)return;
+ if(!overlay?.classList.contains('jtl-visible')){if(lastExpiry){hideDrift=Math.round(Date.now()-lastExpiry*1000);lastExpiry=0;}return;}
+ lastExpiry=Number(overlay.dataset.expiresAt)||0;
  const ja=overlay.querySelector('.jtl-spoken').textContent,zh=overlay.querySelector('.jtl-chinese').textContent,key=ja+'|'+zh;
  if(key===last)return;last=key;
  const row=document.createElement('tr');for(const text of [((performance.now()-started)/1000).toFixed(2),ja,zh]){const cell=document.createElement('td');cell.textContent=text;row.append(cell);}document.querySelector('#events').append(row);

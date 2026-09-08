@@ -184,7 +184,7 @@
     try {
       const data = await message({type: 'subtitles'});
       const item = data.items?.slice().sort((a, b) => b.id - a.id)[0];
-      const fresh = data.running && item && Date.now() / 1000 - item.updatedAt < 8;
+      const fresh = data.running && item && !item.expired && Date.now()/1000 < (item.expiresAt??item.updatedAt+3);
       panel.querySelector('.jtl-x-original').textContent = fresh ? item.original : '';
       panel.querySelector('.jtl-x-translated').textContent = fresh
         ? (item.translated === '(translating...)' ? '翻譯中…' : item.translated) : '';

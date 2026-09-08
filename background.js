@@ -2,8 +2,12 @@ import {ResultGate} from './stream-core.mjs';
 import {CueCursor} from './cue-cursor.mjs';
 import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
 const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
+let captionHold=3;
+const setHold=value=>{captionHold=Math.max(1,Math.min(6,Number(value)||3));};
+chrome.storage.onChanged?.addListener((changes,area)=>{if(area==='local'&&changes.subtitleSettings)setHold(changes.subtitleSettings.newValue?.holdSeconds);});
+const fresh=item=>item&&!item.expired&&Date.now()/1000<(item.expiresAt??item.updatedAt+3);
 const items=[];let running=false,lastError="",captureTabId=null;
-const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode"]);
+const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode","subtitleSettings"]);
 const deadline=(signal,ms)=>signal?AbortSignal.any([signal,AbortSignal.timeout(ms)]):AbortSignal.timeout(ms);
 async function request(url,key,body,signal){const r=await fetch(url,{signal:deadline(signal,10000),method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok){const error=new Error(`API ${r.status}`);error.status=r.status;throw error;}return d}
 async function nvidia(text,from,to,signal){const {nvidiaKey}=await settings();if(!nvidiaKey)throw new Error("請先儲存 NVIDIA Key");const d=await request(`${NVIDIA}/chat/completions`,nvidiaKey,{model:"nvidia/riva-translate-4b-instruct-v2",messages:[{role:"system",content:`${from}-${to}`},{role:"user",content:text}],temperature:0,max_tokens:300},signal);return(d.choices?.[0]?.message?.content||"").trim()}
@@ -56,14 +60,15 @@ async function translateCaption(text,signal){
  const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
  const primary=async s=>validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW',s)),'ja-zh',text);
  const {nvidiaKey}=await settings();
- if(!nvidiaKey)return primary(signal);
- return firstTranslation(primary,async s=>validateTranslation(await nvidia(text,'ja','zh-tw',s),'ja-zh',text),signal);
+ if(!nvidiaKey)return primary(deadline(signal,3000));
+ return firstTranslation(primary,async s=>validateTranslation(polishChinese(text,await styledTranslation(text,'ja-zh',s)),'ja-zh',text),deadline(signal,3000),400);
 }
 const translationCache=new Map();
 function pushSubtitle(item){if(captureTabId)chrome.tabs.sendMessage(captureTabId,{type:'subtitle-update',item}).catch(()=>{});}
 async function translateItem(job){
  // Finish useful work; keep only the newest waiting revision. Repeatedly
  // aborting the oldest request starves subtitles on slower connections.
+ if(Date.now()-job.started>3000||job.item.expired)return;
  if(captionRequests.size>=2){translationPending=job;return;}
  const controller=new AbortController();captionRequests.set(job,controller);
  try {
@@ -71,8 +76,8 @@ async function translateItem(job){
   const result=translationCache.get(key)||await translateCaption(job.item.original,controller.signal);
   if(controller.signal.aborted)return;
   translationCache.set(key,result);if(translationCache.size>200)translationCache.delete(translationCache.keys().next().value);
-  if(gate.session===job.session&&job.item.id>publishedId&&Date.now()/1000-job.item.updatedAt<8){
-   publishedId=job.item.id;job.item.translated=result;items.length=0;items.push(job.item);
+  if(gate.session===job.session&&job.item.id>publishedId&&!job.item.expired&&Date.now()-job.started<3000){
+   publishedId=job.item.id;job.item.translated=result;job.item.expiresAt=Date.now()/1000+captionHold;items.length=0;items.push(job.item);
    lastError='';diagnostics.translationMs=Date.now()-job.started;diagnostics.chineseLagMs=job.item.audioEndAt?Date.now()-job.item.audioEndAt:diagnostics.translationMs;pushSubtitle(job.item);
   }
  } catch(e){if(!controller.signal.aborted&&gate.latest===job.item && gate.session===job.session)lastError='翻譯失敗：'+e.message;}
@@ -92,10 +97,10 @@ function addTranscript(m){
   if(Date.now()<nativeUntil || m.id<lastSpeechId)return;
   lastSpeechId=m.id;
  }
- if(gate.latest?.original===m.text && Date.now()/1000-gate.latest.updatedAt<2){gate.latest.provisional=Boolean(m.provisional);gate.latest.updatedAt=Date.now()/1000;if(items[0]===gate.latest)pushSubtitle(gate.latest);return;}
+ if(gate.latest?.original===m.text && gate.latest.speechId===m.id && gate.latest.source===m.source){gate.latest.provisional=Boolean(m.provisional);return;}
  const item=gate.accept(m.session,++outputSequence,m.text);if(!item)return;
- item.provisional=Boolean(m.provisional);item.audioEndAt=m.audioEndAt;item.stableText=m.stableText||'';
- if(!items[0]?.translated||Date.now()/1000-items[0].updatedAt>=8){items.length=0;items.push(item);pushSubtitle(item);}
+ item.source=m.source;item.speechId=m.id;item.expiresAt=Date.now()/1000+captionHold;item.provisional=Boolean(m.provisional);item.audioEndAt=m.audioEndAt;item.stableText=m.stableText||'';
+ if(!items[0]?.translated||!fresh(items[0])){items.length=0;items.push(item);pushSubtitle(item);}
  diagnostics.lastRecognition=Date.now();diagnostics.decodeMs=m.decodeMs;modelStatus='已辨識日文';
  translateItem({session:m.session,item,started:Date.now()});
 }
@@ -120,7 +125,7 @@ async function resetCapture(){
 }
 async function startCapture(tabId){
  if(!Number.isInteger(tabId))throw new Error('請先選擇影片分頁');
- await stopCapture();captureTabId=tabId;diagnostics={};lastError='';
+ await stopCapture();setHold((await settings()).subtitleSettings?.holdSeconds);captureTabId=tabId;diagnostics={};lastError='';
  await ensureOffscreen();
  const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});
  running=true;modelStatus='正在擷取分頁聲音';
@@ -145,14 +150,15 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
   if(text && /[\u3040-\u30ff]/.test(text)){
    nativeUntil=Date.now()+1800;
    chrome.runtime.sendMessage({type:'offscreen-native',session:gate.session}).catch(()=>{});
-   if(text!==nativeText){nativeText=text;addTranscript({session:gate.session,text,source:'native'});}
+   if(text!==nativeText){if(!nativeText){cancelTranslations();items.length=0;pushSubtitle(null);}nativeText=text;addTranscript({session:gate.session,text,source:'native'});}
+   if(gate.latest?.source==='native')gate.latest.expiresAt=Date.now()/1000+1.8;
    modelStatus='使用 YouTube 日文字幕';
-  } else {nativeUntil=0;nativeText='';}
+  } else {nativeUntil=0;nativeText='';if(gate.latest?.source==='native')gate.latest.expired=true;for(const [job,controller] of captionRequests){if(job.item.source==='native'){job.item.expired=true;controller.abort();}}if(translationPending?.item.source==='native')translationPending=null;if(items[0]?.source==='native'){items[0].expired=true;items.length=0;pushSubtitle(null);}}
   send({ok:true,text:{running}});return;
  }
  else if(m.type==='make-draft')task=makeDraft(m.text);
  else if(m.type==='translate')task=translate(m.text,m.direction,Boolean(m.priority));
- else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?items:[]});
+ else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?items.filter(fresh):[]});
  else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,diagnostics,captureTabId});
  else if(m.type==='subtitle-reset'){
   if(s.tab?.id!==captureTabId)return;
