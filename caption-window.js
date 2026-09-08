@@ -1,5 +1,9 @@
 (() => {
  if(window.JtlCaptionWindow)return;
+ // Display-only compression: keep stored transcripts and translation input intact.
+ window.jtlCompactCaption=text=>String(text||'').replace(/\s+/g,' ').trim()
+  .replace(/([あアぁァ啊呀哇])(?:[あアぁァ啊呀哇ー〜～]*\1){2,}[ー〜～]*[!！]*/gu,'$1～！')
+  .replace(/([\p{L}]{2,16}?)(?:[、,，\s]*\1){2,}[、,，]*/gu,'$1…');
  window.JtlCaptionWindow=class {
   constructor(root,key){
    this.root=root;this.key=key;root.classList.add('jtl-caption-window');
@@ -17,7 +21,7 @@
   apply(raw={}){const s={fontSize:22,captionOpacity:100,backgroundColor:'#000000',backgroundOpacity:60,japaneseColor:'#ffffff',chineseColor:'#ffffff',outlineWidth:1,...raw};this.root.style.setProperty('opacity',String(Math.max(0,Math.min(100,Number(s.captionOpacity)))/100));this.root.style.setProperty('--jtl-size',s.fontSize+'px');this.root.style.setProperty('--jtl-ja',s.japaneseColor);this.root.style.setProperty('--jtl-zh',s.chineseColor);this.root.style.setProperty('--jtl-outline',s.outlineWidth+'px');const hex=/^#[0-9a-f]{6}$/i.test(s.backgroundColor)?s.backgroundColor:'#000000';const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));this.root.style.setProperty('--jtl-bg',`rgba(${rgb.join(',')},${Math.max(0,Math.min(100,Number(s.backgroundOpacity)))/100})`);}
   render(rows){
    const signature=JSON.stringify(rows);if(signature===this.signature)return;this.signature=signature;
-   this.lines.replaceChildren(...rows.slice(-4).map(row=>{const pair=document.createElement('div');pair.className='jtl-pair';for(const [cls,text] of [['jtl-spoken',row.original],['jtl-chinese',row.translated]]){const line=document.createElement('div');line.className=cls;const value=(text||'').replace(/\s+/g,' ').trim();if(value){const backing=document.createElement('span');backing.textContent=value;line.append(backing);}pair.append(line);}return pair;}));
+   this.lines.replaceChildren(...rows.slice(-4).map(row=>{const pair=document.createElement('div');pair.className='jtl-pair';for(const [cls,text] of [['jtl-spoken',row.original],['jtl-chinese',row.translated]]){const line=document.createElement('div');line.className=cls;const value=window.jtlCompactCaption(text);if(value){const backing=document.createElement('span');backing.textContent=value;line.append(backing);}pair.append(line);}return pair;}));
    this.lines.scrollTop=this.lines.scrollHeight;
   }
   begin(event){
