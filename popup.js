@@ -23,3 +23,6 @@ $('#saveTranslation').onclick=async()=>{
  $('#translationStatus').textContent='已儲存。下一次翻譯會使用新設定。';await loadTranslationStatus();
 };
 loadTranslationStatus();
+
+chrome.storage.local.get('websiteTextEnabled').then(s=>$('#websiteText').checked=s.websiteTextEnabled!==false);
+$('#websiteText').onchange=()=>chrome.storage.local.set({websiteTextEnabled:$('#websiteText').checked});

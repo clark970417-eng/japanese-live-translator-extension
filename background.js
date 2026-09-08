@@ -5,7 +5,7 @@ const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nv
 const items=[];let running=false,lastError="",captureTabId=null;
 const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode"]);
 const deadline=(signal,ms)=>signal?AbortSignal.any([signal,AbortSignal.timeout(ms)]):AbortSignal.timeout(ms);
-async function request(url,key,body,signal){const r=await fetch(url,{signal:deadline(signal,10000),method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error?.message||d.detail||`API ${r.status}`);return d}
+async function request(url,key,body,signal){const r=await fetch(url,{signal:deadline(signal,10000),method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok){const error=new Error(`API ${r.status}`);error.status=r.status;throw error;}return d}
 async function nvidia(text,from,to,signal){const {nvidiaKey}=await settings();if(!nvidiaKey)throw new Error("請先儲存 NVIDIA Key");const d=await request(`${NVIDIA}/chat/completions`,nvidiaKey,{model:"nvidia/riva-translate-4b-instruct-v2",messages:[{role:"system",content:`${from}-${to}`},{role:"user",content:text}],temperature:0,max_tokens:300},signal);return(d.choices?.[0]?.message?.content||"").trim()}
 async function freeTranslate(text,from,to,signal){
  const q=new URLSearchParams({client:'gtx',sl:from,tl:to,dt:'t',q:text});
@@ -26,7 +26,12 @@ async function styledTranslation(text,direction,signal){
  const {openrouterKey,nvidiaKey}=await settings();
  const messages=[{role:'system',content:direction==='zh-ja'?viewerPrompt:chinesePrompt},{role:'user',content:text}];
  const providers=[];
- if(nvidiaKey)providers.push(()=>request(`${NVIDIA}/chat/completions`,nvidiaKey,{model:'qwen/qwen3.5-397b-a17b',messages,temperature:0.2,max_tokens:600,chat_template_kwargs:{enable_thinking:false}},signal));
+ if(nvidiaKey){
+  for(const model of ['nvidia/nemotron-3.5-lightning-30b-a3b'])providers.push(async()=>{
+   const result=await request(`${NVIDIA}/chat/completions`,nvidiaKey,{model,messages,temperature:0.2,max_tokens:600,chat_template_kwargs:{enable_thinking:false}},signal);
+   return result;
+  });
+ }
  if(openrouterKey)providers.push(()=>request(`${OPENROUTER}/chat/completions`,openrouterKey,{model:'google/gemma-4-31b-it:free',messages,temperature:0.2,max_tokens:600},signal));
  for(const run of providers){try{const d=await run();if(d.choices?.[0]?.finish_reason==='length')throw new Error('翻譯被截斷');return validateTranslation(d.choices?.[0]?.message?.content,direction,text);}catch(error){if(signal?.aborted)throw error;}}
  throw new Error(direction==='zh-ja'?'可愛禮貌語氣翻譯目前無法使用，請確認 NVIDIA／OpenRouter Key 或稍後重試':'情境翻譯目前無法使用');

@@ -1,6 +1,7 @@
 (() => {
 if(window.__jtlV3)return;window.__jtlV3=true;
-const translated = new WeakMap();
+let translated = new WeakMap();
+let websiteTextEnabled=false, textEpoch=0;
 const cache = new Map();
 
 const hasJapanese = text => /[\u3040-\u30ff]/.test(text);
@@ -21,14 +22,15 @@ function requestTranslation(text, direction, priority = false) {
 }
 
 async function translateElement(element, className, priority = false) {
-  if (!element) return false;
+  if (!websiteTextEnabled || !element) return false;
+  const epoch=textEpoch;
   const text = element.textContent.trim();
   if (!text || !hasJapanese(text)) return false;
   if (translated.get(element) === text) return true;
   translated.set(element, text);
   try {
     const result = await requestTranslation(text, "ja-zh", priority);
-    if (!element.isConnected || element.textContent.trim() !== text || !result) return false;
+    if (!websiteTextEnabled || epoch!==textEpoch || !element.isConnected || element.textContent.trim() !== text || !result) return false;
     const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
     let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
     if (!line) {
@@ -45,6 +47,8 @@ async function translateElement(element, className, priority = false) {
 }
 
 function scan() {
+  if (window.top === window) installSubtitleOverlay();
+  if (!websiteTextEnabled) return;
   if (window.top === window) {
     const title = document.querySelector("ytd-watch-metadata h1 yt-formatted-string");
     const titleLines = [...document.querySelectorAll(".jtl-title")];
@@ -121,6 +125,7 @@ function applySubtitleSettings(settings) {
   if (settings) apply(settings); else chrome.storage.local.get("subtitleSettings", ({subtitleSettings}) => apply(subtitleSettings));
 }
 chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.websiteTextEnabled) setWebsiteText(changes.websiteTextEnabled.newValue!==false);
   if (area === "local" && changes.subtitleSettings) applySubtitleSettings(changes.subtitleSettings.newValue);
 });
 
@@ -208,6 +213,12 @@ function installComposerButton() {
   anchor.parentElement?.append(button, status);
 }
 
+function setWebsiteText(enabled){
+ websiteTextEnabled=enabled;textEpoch++;translated=new WeakMap();
+ if(!enabled)document.querySelectorAll('.jtl-title,.jtl-translation,.jtl-comment-action,.jtl-compose,.jtl-status').forEach(el=>el.remove());
+ else scan();
+}
+chrome.storage.local.get('websiteTextEnabled').then(s=>setWebsiteText(s.websiteTextEnabled!==false));
 let timer;
 new MutationObserver(() => {
   clearTimeout(timer);

@@ -1,5 +1,6 @@
 // X uses a separate script so YouTube's player and composer stay independent.
 (() => {
+  let websiteTextEnabled=false;
   const composers = new WeakMap();
   const posts = new WeakMap();
   let panel;
@@ -194,10 +195,21 @@
   }
 
   function scan() {
+    if(websiteTextEnabled){
     document.querySelectorAll('[contenteditable="true"][data-testid^="tweetTextarea_"]').forEach(addComposer);
     document.querySelectorAll('[data-testid="tweetText"]').forEach(addPost);
+    }
     syncSpacePanel();
   }
+  function setWebsiteText(enabled){
+    websiteTextEnabled=enabled;
+    if(!enabled)document.querySelectorAll('.jtl-x-controls').forEach(el=>el.remove());
+    scan();
+  }
+  chrome.storage.local.get('websiteTextEnabled').then(s=>setWebsiteText(s.websiteTextEnabled!==false));
+  chrome.storage.onChanged.addListener((changes,area)=>{
+    if(area==='local'&&changes.websiteTextEnabled)setWebsiteText(changes.websiteTextEnabled.newValue!==false);
+  });
   let scheduled = false;
   new MutationObserver(() => {
     if (scheduled) return;
