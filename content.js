@@ -196,9 +196,10 @@ function installComposerButton() {
     button.disabled = true;
     status.textContent = "翻譯中…";
     try {
-      const result = await requestTranslation(text, "zh-ja");
-      replaceEditable(box, result);
-      status.textContent = "已翻成日文，確認後按送出";
+      const result = await runtimeMessage({type:'make-draft',text});
+      if(editableText(box)!==text){status.textContent='原文已修改，請重新翻譯';return;}
+      replaceEditable(box, result.draft);
+      status.textContent = `${result.mode}，確認後按送出`;
     } catch (error) {
       status.textContent = `翻譯失敗：${error.message}`;
     } finally { button.disabled = false; }

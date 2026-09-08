@@ -55,3 +55,6 @@ API Key 儲存在瀏覽器的 `chrome.storage.local`，不包含於原始碼、G
 完整收音測試：載入包含 `tests/` 的擴充功能後，開啟 `chrome-extension://你的擴充功能ID/tests/capture.html`，先從工具列按「開始」，等模型就緒後播放音檔。表格記錄正式字幕介面出現的日中配對與播放後時間；此測試也會使用正常的網路翻譯服務。
 
 增量輸出使用 [Transformers.js 的 streamer 介面](https://huggingface.co/docs/transformers.js/en/api/generation/streamers)，並依本專案所附執行檔的 `put/end` 協定實作日文預覽。
+# Translation update 3.3.1
+
+Reviewed short phrases, shared text requests, slow-request backup, and polite/cute viewer drafts are documented in [TRANSLATION-NOTES.md](TRANSLATION-NOTES.md). The popup has collapsed NVIDIA/OpenRouter settings. Without a working style provider, drafts explicitly say they are general machine translation. Full clauses are retained for translation instead of deleting their opening words to fit the subtitle line. No model training was performed.

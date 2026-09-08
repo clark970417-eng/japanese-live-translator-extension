@@ -3,14 +3,16 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 import {ResultGate} from '../stream-core.mjs';
+import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from '../translation-policy.mjs';
 test('slow translation still publishes paired captions; queue coalesces and stop aborts',async()=>{
  let listener,session;const requests=[];
  const chrome={storage:{local:{get:async()=>({})}},tabs:{sendMessage:async()=>{},onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
- const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace("import {ResultGate} from './stream-core.mjs';",'');
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
  const fetch=(_,options)=>new Promise((resolve,reject)=>{requests.push({signal:options.signal,finish:text=>resolve({ok:true,json:async()=>[[[text]]]})});options.signal.addEventListener('abort',()=>reject(new Error('aborted')));});
- vm.runInNewContext(src,{chrome,ResultGate,URLSearchParams,AbortSignal,AbortController,Date,console,fetch});
+ vm.runInNewContext(src,{chrome,ResultGate,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch});
  const call=m=>new Promise(resolve=>listener(m,{},resolve));await call({type:'subtitle-control',action:'start',tabId:7});
  for(let id=1;id<=4;id++)listener({type:'speech-result',session,id,text:'こんにちは'+id},{url:'chrome-extension://test/offscreen.html'},()=>{});
+ await new Promise(r=>setTimeout(r,0));
  assert.equal(requests.length,2);assert.equal(requests[0].signal.aborted,false);
  const flush=()=>new Promise(r=>setTimeout(r,0));
  const current=()=>new Promise(resolve=>listener({type:'subtitles'},{tab:{id:7}},r=>resolve(r.text.items[0])));

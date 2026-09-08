@@ -12,3 +12,14 @@ $("#reset").onclick=async()=>{controls.forEach(id=>$("#"+id).value=defaults[id])
 $("#start").onclick=async()=>{const[tab]=await chrome.tabs.query({active:true,currentWindow:true});$("#status").textContent="正在擷取聲音…";try{await send({type:"subtitle-control",action:"start",tabId:tab.id});await refresh()}catch(e){$("#status").textContent=`提示：${e.message}`}};
 $("#stop").onclick=async()=>{await send({type:"subtitle-control",action:"stop"});refresh()};
 loadSettings();refresh();setInterval(refresh,1500);
+async function loadTranslationStatus(){
+ const values=await chrome.storage.local.get(['nvidiaKey','openrouterKey']);
+ for(const id of ['nvidiaKey','openrouterKey'])$('#'+id).placeholder=values[id]?'已儲存（留空保留）':'尚未設定';
+}
+$('#saveTranslation').onclick=async()=>{
+ const values={};for(const id of ['nvidiaKey','openrouterKey']){const value=$('#'+id).value.trim();if(value)values[id]=value;}
+ await chrome.storage.local.set(values);
+ for(const id of ['nvidiaKey','openrouterKey'])$('#'+id).value='';
+ $('#translationStatus').textContent='已儲存。下一次翻譯會使用新設定。';await loadTranslationStatus();
+};
+loadTranslationStatus();

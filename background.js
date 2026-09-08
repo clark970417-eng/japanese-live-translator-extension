@@ -1,4 +1,5 @@
 import {ResultGate} from './stream-core.mjs';
+import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
 const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
 const items=[];let running=false,lastError="",captureTabId=null;
 const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode"]);
@@ -12,16 +13,44 @@ async function freeTranslate(text,from,to,signal){
  const d=await r.json();const result=(d[0]||[]).map(x=>x[0]||'').join('').trim();
  if(!result)throw new Error('翻譯回應為空');return result;
 }
-async function translate(text,direction,allowFree=true){if(direction==="ja-zh"){if(allowFree){try{const result=await freeTranslate(text,"ja","zh-TW");if(/[\u3400-\u9fff]/.test(result))return result}catch(_error){}}const result=await nvidia(text,"ja","zh-tw");if(!/[\u3400-\u9fff]/.test(result))throw new Error("翻譯服務未回傳中文");return result}const {openrouterKey}=await settings();if(!openrouterKey)return freeTranslate(text,"zh-TW","ja");try{const d=await request(`${OPENROUTER}/chat/completions`,openrouterKey,{model:"google/gemma-4-31b-it:free",messages:[{role:"system",content:"將中文翻成適合對日本 VTuber 留言的自然日文。親切、柔和、有一點可愛並保持禮貌；忠實保留原意，不擅自增加稱呼、告白或表情。只輸出可直接貼出的日文。"},{role:"user",content:text}],temperature:0,max_tokens:300});return(d.choices?.[0]?.message?.content||"").trim()}catch(_error){return freeTranslate(text,"zh-TW","ja")}}
+const textMemo=new TranslationMemo();
+async function makeDraft(text){
+ if(typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的中文');
+ text=text.trim();
+ const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
+ try{return {draft:await textMemo.run('styled:'+text,()=>styledTranslation(text,'zh-ja')),mode:'可愛禮貌'};}
+ catch(_error){return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}
+}
+async function styledTranslation(text,direction,signal){
+ const {openrouterKey,nvidiaKey}=await settings();
+ const messages=[{role:'system',content:direction==='zh-ja'?viewerPrompt:chinesePrompt},{role:'user',content:text}];
+ const providers=[];
+ if(nvidiaKey)providers.push(()=>request(`${NVIDIA}/chat/completions`,nvidiaKey,{model:'qwen/qwen3.5-397b-a17b',messages,temperature:0.2,max_tokens:600,chat_template_kwargs:{enable_thinking:false}},signal));
+ if(openrouterKey)providers.push(()=>request(`${OPENROUTER}/chat/completions`,openrouterKey,{model:'google/gemma-4-31b-it:free',messages,temperature:0.2,max_tokens:600},signal));
+ for(const run of providers){try{const d=await run();if(d.choices?.[0]?.finish_reason==='length')throw new Error('翻譯被截斷');return validateTranslation(d.choices?.[0]?.message?.content,direction,text);}catch(error){if(signal?.aborted)throw error;}}
+ throw new Error(direction==='zh-ja'?'可愛禮貌語氣翻譯目前無法使用，請確認 NVIDIA／OpenRouter Key 或稍後重試':'情境翻譯目前無法使用');
+}
+async function translate(text,direction,priority=false){
+ if(!['ja-zh','zh-ja'].includes(direction)||typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的日文或中文');
+ text=text.trim();
+ return textMemo.run(direction+':'+priority+':'+text,async()=>{
+  const phrase=phraseTranslation(text,direction);if(phrase)return phrase;
+  if(direction==='zh-ja')return (await makeDraft(text)).draft;
+  if(priority){try{return await styledTranslation(text,direction);}catch(_error){}}
+  return translateCaption(text);
+ });
+}
 const gate=new ResultGate();
 let nativeUntil=0, nativeText='', outputSequence=0, lastSpeechId=-1;
 let diagnostics={}, modelStatus='', controlBusy=false, translationPending=null, publishedId=-1;
 const captionRequests=new Map();
 function cancelTranslations(){translationPending=null;publishedId=-1;for(const controller of captionRequests.values())controller.abort();captionRequests.clear();}
 async function translateCaption(text,signal){
- const validate=result=>{if(!/[\u3400-\u9fff]/.test(result)||/[\u3040-\u30ff]/.test(result))throw new Error('翻譯服務未回傳中文');return result;};
- try{return validate(await freeTranslate(text,'ja','zh-TW',signal));}
- catch(error){if(signal.aborted)throw error;return validate(await nvidia(text,'ja','zh-tw',signal));}
+ const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
+ const primary=async s=>validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW',s)),'ja-zh',text);
+ const {nvidiaKey}=await settings();
+ if(!nvidiaKey)return primary(signal);
+ return firstTranslation(primary,async s=>validateTranslation(await nvidia(text,'ja','zh-tw',s),'ja-zh',text),signal);
 }
 const translationCache=new Map();
 function pushSubtitle(item){if(captureTabId)chrome.tabs.sendMessage(captureTabId,{type:'subtitle-update',item}).catch(()=>{});}
@@ -50,7 +79,8 @@ function addTranscript(m){
   const clauses=m.text.match(/[^。！？!?]+[。！？!?]?/gu)||[m.text];
   m.text=clauses.at(-1).trim();
   if(m.text.length<4&&clauses.length>1)m.text=clauses.at(-2).trim()+m.text;
-  if(m.text.length>44)m.text=m.text.slice(-44);
+  // Keep the whole clause for translation; CSS controls visible line length.
+  // Cutting the last 44 characters here discarded subjects and negation.
  }
  if(m.source!=='native'){
   if(Date.now()<nativeUntil || m.id<lastSpeechId)return;
@@ -112,7 +142,8 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
   } else {nativeUntil=0;nativeText='';}
   send({ok:true,text:{running}});return;
  }
- else if(m.type==='translate')task=translate(m.text,m.direction,true);
+ else if(m.type==='make-draft')task=makeDraft(m.text);
+ else if(m.type==='translate')task=translate(m.text,m.direction,Boolean(m.priority));
  else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?items:[]});
  else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,diagnostics,captureTabId});
  else if(m.type==='subtitle-reset'){

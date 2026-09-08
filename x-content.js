@@ -63,10 +63,12 @@
       apply.hidden = true;
       status.textContent = '翻譯中…';
       try {
-        preview.value = await message({type: 'translate', text: source, direction: 'zh-ja'});
+        const result = await message({type: 'make-draft', text: source});
+        if(read(box)!==source){status.textContent='原文已修改，請重新翻譯';return;}
+        preview.value = result.draft;
         preview.hidden = false;
         apply.hidden = false;
-        status.textContent = '可以修改日文草稿，再放入留言框。';
+        status.textContent = `${result.mode}。可以修改草稿，再放入留言框。`;
       } catch (error) { status.textContent = error.message; }
       finally { translate.disabled = false; }
     });

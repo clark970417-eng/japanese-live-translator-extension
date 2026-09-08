@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "日文直播翻譯助手",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "YouTube 與 X Spaces 日文語音字幕、貼文翻譯，以及親切可愛的中文轉日文留言草稿。",
   "icons": {
     "16": "icons/icon-16.png",
