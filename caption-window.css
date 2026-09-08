@@ -1,4 +1,4 @@
-.jtl-caption-window{position:absolute;left:8%;bottom:8%;width:84%;height:75%;box-sizing:border-box;background:var(--jtl-bg,rgba(0,0,0,.6))!important;border:1px solid transparent;z-index:80;pointer-events:auto;cursor:move;touch-action:none;text-align:left;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif}
+.jtl-caption-window{position:fixed;left:8%;bottom:8%;width:84%;height:75%;box-sizing:border-box;background:var(--jtl-bg,rgba(0,0,0,.6))!important;border:1px solid transparent;z-index:2147483646;pointer-events:auto;cursor:move;touch-action:none;text-align:left;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif}
 .jtl-caption-window:hover{border-color:#ffffff66}
 .jtl-caption-window .jtl-lines{height:100%;overflow:auto;scrollbar-width:thin;box-sizing:border-box;padding:8px;display:flex;flex-direction:column;justify-content:safe flex-end;font-size:var(--jtl-size,22px);line-height:1.35;background:transparent}
 .jtl-caption-window .jtl-pair{flex:none}

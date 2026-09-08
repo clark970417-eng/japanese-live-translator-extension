@@ -95,7 +95,7 @@ function runtimeMessage(message) {
 }
 
 function installSubtitleOverlay() {
-  const player = document.querySelector("#movie_player");
+  const player = document.fullscreenElement || document.body;
   if(!player)return;
   const existing=document.querySelector('#jtl-subtitles');
   if(existing){if(existing.parentElement!==player)player.append(existing);return;}

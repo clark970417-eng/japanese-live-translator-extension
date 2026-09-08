@@ -5,7 +5,7 @@ const tick=()=>new Promise(r=>setTimeout(r,0));
 test('recording persists before translating, keeps new speech during slow API, rotates four in translation order',async()=>{
  let saved=[],pending=[];const q=new RecordingQueue({save:async entries=>saved=entries,translate:text=>new Promise(resolve=>pending.push({text,resolve}))});
  for(let i=1;i<=6;i++)await q.add({key:''+i,group:''+i,session:'s',original:'句'+i});
- assert.equal(saved.length,6);assert.equal(pending.length,1);assert.equal(q.rows('s')[0].original,'句1');
+ assert.equal(saved.length,6);assert.equal(pending.length,1);assert.deepEqual(q.rows('s').map(e=>e.original),['句3','句4','句5','句6']);
  for(let i=0;i<6;i++){assert.equal(pending[i].text,'句'+(i+1));pending[i].resolve('譯'+(i+1));await tick();}
  assert.deepEqual(q.rows('s').map(e=>e.original),['句3','句4','句5','句6']);assert.ok(saved.every(e=>e.state==='done'));
  await q.add({key:'6',group:'6',session:'s',original:'句6'});assert.equal(q.entries.length,6);
@@ -25,4 +25,11 @@ test('continuous speech chunks share an utterance, pause starts the next utteran
  const windows=new SpeechWindows();const jobs=[];for(let i=0;i<800;i++){const job=windows.push(new Float32Array(512),.9);if(job?.final)jobs.push(job);}assert.ok(jobs.length>=2);assert.equal(jobs[0].utteranceId,jobs[1].utteranceId);
  for(let i=0;i<22;i++)windows.push(new Float32Array(512),0);
  let next;for(let i=0;i<45;i++){const job=windows.push(new Float32Array(512),.9);if(job)next=job;}assert.ok(next.utteranceId>jobs[0].utteranceId);
+});
+
+test('stalled translation times out and new speech still rotates the visible four',async()=>{
+ const q=new RecordingQueue({save:async()=>{},timeoutMs:15,translate:text=>text==='1'?new Promise(()=>{}):Promise.resolve('中'+text)});
+ for(let i=1;i<=5;i++)await q.add({key:String(i),group:String(i),session:'s',original:String(i)});
+ assert.deepEqual(q.rows('s').map(e=>e.original),['2','3','4','5']);
+ await new Promise(r=>setTimeout(r,40));assert.equal(q.entries[0].state,'failed');assert.equal(q.entries[4].translated,'中5');assert.equal(q.pending,0);
 });

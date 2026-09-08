@@ -51,7 +51,7 @@ async function translate(text,direction,priority=false){
   return translateCaption(text);
  });
 }
-let recordingReady;
+let recordingReady,recordingPreview=null;
 const recording=new RecordingQueue({
  save:entries=>chrome.storage.local.set({recordedCaptions:entries}),
  translate:text=>textMemo.run('record:'+text,async()=>{const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;try{return await styledTranslation(text,'ja-zh');}catch(_){return translateCaption(text);}}),
@@ -59,9 +59,10 @@ const recording=new RecordingQueue({
  onError:()=>{lastError='字幕記錄無法儲存，請匯出記錄並檢查儲存空間';if(running)stopCapture();}
 });
 function initRecording(){return recordingReady??=chrome.storage.local.get('recordedCaptions').then(s=>recording.restore(Array.isArray(s.recordedCaptions)?s.recordedCaptions:[]));}
-function recordingItem(){return {id:'recording',recordingRows:recording.rows(gate.session),original:'',translated:'',updatedAt:Date.now()/1000};}
+function recordingItem(){const rows=recording.rows(gate.session);if(recordingPreview?.session===gate.session){const existing=rows.find(r=>r.id===recordingPreview.group);if(existing)existing.original+=' '+recordingPreview.original;else rows.push({id:recordingPreview.group,original:recordingPreview.original,translated:''});}return {id:'recording',recordingRows:rows.slice(-4),original:'',translated:'',updatedAt:Date.now()/1000};}
 function recordTranscript(m){
- if(m.source!=='native'&&!m.final)return;
+ if(m.source!=='native'&&!m.final){if(m.partial&&m.text){recordingPreview={session:gate.session,group:gate.session+':'+m.utteranceId,original:m.text};pushSubtitle(recordingItem());}return;}
+ recordingPreview=null;
  const text=String(m.text||'').replace(/\s+/g,' ').trim();if(!text)return;
  const key=gate.session+':'+(m.source==='native'?'native-'+(++outputSequence):m.id);
  recording.add({key,session:gate.session,group:gate.session+':'+(m.utteranceId??key),original:text,createdAt:Date.now()}).catch(()=>{});

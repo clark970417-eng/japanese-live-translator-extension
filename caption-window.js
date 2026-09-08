@@ -21,7 +21,7 @@
    if(event.button!==0)return;
    const root=this.root,parent=root.parentElement;if(!parent)return;
    event.preventDefault();event.stopPropagation();
-   const box=root.getBoundingClientRect(),host=parent.getBoundingClientRect(),side=event.target.dataset.side||'';
+   const box=root.getBoundingClientRect(),host={left:0,top:0,width:window.innerWidth,height:window.innerHeight},side=event.target.dataset.side||'';
    const start={x:box.left-host.left,y:box.top-host.top,w:box.width,h:box.height,px:event.clientX,py:event.clientY};
    root.setPointerCapture(event.pointerId);
    const move=e=>{
