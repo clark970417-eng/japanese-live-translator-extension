@@ -1,0 +1,5 @@
+const result=document.querySelector('#result');document.querySelector('#start').onclick=async()=>{
+ try{const ctx=new AudioContext();const buffer=await ctx.decodeAudioData(await(await fetch('japanese-fixture.wav')).arrayBuffer());const audio=buffer.getChannelData(0);let at=0,segments=0,voiced=0,frames=0,max=0;const worker=new Worker('../vad-worker.js',{type:'module'});
+ const next=()=>{if(at>=audio.length){result.textContent=JSON.stringify({done:true,frames,voiced,max,segments,duration:buffer.duration});worker.terminate();ctx.close();return;}const frame=audio.slice(at,at+4096);at+=frame.length;worker.postMessage({type:'audio',audio:frame,epoch:0,interval:.65});};
+ worker.onerror=e=>result.textContent='Error: '+e.message;worker.onmessage=({data:m})=>{if(m.type==='ready')next();if(m.type==='segment')segments++;if(m.type==='processed'){frames++;max=Math.max(max,m.probability);if(m.probability>=.3)voiced++;next();}if(m.type==='error')result.textContent=m.error;};worker.postMessage({type:'init',rate:buffer.sampleRate,epoch:0,origin:Date.now()});result.textContent='執行中';}catch(e){result.textContent=e.stack;}
+};

@@ -1,10 +1,11 @@
 import {ort} from './whisper-runtime.js';
-import {Resampler,SpeechWindows,SpeechGain} from './streaming.mjs?v=3.4.6';
+import {Resampler,SpeechWindows,SpeechGain} from './streaming.mjs?v=3.4.7';
 ort.env.wasm.wasmPaths=new URL('./ort/',import.meta.url).href;
 ort.env.wasm.numThreads=1;
+let context=new Float32Array(64);
 let session,state,sr,resampler,windows,gain,pending=[],epoch=0,origin=0;
 function reset(m){
- epoch=m.epoch;origin=m.origin;pending=[];resampler=new Resampler(m.rate);windows=new SpeechWindows();gain=new SpeechGain();
+ context=new Float32Array(64);epoch=m.epoch;origin=m.origin;pending=[];resampler=new Resampler(m.rate);windows=new SpeechWindows();gain=new SpeechGain();
  state?.dispose();state=new ort.Tensor('float32',new Float32Array(256),[2,1,128]);
 }
 let chain=Promise.resolve();
@@ -20,7 +21,8 @@ self.onmessage=({data:m})=>{
   let probability=0;
   while(pending.length>=512){
    const audio=gain.push(Float32Array.from(pending.splice(0,512)));
-   const input=new ort.Tensor('float32',audio,[1,512]);
+   const contextual=new Float32Array(576);contextual.set(context);contextual.set(audio,64);context=audio.slice(-64);
+   const input=new ort.Tensor('float32',contextual,[1,576]);
    const out=await session.run({input,state,sr});
    input.dispose();state.dispose();state=out.stateN;
    probability=Number(out.output.data[0]);out.output.dispose();
