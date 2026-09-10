@@ -1,4 +1,15 @@
-# Native caption companion (experimental)
+# Native messaging installation
+
+The current desktop integration uses the complete application in
+[desktop-app](../desktop-app/INTEGRATION.md). Pass `--app` to the installer to
+register its executable. `relay.py` starts that app and forwards messages; no
+inference occurs in the relay. The local app build uses upstream MLX Whisper
+Large v3 Turbo and HY-MT GGUF through node-llama-cpp.
+
+The following describes the retained legacy Python inference option, selected
+when the installer is run without `--app`. Its weights may need downloading again.
+
+## Legacy Python inference
 
 The extension controls an on-demand Python companion through Chromium native
 messaging. Tab capture and caption rendering remain in the extension. Whisper

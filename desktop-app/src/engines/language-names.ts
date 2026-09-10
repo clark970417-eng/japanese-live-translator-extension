@@ -12,7 +12,7 @@
 export const LANG_NAMES_EN: Record<string, string> = {
   ja: 'Japanese',
   en: 'English',
-  zh: 'Chinese',
+  zh: 'Traditional Chinese',
   'zh-Hant': 'Traditional Chinese',
   fr: 'French',
   de: 'German',
@@ -54,7 +54,7 @@ export const LANG_NAMES_EN: Record<string, string> = {
 export const LANG_NAMES_ZH: Record<string, string> = {
   ja: '日语',
   en: '英语',
-  zh: '中文',
+  zh: '繁體中文',
   'zh-Hant': '繁体中文',
   fr: '法语',
   de: '德语',

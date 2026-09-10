@@ -73,7 +73,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
 
   async initialize(): Promise<void> {
     if (this.initPromise) return this.initPromise
-    this.initPromise = this.doInitialize()
+    this.initPromise = this.doInitialize().catch(error => { this.initPromise = null; throw error })
     return this.initPromise
   }
 

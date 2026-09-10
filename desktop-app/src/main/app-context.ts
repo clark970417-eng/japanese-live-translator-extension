@@ -13,6 +13,8 @@ import type { VirtualMicManager } from './virtual-mic-manager'
  * reference captured at registration time.
  */
 export interface AppContext {
+  /** Prevent the desktop capture controls from interrupting an extension session. */
+  extensionConnected?: boolean
   mainWindow: BrowserWindow | null
   subtitleWindow: BrowserWindow | null
   pipeline: TranslationPipeline | null

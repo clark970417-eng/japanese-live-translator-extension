@@ -55,6 +55,7 @@ interface PipelineStartConfig extends EngineConfig {
 /** Register pipeline control IPC handlers */
 export function registerPipelineIpc(ctx: AppContext): void {
   ipcMain.handle('pipeline-start', async (_event, config: PipelineStartConfig) => {
+    if (ctx.extensionConnected) return { error: 'Caption session is controlled by the browser extension.' }
     if (!ctx.pipeline) return { error: 'Pipeline not initialized' }
     if (ctx.pipeline.active) {
       await ctx.pipeline.stop() // Auto-stop before restart
@@ -296,6 +297,7 @@ export function registerPipelineIpc(ctx: AppContext): void {
   })
 
   ipcMain.handle('pipeline-stop', async () => {
+    if (ctx.extensionConnected) return { error: 'Stop the browser caption session from the extension.' }
     // #116: log session usage
     const activeSession = store.get('activeSession')
     if (activeSession) {

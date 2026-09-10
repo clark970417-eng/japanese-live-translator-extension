@@ -1,5 +1,5 @@
-appId: com.live-translate.app
-productName: Live Translate
+appId: org.jtl.desktop
+productName: Japanese Live Translate
 directories:
   buildResources: build
 files:
@@ -35,7 +35,7 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
-  notarize: true
+  notarize: false
   extendInfo:
     NSMicrophoneUsageDescription: "live-translate needs microphone access for real-time speech recognition and translation."
 win:

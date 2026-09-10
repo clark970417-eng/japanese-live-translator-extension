@@ -59,7 +59,7 @@ export const PYTHON_IMPORT_CHECK_TIMEOUT_MS = 5_000
 export const MLX_WHISPER_TRANSCRIBE_TIMEOUT_MS = 30_000
 
 /** Init timeout for mlx-whisper bridge (ms) */
-export const MLX_WHISPER_INIT_TIMEOUT_MS = 60_000
+export const MLX_WHISPER_INIT_TIMEOUT_MS = 600_000
 
 /** Command timeout for Qwen-ASR transcription (ms) */
 export const QWEN_ASR_TRANSCRIBE_TIMEOUT_MS = 30_000

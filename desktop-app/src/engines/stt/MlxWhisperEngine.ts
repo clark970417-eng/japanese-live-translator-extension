@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { execSync, execFileSync } from 'child_process'
 import { join } from 'path'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
 import { tmpdir, homedir } from 'os'
@@ -103,6 +103,7 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
 function findPython3WithMlxWhisper(): string {
   // Check common venv locations first
   const venvPaths = [
+    join(homedir(), 'Library/Application Support/JapaneseLiveCaption/venv/bin/python3'),
     join(homedir(), 'mlx-env', 'bin', 'python3'),
     join(homedir(), '.venv', 'bin', 'python3'),
     join(homedir(), 'venv', 'bin', 'python3')
@@ -111,7 +112,7 @@ function findPython3WithMlxWhisper(): string {
   for (const p of venvPaths) {
     if (!existsSync(p)) continue
     try {
-      execSync(`${p} -c "import mlx_whisper"`, { stdio: 'ignore', timeout: PYTHON_IMPORT_CHECK_TIMEOUT_MS })
+      execFileSync(p, ['-c', 'import mlx_whisper'], { stdio: 'ignore', timeout: PYTHON_IMPORT_CHECK_TIMEOUT_MS })
       return p
     } catch { /* mlx_whisper not installed in this venv */ }
   }

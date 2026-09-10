@@ -2,7 +2,13 @@
 
 ![Extension icon](./icon-preview.png)
 
-A Chromium browser extension that generates bilingual Japanese–Traditional Chinese captions for online video and live audio. It combines in-browser speech recognition, voice activity detection, incremental transcript rendering, and network translation in a single extension.
+A Chromium browser extension that generates bilingual Japanese–Traditional Chinese captions for online video and live audio. It supports browser inference and a local desktop companion while keeping caption controls in the browser.
+
+The complete upstream LiveTranslate application is included in
+[desktop-app](desktop-app/INTEGRATION.md), with attribution and a private browser
+bridge. This integration preserves the extension's page translation, Japanese
+reply drafts, caption modes and visual controls. See the integration notes for
+the implemented path, tests and remaining limits.
 
 ## Project overview
 
@@ -17,7 +23,7 @@ The extension never publishes a message automatically. Its optional writing assi
 
 ## Key features
 
-- Local Japanese speech recognition with Whisper Small FP32 through WebGPU.
+- Local Japanese recognition through browser WebGPU or the full desktop MLX engine.
 - Silero V5 voice activity detection in a dedicated worker.
 - Incremental Japanese hypotheses before the final recognition result.
 - Traditional Chinese translation with bounded requests and fallback handling.
@@ -43,7 +49,10 @@ This is windowed incremental recognition rather than a stateful streaming acoust
 4. Select **Load unpacked** and choose the directory containing `manifest.json`.
 5. Refresh the target YouTube or X page, open the extension, and select **Start audio**.
 
-The first run downloads and caches the Whisper Small model. A WebGPU-capable Chromium browser is required. Translation requires an internet connection; optional provider credentials can be stored in the extension settings.
+Browser mode downloads Whisper Small and uses network translation. Desktop mode
+requires the [local app and native messaging registration](desktop-app/INTEGRATION.md);
+audio captions and Japanese reply drafts then use local models after their initial
+download. Website text translation retains its existing provider routing.
 
 ## Privacy and security
 
@@ -69,9 +78,15 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-Version 3.4.8 passes 44 automated tests. The suite covers resampling continuity, speech segmentation, queue ordering, stale-result rejection, repeated speech, translation timeout recovery, caption visibility, dragging, resizing, and decoder restart behavior.
+The integration passes 45 extension tests, 486 desktop tests, and five Python
+bridge tests. Coverage includes native response ordering, source-before-translation
+events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
+These tests do not establish long-session or commercial-product parity.
 
-The end-to-end browser fixture at `tests/capture.html` uses the production tab-capture, VAD, Whisper, translation, and rendering path with a 10.7-second synthetic Japanese recording. In the latest Opera GX run, the first Japanese text appeared at 6.02 seconds, later Japanese updates appeared at 9.77 and 9.92 seconds, and corresponding Chinese updates appeared at 9.92 and 10.52 seconds. These measurements describe one controlled run and are not a general latency guarantee. Detailed evidence is recorded in [RETEST-3.4.8.md](RETEST-3.4.8.md).
+The end-to-end browser fixture at `tests/capture.html` uses the production capture
+and caption path with a 10.7-second synthetic Japanese recording. Historical
+browser-only measurements are recorded in [RETEST-3.4.8.md](RETEST-3.4.8.md);
+they should not be interpreted as measurements of the new desktop backend.
 
 ## Limitations
 

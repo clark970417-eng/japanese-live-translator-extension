@@ -315,6 +315,7 @@ export abstract class SubprocessBridge {
   async dispose(): Promise<void> {
     this.log.info('bridge disposing resources')
     if (this.process) {
+      const child = this.process
       try {
         this.sendCommand({ action: 'dispose' }).catch((e) => {
           this.log.warn('bridge: failed to send dispose command:', e)
@@ -324,11 +325,11 @@ export abstract class SubprocessBridge {
         this.log.warn('bridge: error during dispose command:', e)
       }
       try {
-        this.process.kill()
+        child.kill()
       } catch (e) {
         this.log.warn('bridge: failed to kill process during dispose:', e)
       }
-      this.process = null
+      if (this.process === child) this.process = null
     }
     // Snapshot pending requests to avoid concurrent modification
     const pending = Array.from(this.pendingRequests.values())

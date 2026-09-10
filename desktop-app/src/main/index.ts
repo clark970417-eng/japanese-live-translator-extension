@@ -1,6 +1,7 @@
 import { app, protocol, net } from 'electron'
 import { initMain as initAudioLoopback } from 'electron-audio-loopback'
 import { TranslationPipeline } from '../pipeline/TranslationPipeline'
+import { startExtensionCompanion } from './extension-companion'
 import { WhisperLocalEngine } from '../engines/stt/WhisperLocalEngine'
 import { MlxWhisperEngine } from '../engines/stt/MlxWhisperEngine'
 import { KotobaWhisperEngine } from '../engines/stt/KotobaWhisperEngine'
@@ -37,7 +38,7 @@ import { registerAudioHandlers } from './audio-handlers'
 import { setupAudioPort } from './audio-port'
 import { registerIpcHandlers } from './ipc-handlers'
 import { createLogger } from './logger'
-import { initAutoUpdater, registerUpdateHandlers, disposeAutoUpdater } from './auto-updater'
+import { registerUpdateHandlers, disposeAutoUpdater } from './auto-updater'
 import { createAppContext } from './app-context'
 import { registerGlobalShortcuts, setLastSubtitleText } from './shortcut-manager'
 import { TTSManager } from './tts-manager'
@@ -289,7 +290,14 @@ initAudioLoopback()
 
 // --- App Lifecycle ---
 
+if (!app.requestSingleInstanceLock()) app.quit()
 app.whenReady().then(async () => {
+  if (process.argv.includes('--jtl-companion')) {
+    store.set('isFirstRun', false)
+    store.set('sourceLanguage', 'ja')
+    store.set('targetLanguage', 'zh')
+    store.set('translationEngine', 'hunyuan-mt-15')
+  }
   // Serve VAD assets (ONNX, WASM, worklet) from filesystem.
   // In packaged app, these are in app.asar.unpacked; dynamic import() can't read from asar.
   protocol.handle('vad-asset', (request) => {
@@ -341,6 +349,7 @@ app.whenReady().then(async () => {
   }
 
   await initPipeline()
+  await startExtensionCompanion(ctx)
 
   // Initialize TTS manager (#508)
   ctx.ttsManager = new TTSManager()
@@ -380,7 +389,8 @@ app.whenReady().then(async () => {
 
   cleanupDisplayHandlers = registerDisplayHandlers(ctx)
   cleanupShortcuts = registerGlobalShortcuts(ctx)
-  initAutoUpdater(ctx)
+  // This local fork must never replace itself with an upstream release.
+  if (process.argv.includes('--jtl-companion')) return
 
   // #694: Start progressive model download for instant offline start
   // Tier 1 (fast-start ~371MB) downloads first, Tier 2 (full-quality) follows

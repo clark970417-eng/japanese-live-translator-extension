@@ -5,6 +5,7 @@ export class NativeClient {
   const port=this.port=this.runtime.connectNative('org.jtl.companion');
   port.onMessage.addListener(message=>{
    const job=this.pending.get(message.id);if(!job)return;
+   if(message.event){job.progress?.(message);return;}
    clearTimeout(job.timer);this.pending.delete(message.id);
    message.ok?job.resolve(message.result):job.reject(new Error(message.error||'Desktop inference failed'));
   });
@@ -15,12 +16,12 @@ export class NativeClient {
   });
  }
  rejectAll(error){for(const job of this.pending.values()){clearTimeout(job.timer);job.reject(new Error(error));}this.pending.clear();}
- request(op,fields={},timeout=60000){
+ request(op,fields={},timeout=60000,progress){
   if(this.pending.size>=16)return Promise.reject(new Error('Desktop queue is full'));
   this.connect();const id=++this.sequence;
   return new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>{this.close();},timeout);
-   this.pending.set(id,{resolve,reject,timer});
+   this.pending.set(id,{resolve,reject,timer,progress});
    try{this.port.postMessage({id,op,...fields});}catch(error){clearTimeout(timer);this.pending.delete(id);reject(error);}
   });
  }

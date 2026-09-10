@@ -3,6 +3,7 @@ import {NativeClient} from './native-client.mjs';
 let desktopClient;
 const desktop={request:(...args)=>(desktopClient??=new NativeClient(chrome.runtime)).request(...args)};
 let engineMode='browser';
+const desktopTranslations=new Map();
 import {ResultGate} from './stream-core.mjs';
 import {CueCursor} from './cue-cursor.mjs';
 import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
@@ -29,7 +30,7 @@ async function makeDraft(text){
  text=text.trim();
  const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
  if((await settings()).speechMode==='desktop'){
-  await desktop.request('init',{},180000);
+  await desktop.request('init',{},600000);
   const result=await desktop.request('translate',{text,direction:'zh-ja'});
   return {draft:validateTranslation(result.text,'zh-ja',text),mode:'本機翻譯 · 禮貌親切草稿'};
  }
@@ -85,6 +86,7 @@ function cancelTranslations(){translationPending=null;publishedId=-1;for(const c
 async function translateCaption(text,signal){
  const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
  if(engineMode==='desktop'){
+  const cached=desktopTranslations.get(text.trim());if(cached)return cached;
   const result=await desktop.request('translate',{text});
   return validateTranslation(result.text,'ja-zh',text);
  }
@@ -160,7 +162,7 @@ async function startCapture(tabId){
  if(!Number.isInteger(tabId))throw new Error('請先選擇影片分頁');
  await stopCapture();const prefs=(await settings()).subtitleSettings;setHold(prefs?.holdSeconds);captionMode=prefs?.captionMode==='realtime'?'realtime':'record';if(captionMode==='record')await initRecording();captureTabId=tabId;diagnostics={};lastError='';
  engineMode=(await settings()).speechMode==='desktop'?'desktop':'browser';
- if(engineMode==='desktop'){modelStatus='正在啟動桌面模型…';await desktop.request('init',{},180000);}
+ if(engineMode==='desktop'){modelStatus='正在載入桌面模型，首次可能需要下載…';await desktop.request('init',{},600000);}
  await ensureOffscreen();
  const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});
  running=true;modelStatus='正在擷取分頁聲音';
@@ -173,7 +175,12 @@ chrome.tabs.onRemoved.addListener(id=>{if(id===captureTabId)stopCapture();});
 chrome.runtime.onMessage.addListener((m,s,send)=>{
  if(m.type==='desktop-request'){
   if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||engineMode!=='desktop'||!['init','decode'].includes(m.op))return;
-  desktop.request(m.op,m.op==='decode'?{audio:m.audio}:{},m.op==='init'?180000:60000).then(text=>send({ok:true,text}),e=>send({ok:false,error:e.message}));return true;
+  desktop.request(m.op,m.op==='decode'?{audio:m.audio}:{},m.op==='init'?600000:60000,event=>{
+   if(event.event==='source')chrome.runtime.sendMessage({type:'desktop-partial',decodeId:m.decodeId,workerToken:m.workerToken,text:event.text}).catch(()=>{});
+  }).then(text=>{
+   if(text.text&&text.translated){try{desktopTranslations.set(text.text.trim(),validateTranslation(text.translated,'ja-zh',text.text));if(desktopTranslations.size>200)desktopTranslations.delete(desktopTranslations.keys().next().value);}catch{}}
+   send({ok:true,text});
+  },e=>send({ok:false,error:e.message}));return true;
  }
  if(['speech-result','model-status','speech-error','audio-health'].includes(m.type)){
   if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||m.session!==gate.session)return;

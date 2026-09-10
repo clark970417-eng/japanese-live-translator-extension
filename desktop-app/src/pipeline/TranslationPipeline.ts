@@ -463,6 +463,7 @@ export class TranslationPipeline extends EventEmitter {
     log.info(`STT: ${sttMs}ms → "${sttResult.text}" [${sttResult.language}]`)
 
     const targetLang = this.resolveTargetLanguage(sttResult.language)
+    this.emit('source-result', sttResult.text)
 
     if (!this.engineManager.translator) {
       this.emit('error', new Error('Translator engine not initialized'))

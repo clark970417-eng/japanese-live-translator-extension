@@ -239,7 +239,8 @@ function buildTranslationPrompt(
     const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
     if (isChinese) {
       const targetZh = LANG_NAMES_ZH[to] ?? to
-      return `${contextSection}将以下文本翻译为${targetZh}，注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
+      const style = from === 'zh' && to === 'ja' ? '使用自然、礼貌、亲切而稍微可爱的观众留言语气；不添加原文没有的亲密关系或意思，避免生硬的「あなた」。' : ''
+      return `${contextSection}将以下文本翻译为${targetZh}，${style}注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
     }
     return `${contextSection}Translate the following segment into ${toLang}, without additional explanation.\n\n${text}`
   }

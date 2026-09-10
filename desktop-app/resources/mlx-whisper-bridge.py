@@ -14,6 +14,8 @@ import json
 import tempfile
 import os
 import numpy as np
+import contextlib
+import wave
 
 whisper_model = None
 whisper_processor = None
@@ -23,9 +25,17 @@ def init_model(model_name="mlx-community/whisper-large-v3-turbo"):
     try:
         import mlx_whisper
         whisper_model = model_name
+        # Resolve/download weights and compile kernels before reporting ready.
+        with contextlib.redirect_stdout(sys.stderr):
+            mlx_whisper.transcribe(np.zeros(16000, dtype=np.float32),
+                path_or_hf_repo=whisper_model, language='ja', verbose=False,
+                condition_on_previous_text=False, temperature=0)
         output({"ready": True, "model": model_name})
     except ImportError:
         output({"error": "mlx-whisper not installed. Run: pip install mlx-whisper"})
+    except Exception as e:
+        whisper_model = None
+        output({"error": str(e)})
 
 def transcribe(audio_path, sample_rate=16000):
     global whisper_model
@@ -35,11 +45,25 @@ def transcribe(audio_path, sample_rate=16000):
 
     try:
         import mlx_whisper
-        result = mlx_whisper.transcribe(
-            audio_path,
-            path_or_hf_repo=whisper_model,
-            language=None,  # auto-detect
-        )
+        # The native engine already writes mono PCM16 WAV. Decode it directly;
+        # a packaged app must not depend on ffmpeg being present in shell PATH.
+        with wave.open(audio_path, 'rb') as audio_file:
+            if audio_file.getnchannels() != 1 or audio_file.getsampwidth() != 2:
+                raise ValueError('Expected mono PCM16 WAV')
+            rate = audio_file.getframerate()
+            audio = np.frombuffer(audio_file.readframes(audio_file.getnframes()), dtype='<i2').astype(np.float32) / 32768.0
+        if rate != 16000:
+            audio = np.interp(np.arange(round(len(audio) * 16000 / rate)) * rate / 16000,
+                              np.arange(len(audio)), audio).astype(np.float32)
+        if not len(audio) or float(np.max(np.abs(audio))) < 0.00003:
+            output({"text": "", "language": "ja"})
+            return
+        with contextlib.redirect_stdout(sys.stderr):
+            result = mlx_whisper.transcribe(
+                audio, path_or_hf_repo=whisper_model,
+                language=None, condition_on_previous_text=False,
+                temperature=0, verbose=False,
+            )
 
         text = result.get("text", "").strip()
         language = result.get("language", "en")

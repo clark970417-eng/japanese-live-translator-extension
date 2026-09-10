@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { release } from 'os'
+vi.mock('os', () => ({ release: vi.fn(() => '24.0.0') }))
 
 // Mock naudiodon before importing VirtualMicManager
 const mockOutput = {
@@ -47,6 +49,12 @@ describe('VirtualMicManager', () => {
     expect(devices).toHaveLength(2) // BlackHole + Soundflower
     expect(devices[0]!.name).toBe('BlackHole 2ch')
     expect(devices[1]!.name).toBe('Soundflower (2ch)')
+  })
+  it.skipIf(process.platform !== 'darwin')('disables incompatible PortAudio on macOS 26', async () => {
+    vi.mocked(release).mockReturnValueOnce('25.0.0')
+    const current = new VirtualMicManager()
+    await current.initialize()
+    expect(current.isAvailable()).toBe(false)
   })
 
   it('should not list non-virtual devices', () => {
