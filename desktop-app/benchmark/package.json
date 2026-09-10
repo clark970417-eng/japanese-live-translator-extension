@@ -1,0 +1,49 @@
+{
+  "name": "live-translate-benchmark",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Translation quality benchmark for all translation engines",
+  "scripts": {
+    "bench": "tsx --expose-gc run.ts",
+    "bench:google": "tsx --expose-gc run.ts --engines google",
+    "bench:deepl": "tsx --expose-gc run.ts --engines deepl",
+    "bench:microsoft": "tsx --expose-gc run.ts --engines microsoft",
+    "bench:gemini": "tsx --expose-gc run.ts --engines gemini",
+    "bench:opus": "tsx --expose-gc run.ts --engines opus-mt",
+    "bench:ct2-opus": "tsx --expose-gc run.ts --engines ct2-opus-mt",
+    "bench:ct2-madlad": "tsx --expose-gc run.ts --engines ct2-madlad400",
+    "bench:gemma": "tsx --expose-gc run.ts --engines translate-gemma",
+    "bench:hunyuan": "tsx --expose-gc run.ts --engines hunyuan-mt",
+    "bench:hunyuan15": "tsx --expose-gc run.ts --engines hunyuan-mt-15",
+    "bench:alma": "tsx --expose-gc run.ts --engines alma-ja",
+    "bench:gemma2jpn": "tsx --expose-gc run.ts --engines gemma2-jpn",
+    "bench:cat": "tsx --expose-gc run.ts --engines cat-translate",
+    "bench:api": "tsx --expose-gc run.ts --engines google,deepl,microsoft,gemini",
+    "bench:local": "tsx --expose-gc run.ts --engines opus-mt,ct2-opus-mt,ct2-madlad400,translate-gemma,hunyuan-mt,hunyuan-mt-15,alma-ja,gemma2-jpn,cat-translate",
+    "bench:all": "tsx --expose-gc run.ts --engines google,deepl,microsoft,gemini,opus-mt,ct2-opus-mt,ct2-madlad400,translate-gemma,hunyuan-mt,hunyuan-mt-15,alma-ja,gemma2-jpn,cat-translate",
+    "stt": "tsx --expose-gc run.ts --stt",
+    "stt:whisper": "tsx --expose-gc run.ts --stt --engines whisper-local",
+    "stt:mlx": "tsx --expose-gc run.ts --stt --engines mlx-whisper",
+    "stt:lightning": "tsx --expose-gc run.ts --stt --engines lightning-whisper",
+    "stt:moonshine": "tsx --expose-gc run.ts --stt --engines moonshine",
+    "stt:sensevoice": "tsx --expose-gc run.ts --stt --engines sensevoice",
+    "stt:qwen": "tsx --expose-gc run.ts --stt --engines qwen-asr",
+    "stt:qwen3-swift-06b": "tsx --expose-gc run.ts --stt --engines qwen3-asr-swift-06b",
+    "stt:qwen3-swift-17b": "tsx --expose-gc run.ts --stt --engines qwen3-asr-swift-17b",
+    "stt:qwen3-native-06b": "tsx --expose-gc run.ts --stt --engines qwen3-asr-native-06b",
+    "stt:qwen3-native-17b": "tsx --expose-gc run.ts --stt --engines qwen3-asr-native-17b",
+    "stt:sherpa": "tsx --expose-gc run.ts --stt --engines sherpa-onnx",
+    "stt:sherpa-sensevoice": "tsx --expose-gc run.ts --stt --engines sherpa-sensevoice",
+    "stt:promotion-candidates": "tsx --expose-gc run.ts --stt --engines whisper-local,mlx-whisper,sherpa-sensevoice,qwen3-asr-swift-06b,qwen3-asr-native-06b",
+    "stt:all": "tsx --expose-gc run.ts --stt --engines whisper-local,mlx-whisper,lightning-whisper,moonshine,sensevoice,qwen-asr,qwen3-asr-swift-06b,qwen3-asr-swift-17b,qwen3-asr-native-06b,qwen3-asr-native-17b,sherpa-onnx,sherpa-sensevoice",
+    "stt:generate-testset": "bash scripts/generate-stt-testset.sh"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.0",
+    "node-llama-cpp": "^3.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

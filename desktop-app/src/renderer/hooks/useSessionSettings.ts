@@ -1,0 +1,209 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { bool } from './settingsCastUtils'
+import type { UseAudioCaptureReturn } from './useAudioCapture'
+import type { UseNoiseSuppressionReturn } from './useNoiseSuppression'
+import { useNoiseSuppression } from './useNoiseSuppression'
+import { useAudioCapture } from './useAudioCapture'
+
+export interface SessionSettingsState {
+  status: string
+  setStatus: (v: string) => void
+  isRunning: boolean
+  setIsRunning: (v: boolean) => void
+  isStarting: boolean
+  setIsStarting: (v: boolean) => void
+  sessionDuration: string
+  sessions: Array<{ id: string; startedAt: number; engineMode: string; entryCount: number }>
+
+  lastTranscriptPath: string | null
+  setLastTranscriptPath: (v: string | null) => void
+  summaryText: string | null
+  setSummaryText: (v: string | null) => void
+  isSummarizing: boolean
+  setIsSummarizing: (v: boolean) => void
+
+  crashedSession: { config: Record<string, unknown>; startedAt: number } | null
+  setCrashedSession: (v: { config: Record<string, unknown>; startedAt: number } | null) => void
+
+  startSessionTimer: () => void
+  stopSessionTimer: () => void
+
+  audio: UseAudioCaptureReturn
+  noiseSuppression: UseNoiseSuppressionReturn
+
+  streamingIntervalMs: number
+  setStreamingIntervalMs: (v: number) => void
+}
+
+export function useSessionSettings(): SessionSettingsState {
+  const [status, setStatus] = useState('Ready')
+  const [isRunning, setIsRunning] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
+  const [sessionDuration, setSessionDuration] = useState('')
+  const sessionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sessionStartRef = useRef<number | null>(null)
+  const [sessions, setSessions] = useState<Array<{ id: string; startedAt: number; engineMode: string; entryCount: number }>>([])
+
+  const [lastTranscriptPath, setLastTranscriptPath] = useState<string | null>(null)
+  const [summaryText, setSummaryText] = useState<string | null>(null)
+  const [isSummarizing, setIsSummarizing] = useState(false)
+
+  const [crashedSession, setCrashedSession] = useState<{ config: Record<string, unknown>; startedAt: number } | null>(null)
+
+  // Streaming interval from settings (#506, #606: lowered default to 800ms)
+  const [streamingIntervalMs, setStreamingIntervalMs] = useState<number>(800)
+
+  // Noise suppression + audio capture
+  const noiseSuppression = useNoiseSuppression()
+  const audio = useAudioCapture(noiseSuppression.enabled ? noiseSuppression : undefined, streamingIntervalMs)
+
+  // --- Timer helpers ---
+  const formatDuration = useCallback((ms: number): string => {
+    const totalSec = Math.floor(ms / 1000)
+    const h = Math.floor(totalSec / 3600)
+    const m = Math.floor((totalSec % 3600) / 60)
+    const s = totalSec % 60
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    return `${m}:${String(s).padStart(2, '0')}`
+  }, [])
+
+  const startSessionTimer = useCallback(() => {
+    sessionStartRef.current = Date.now()
+    sessionTimerRef.current = setInterval(() => {
+      if (sessionStartRef.current) {
+        setSessionDuration(formatDuration(Date.now() - sessionStartRef.current))
+      }
+    }, 1000)
+  }, [formatDuration])
+
+  const stopSessionTimer = useCallback(() => {
+    if (sessionTimerRef.current) {
+      clearInterval(sessionTimerRef.current)
+      sessionTimerRef.current = null
+    }
+    sessionStartRef.current = null
+    setSessionDuration('')
+  }, [])
+
+  // Load noise suppression setting and check crashed session on mount
+  useEffect(() => {
+    window.api.getSettings().then((s) => {
+      if (s.noiseSuppressionEnabled !== undefined) noiseSuppression.setEnabled(bool(s.noiseSuppressionEnabled, false))
+      if (s.selectedMicrophone) audio.setSelectedDevice(typeof s.selectedMicrophone === 'string' ? s.selectedMicrophone : '')
+      if (typeof s.streamingIntervalMs === 'number') setStreamingIntervalMs(s.streamingIntervalMs)
+      // #501: Restore audio source preference
+      if (s.audioSource && ['microphone', 'system', 'both'].includes(s.audioSource as string)) {
+        audio.setAudioSource(s.audioSource as 'microphone' | 'system' | 'both')
+      }
+    })
+
+    // Check for crashed session
+    window.api.getCrashedSession().then((session) => {
+      if (session) {
+        setCrashedSession(session)
+        setStatus('Previous session ended unexpectedly. Resume?')
+      }
+    })
+  }, [])
+
+  // Load session history
+  useEffect(() => {
+    window.api.listSessions().then(setSessions).catch((e) => console.warn('[settings] Failed to load sessions:', e))
+  }, [isRunning])
+
+  // Audio MessagePort for zero-copy transfer (#553)
+  const audioPortRef = useRef<MessagePort | null>(null)
+
+  useEffect(() => {
+    const unsub = window.api.onAudioPort((port) => {
+      audioPortRef.current = port
+      console.log('[session] Audio MessagePort received — using zero-copy transfer')
+    })
+    return () => {
+      unsub()
+      audioPortRef.current = null
+    }
+  }, [])
+
+  // Send audio via MessagePort (zero-copy) or fall back to IPC (JSON-serialized)
+  const sendAudio = useCallback((type: string, data: Float32Array) => {
+    const port = audioPortRef.current
+    if (port) {
+      // Zero-copy: transfer the underlying ArrayBuffer
+      const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+      port.postMessage({ type, audio: buffer }, [buffer])
+    } else {
+      // Fallback: JSON-serialized IPC
+      const arr = Array.from(data)
+      if (type === 'process-audio') {
+        window.api.processAudio(arr)
+      } else if (type === 'process-audio-streaming') {
+        window.api.processAudioStreaming(arr)
+      } else if (type === 'finalize-streaming') {
+        window.api.finalizeStreaming(arr)
+      } else if (type === 'push-realtime-audio') {
+        window.api.pushRealtimeAudio(arr)
+      }
+    }
+  }, [])
+
+  // Handle audio: streaming chunks during speech, final segment on speech end
+  useEffect(() => {
+    const unsub1 = audio.onAudioChunk((chunk) => {
+      sendAudio('process-audio', chunk)
+    })
+    const unsub2 = audio.onStreamingChunk((buffer) => {
+      sendAudio('process-audio-streaming', buffer)
+    })
+    const unsub3 = audio.onSpeechSegmentEnd((finalBuffer) => {
+      sendAudio('finalize-streaming', finalBuffer)
+    })
+    // #721: realtime cloud e2e — continuous 100ms chunks + VAD turn-boundary hints
+    const unsub4 = audio.onRealtimeChunk((chunk) => {
+      sendAudio('push-realtime-audio', chunk)
+    })
+    const unsub5 = audio.onSpeechBoundary((boundary) => {
+      window.api.speechBoundary(boundary)
+    })
+
+    return () => {
+      unsub1()
+      unsub2()
+      unsub3()
+      unsub4()
+      unsub5()
+    }
+  }, [sendAudio])
+
+  // Listen for status updates from main process
+  useEffect(() => {
+    const unsubscribe = window.api.onStatusUpdate((message) => {
+      setStatus(message)
+    })
+    return () => unsubscribe?.()
+  }, [])
+
+  // Cleanup session timer on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionTimerRef.current) {
+        clearInterval(sessionTimerRef.current)
+      }
+    }
+  }, [])
+
+  return {
+    status, setStatus,
+    isRunning, setIsRunning,
+    isStarting, setIsStarting,
+    sessionDuration,
+    sessions,
+    lastTranscriptPath, setLastTranscriptPath,
+    summaryText, setSummaryText,
+    isSummarizing, setIsSummarizing,
+    crashedSession, setCrashedSession,
+    startSessionTimer, stopSessionTimer,
+    audio, noiseSuppression,
+    streamingIntervalMs, setStreamingIntervalMs
+  }
+}

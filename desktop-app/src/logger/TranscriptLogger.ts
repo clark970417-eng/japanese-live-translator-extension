@@ -1,0 +1,99 @@
+import { app } from 'electron'
+import { join } from 'path'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { appendFile } from 'fs/promises'
+import type { TranslationResult } from '../engines/types'
+import { createLogger } from '../main/logger'
+
+const log = createLogger('logger')
+
+export class TranscriptLogger {
+  private logPath: string
+  private sessionStartTime: Date
+  private writeQueue: Promise<void> = Promise.resolve()
+  private consecutiveFailures = 0
+  private loggingDisabled = false
+  private onStatusUpdate?: (message: string) => void
+  private static readonly MAX_FAILURES = 5
+
+  constructor(onStatusUpdate?: (message: string) => void) {
+    this.onStatusUpdate = onStatusUpdate
+    const logsDir = join(app.getPath('userData'), 'logs')
+    if (!existsSync(logsDir)) {
+      mkdirSync(logsDir, { recursive: true })
+    }
+
+    this.sessionStartTime = new Date()
+    const timestamp = this.sessionStartTime
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .slice(0, 19)
+    this.logPath = join(logsDir, `${timestamp}.txt`)
+  }
+
+  /** Write session header */
+  startSession(engineMode: string): void {
+    const header = [
+      `=== live-translate Session Log ===`,
+      `Date: ${this.sessionStartTime.toLocaleDateString('ja-JP')} ${this.sessionStartTime.toLocaleTimeString('ja-JP')}`,
+      `Engine: ${engineMode}`,
+      `${'='.repeat(40)}`,
+      ''
+    ].join('\n')
+
+    writeFileSync(this.logPath, header, 'utf-8')
+  }
+
+  /** Append a translation result to the log (sequential writes for ordering) */
+  log(result: TranslationResult): void {
+    if (this.loggingDisabled) return
+
+    const time = new Date(result.timestamp).toLocaleTimeString('ja-JP')
+    const entry = [
+      `[${time}] [${result.sourceLanguage.toUpperCase()}] ${result.sourceText}`,
+      `[${time}] [${result.targetLanguage.toUpperCase()}] ${result.translatedText}`,
+      ''
+    ].join('\n')
+
+    this.writeQueue = this.writeQueue
+      .then(() => appendFile(this.logPath, entry, 'utf-8'))
+      .then(() => {
+        this.consecutiveFailures = 0
+      })
+      .catch((err) => {
+        this.consecutiveFailures++
+        log.error('Failed to write log entry:', err)
+        if (this.consecutiveFailures >= TranscriptLogger.MAX_FAILURES) {
+          this.loggingDisabled = true
+          const msg = `Transcript logging disabled after ${this.consecutiveFailures} failures: ${(err as Error).message}`
+          log.error(msg)
+          this.onStatusUpdate?.(msg)
+        }
+      })
+  }
+
+  /** Write session footer */
+  endSession(): void {
+    const endTime = new Date()
+    const duration = Math.round((endTime.getTime() - this.sessionStartTime.getTime()) / 1000)
+    const footer = [
+      `${'='.repeat(40)}`,
+      `Session ended: ${endTime.toLocaleTimeString('ja-JP')}`,
+      `Duration: ${Math.floor(duration / 60)}m ${duration % 60}s`,
+      ''
+    ].join('\n')
+
+    // endSession is called at shutdown — use sync to ensure footer is written
+    try {
+      writeFileSync(this.logPath, footer, { encoding: 'utf-8', flag: 'a' })
+    } catch (err) {
+      log.error('Failed to write session footer:', err)
+      this.onStatusUpdate?.(`Failed to write session footer: ${(err as Error).message}`)
+    }
+  }
+
+  /** Get the log file path */
+  getLogPath(): string {
+    return this.logPath
+  }
+}

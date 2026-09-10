@@ -1,0 +1,357 @@
+/** Supported language codes (ISO 639-1) */
+export type Language = 'ja' | 'en' | 'zh' | 'ko' | 'fr' | 'de' | 'es' | 'pt' | 'ru' | 'it' | 'nl' | 'pl' | 'ar' | 'th' | 'vi' | 'id'
+
+/** Source language setting: specific language or auto-detect */
+export type SourceLanguage = 'auto' | Language
+
+/** Human-readable language labels */
+export const LANGUAGE_LABELS: Record<Language, string> = {
+  ja: 'Japanese',
+  en: 'English',
+  zh: 'Chinese',
+  ko: 'Korean',
+  fr: 'French',
+  de: 'German',
+  es: 'Spanish',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  it: 'Italian',
+  nl: 'Dutch',
+  pl: 'Polish',
+  ar: 'Arabic',
+  th: 'Thai',
+  vi: 'Vietnamese',
+  id: 'Indonesian'
+}
+
+/** All supported language codes */
+export const ALL_LANGUAGES: Language[] = Object.keys(LANGUAGE_LABELS) as Language[]
+
+/** STT engine result */
+export interface STTResult {
+  /** Recognized text */
+  text: string
+  /** Detected language of the audio */
+  language: Language
+  /** Whether this is a final (committed) result or an interim (tentative) result */
+  isFinal: boolean
+  /** Unix timestamp in ms */
+  timestamp: number
+  /** STT confidence score (0.0–1.0). Used by GER to decide if correction is needed. */
+  confidence?: number
+}
+
+/** Translation pipeline result */
+export interface TranslationResult {
+  /** Original recognized text */
+  sourceText: string
+  /** Translated text */
+  translatedText: string
+  /** Source language */
+  sourceLanguage: Language
+  /** Target language */
+  targetLanguage: Language
+  /** Unix timestamp in ms */
+  timestamp: number
+  /** Whether this is an interim (unconfirmed) result from streaming mode */
+  isInterim?: boolean
+  /** Stable confirmed portion of source text (for stable subtitle display) */
+  confirmedText?: string
+  /** Unstable trailing portion still being recognized */
+  interimText?: string
+  /** Translation stage: 'draft' (OPUS-MT), 'refined' (LLM), 'ger-corrected' (GER), 'simulmt-partial' (partial clause), 'simulmt-revised' (full clause revision), 'ssbd-retranslated' (SSBD re-translation) */
+  translationStage?: 'draft' | 'refined' | 'ger-corrected' | 'simulmt-partial' | 'simulmt-revised' | 'ssbd-retranslated'
+  /** STT confidence score (0.0–1.0), forwarded from STTResult for UI styling */
+  confidence?: number
+  /** Speaker label from diarization (e.g. 'Speaker 1', 'Speaker 2') */
+  speakerLabel?: string
+  /** Speaker index (0-based) for color assignment in SubtitleOverlay */
+  speakerIndex?: number
+  /**
+   * Per-token confidence scores (0.0–1.0) for the translated text.
+   * Each entry corresponds to a whitespace-delimited token in translatedText.
+   * Absent or empty means uniform confidence (e.g. cloud APIs that don't provide scores).
+   */
+  tokenConfidences?: number[]
+}
+
+/**
+ * Speech-to-Text engine interface.
+ * Implementations: WhisperLocalEngine
+ */
+export interface STTEngine {
+  readonly id: string
+  readonly name: string
+  readonly isOffline: boolean
+
+  /** Load model and prepare for inference */
+  initialize(): Promise<void>
+
+  /**
+   * Process an audio chunk and return recognized text.
+   * Returns null if no speech detected in the chunk.
+   */
+  processAudio(audioChunk: Float32Array, sampleRate: number): Promise<STTResult | null>
+
+  /** Release resources */
+  dispose(): Promise<void>
+}
+
+/**
+ * Text-to-text translation engine interface.
+ * Implementations: GoogleTranslator
+ */
+export interface TranslatorEngine {
+  readonly id: string
+  readonly name: string
+  readonly isOffline: boolean
+
+  /** Initialize (e.g. validate API key) */
+  initialize(): Promise<void>
+
+  /** Translate text from one language to another */
+  translate(text: string, from: Language, to: Language, context?: TranslateContext): Promise<string>
+
+  /**
+   * Incremental translation for SimulMT (Wait-k policy).
+   * Translates partial source text while maintaining consistency with previous output.
+   * The returned translation must extend (not replace) previousOutput.
+   * Optional — only offline LLM engines (TranslateGemma, Hunyuan-MT) support this.
+   */
+  translateIncremental?(
+    text: string,
+    previousOutput: string,
+    from: Language,
+    to: Language,
+    context?: TranslateContext
+  ): Promise<string>
+
+  /**
+   * Conversational SimulMT translation with KV cache reuse (#550).
+   * Uses a persistent multi-turn session for lower-latency incremental translation.
+   * When isRevision=true, the full clause has arrived and translation is refined.
+   * Optional — only LLM engines with persistent session support implement this.
+   */
+  translateSimulMt?(
+    text: string,
+    previousOutput: string,
+    from: Language,
+    to: Language,
+    isRevision: boolean,
+    context?: TranslateContext
+  ): Promise<string>
+
+  /**
+   * SSBD (Self-Speculative Biased Decoding) translation for re-translation (#607).
+   * Uses the previous translation as a speculative draft, verifying tokens in batch.
+   * Only re-generates from the divergence point for faster re-translations.
+   * Optional — only offline LLM engines support this.
+   */
+  translateSSBD?(
+    text: string,
+    previousOutput: string,
+    from: Language,
+    to: Language,
+    context?: TranslateContext
+  ): Promise<string>
+
+  /** Reset the persistent SimulMT session (e.g. on speech segment boundary) */
+  resetSimulMtSession?(): void
+
+  /** Release resources */
+  dispose(): Promise<void>
+}
+
+/**
+ * End-to-end engine that performs STT + translation in a single step.
+ * Implementations: WhisperTranslateEngine
+ */
+export interface E2ETranslationEngine {
+  readonly id: string
+  readonly name: string
+  readonly isOffline: boolean
+
+  /** Load model and prepare for inference */
+  initialize(): Promise<void>
+
+  /**
+   * Process audio and directly produce a translation result.
+   * Returns null if no speech detected.
+   */
+  processAudio(audioChunk: Float32Array, sampleRate: number): Promise<TranslationResult | null>
+
+  /**
+   * Optional: create a streaming session for continuous, low-latency
+   * translation of a live audio stream (cloud realtime / local e2e).
+   * Engines that only support single-shot batch translation omit this.
+   */
+  createStreamingSession?(): E2EStreamingSession
+
+  /** Release resources */
+  dispose(): Promise<void>
+}
+
+/**
+ * Backpressure signal returned by {@link E2EStreamingSession.pushAudio} when the
+ * session's input buffer is full. Callers should await `drained` before pushing more.
+ */
+export interface Backpressure {
+  /** Resolves when the session is ready to accept more audio. */
+  drained: Promise<void>
+}
+
+/**
+ * Sink that receives streaming output from an E2E session.
+ * The pipeline supplies the sink; the session pushes interim/final results into it.
+ * Implementations must ignore emissions once their owning session is aborted.
+ */
+export interface E2EStreamingSink {
+  /** Emit an interim (unconfirmed) result. */
+  interim(result: TranslationResult): void
+  /** Emit a final (confirmed) result. */
+  final(result: TranslationResult): void
+  /** Report a non-fatal error. */
+  error(error: Error): void
+}
+
+/** Options passed to {@link E2EStreamingSession.start}. */
+export interface E2EStreamingStartOptions {
+  /** Sink that receives interim/final results. */
+  sink: E2EStreamingSink
+  /**
+   * Abort signal for the session generation. When aborted, the session must stop
+   * pushing to the sink and release resources. This replaces bare EventEmitter
+   * wiring to avoid post-dispose emits, listener leaks, and cross-session mixing.
+   */
+  signal: AbortSignal
+}
+
+/** Options passed to {@link E2EStreamingSession.stop}. */
+export interface E2EStreamingStopOptions {
+  /** When true, flush any buffered audio and emit a final result before closing. */
+  flush?: boolean
+}
+
+/**
+ * End-to-end streaming session performing continuous STT + translation on a live
+ * audio stream, pushing interim/final results into a sink.
+ *
+ * Lifecycle: start() → pushAudio()* [→ flushSegment()]* → stop().
+ * Generation isolation is enforced via the AbortSignal passed to start(): once
+ * aborted, no further sink emissions are permitted. This is the streaming
+ * counterpart to the single-shot {@link E2ETranslationEngine}, which remains for
+ * backward compatibility.
+ */
+export interface E2EStreamingSession {
+  /** Begin the session with the given sink and abort signal. */
+  start(options: E2EStreamingStartOptions): Promise<void>
+  /**
+   * Push an audio chunk into the session. Returns a {@link Backpressure} signal
+   * when the input buffer is full; returns void when there is capacity.
+   */
+  pushAudio(chunk: Float32Array): Promise<void | Backpressure>
+  /** Optional: force a segment boundary (e.g. on a detected speech pause). */
+  flushSegment?(): Promise<void>
+  /** Stop the session, optionally flushing buffered audio first. */
+  stop(options?: E2EStreamingStopOptions): Promise<void>
+}
+
+/** A glossary entry mapping a source term to its fixed translation */
+export interface GlossaryEntry {
+  source: string
+  target: string
+}
+
+/** Context passed to translators that support context-aware translation */
+export interface TranslateContext {
+  /** Previous confirmed translation segments for coherence */
+  previousSegments: Array<{ source: string; translated: string }>
+  /** Glossary terms that must use fixed translations */
+  glossary?: GlossaryEntry[]
+}
+
+/**
+ * Text-to-Speech engine interface.
+ * Implementations: KokoroTTSEngine
+ */
+export interface TTSEngine {
+  readonly id: string
+  readonly name: string
+
+  /** Load model and prepare for inference */
+  initialize(): Promise<void>
+
+  /**
+   * Synthesize speech from text.
+   * Returns PCM audio data as Float32Array and the sample rate.
+   */
+  synthesize(text: string, language: Language): Promise<TTSResult>
+
+  /** Release resources */
+  dispose(): Promise<void>
+}
+
+/** TTS synthesis result */
+export interface TTSResult {
+  /** PCM audio samples (mono, float32) */
+  audio: Float32Array
+  /** Sample rate in Hz (e.g. 24000) */
+  sampleRate: number
+}
+
+/** Speaker diarization result for an audio chunk */
+export interface DiarizationResult {
+  /** Identified speaker label (e.g. 'Speaker 1') */
+  speakerLabel: string
+  /** Speaker index (0-based, for color assignment) */
+  speakerIndex: number
+  /** Confidence score (0.0–1.0) */
+  confidence: number
+}
+
+/**
+ * Speaker diarization engine interface.
+ * Runs in parallel with STT on the same audio buffer to identify speakers.
+ * Implementations: FluidAudioDiarizer
+ */
+export interface SpeakerDiarizer {
+  readonly id: string
+  readonly name: string
+
+  /** Load models and prepare for inference */
+  initialize(): Promise<void>
+
+  /**
+   * Process an audio chunk and return the dominant speaker.
+   * Returns null if no speaker detected (silence/noise).
+   * Must be non-blocking and fast enough for real-time use (~40μs target).
+   */
+  processAudio(audioChunk: Float32Array, sampleRate: number): Promise<DiarizationResult | null>
+
+  /** Release resources */
+  dispose(): Promise<void>
+}
+
+/** Pipeline mode */
+export type PipelineMode = 'cascade' | 'e2e'
+
+/** Engine configuration for the pipeline */
+export interface EngineConfig {
+  /** cascade: STT + Translator separately. e2e: single engine does both */
+  mode: PipelineMode
+  /** STT engine ID (cascade mode only) */
+  sttEngineId?: string
+  /** Translator engine ID (cascade mode only) */
+  translatorEngineId?: string
+  /** E2E engine ID (e2e mode only) */
+  e2eEngineId?: string
+}
+
+/** Engine registry entry */
+export interface EngineInfo {
+  id: string
+  name: string
+  type: 'stt' | 'translator' | 'e2e'
+  isOffline: boolean
+  description: string
+}
