@@ -1,0 +1,27 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "run.ts",
+    "conversational-ja-en/**/*.ts",
+    "gpt-realtime-whisper-eval/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "models",
+    "results",
+    "conversational-ja-en/results",
+    "conversational-ja-en/**/*.test.ts",
+    "gpt-realtime-whisper-eval/results",
+    "gpt-realtime-whisper-eval/**/*.test.ts"
+  ]
+}

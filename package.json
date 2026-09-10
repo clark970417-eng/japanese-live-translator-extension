@@ -1,0 +1,62 @@
+{
+  "name": "live-translate",
+  "version": "0.2.0",
+  "description": "Real-time speech translation overlay — local-first, free, JA↔EN bidirectional with pluggable engines",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "postinstall": "node scripts/fix-whisper-addon.js",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-builder",
+    "package:dmg": "electron-vite build && electron-builder --mac dmg",
+    "package:win": "electron-vite build && electron-builder --win nsis",
+    "typecheck": "tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "bench:stt": "cd benchmark && npm run stt",
+    "bench:stt:all": "cd benchmark && npm run stt:all",
+    "bench:stt:generate": "cd benchmark && npm run stt:generate-testset",
+    "shadow:ja-en": "LT_SHADOW_JA_EN=1 electron-vite dev",
+    "shadow:ja-en:cloud": "LT_SHADOW_JA_EN=1 LT_SHADOW_CLOUD=1 electron-vite dev",
+    "shadow:ja-en:cloud-all": "LT_SHADOW_JA_EN=1 LT_SHADOW_CLOUD=1 LT_SHADOW_GEMINI_LIVE=1 electron-vite dev"
+  },
+  "dependencies": {
+    "@electron-toolkit/utils": "^3.0.0",
+    "@huggingface/transformers": "^3.8.0",
+    "@kutalia/whisper-node-addon": "^1.1.0",
+    "@ricky0123/vad-web": "^0.0.30",
+    "deepfilternet3-noise-filter": "^1.2.1",
+    "electron-audio-loopback": "^1.0.6",
+    "electron-store": "^10.0.0",
+    "electron-updater": "^6.3.0",
+    "kokoro-js": "^1.2.1",
+    "node-llama-cpp": "^3.0.0",
+    "ws": "^8.20.0"
+  },
+  "optionalDependencies": {
+    "naudiodon": "^2.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.3.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "electron-vite": "^2.3.0",
+    "esbuild": "^0.27.7",
+    "eslint": "^10.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.57.2",
+    "vite": "^5.4.0",
+    "vitest": "^4.1.0"
+  }
+}

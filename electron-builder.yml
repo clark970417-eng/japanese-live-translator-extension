@@ -1,0 +1,63 @@
+appId: com.live-translate.app
+productName: Live Translate
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.*'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!benchmark/*'
+extraResources:
+  - from: 'resources/'
+    to: 'bridge-scripts/'
+    filter:
+      - '*.py'
+asarUnpack:
+  - 'node_modules/@kutalia/whisper-node-addon/**'
+  - 'node_modules/node-llama-cpp/**'
+  - 'out/renderer/vad/**'
+publish:
+  provider: github
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+    - target: dir
+      arch:
+        - arm64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  notarize: true
+  extendInfo:
+    NSMicrophoneUsageDescription: "live-translate needs microphone access for real-time speech recognition and translation."
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  asarUnpack:
+    - 'node_modules/@kutalia/whisper-node-addon/**'
+    - 'node_modules/node-llama-cpp/**'
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+afterPack: scripts/after-pack.js

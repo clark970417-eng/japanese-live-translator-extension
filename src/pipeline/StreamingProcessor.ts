@@ -1,0 +1,650 @@
+import type { EventEmitter } from 'events'
+import type {
+  TranslationResult,
+  Language,
+  GlossaryEntry,
+  TranslatorEngine,
+  SpeakerDiarizer,
+  DiarizationResult
+} from '../engines/types'
+import type { STTEngine } from '../engines/types'
+import type { LocalAgreement } from './LocalAgreement'
+import type { ContextBuffer } from './ContextBuffer'
+import type { GERProcessor } from './GERProcessor'
+import { detectClauseBoundary, countUnits } from './ClauseBoundaryDetector'
+import { createLogger } from '../main/logger'
+
+const log = createLogger('pipeline:stream')
+
+const MAX_STREAMING_LOCK_RESOLVERS = 50
+const STREAMING_LOCK_TIMEOUT_MS = 10_000
+/** Debounce delay before translating interim text (ms) */
+const TRANSLATE_DEBOUNCE_MS = 1000
+
+export interface StreamingDeps {
+  readonly emitter: EventEmitter
+  readonly agreement: LocalAgreement
+  readonly contextBuffer: ContextBuffer
+  getSTTEngine(): STTEngine | null
+  getTranslator(): TranslatorEngine | null
+  getGlossary(): GlossaryEntry[]
+  getSimulMtConfig(): { enabled: boolean; waitK: number }
+  resolveTargetLanguage(detectedLang: Language): Language
+  /** Notify that processing count changed */
+  incrementProcessing(): void
+  decrementProcessing(): void
+  /** GER processor for async STT post-correction */
+  getGER?(): GERProcessor | null
+  /** Draft STT engine for fast interim results (#536) */
+  getDraftSTTEngine?(): STTEngine | null
+  /** Speaker diarizer for multi-speaker identification (#549) */
+  getDiarizer?(): SpeakerDiarizer | null
+  /** Current pipeline session generation — used to drop stale async emits (#719) */
+  getGeneration?(): number
+}
+
+/**
+ * Handles streaming audio processing: processStreaming(), finalizeStreaming(),
+ * and the streaming lock mechanism.
+ * Extracted from TranslationPipeline to isolate streaming-specific logic.
+ */
+export class StreamingProcessor {
+  private streamingLock = false
+  private streamingLockResolvers: Array<() => void> = []
+
+  // Streaming translation state
+  lastTranslatedConfirmed = ''
+  simulMtPreviousOutput = ''
+
+  /** Debounced translation: timer and last source text for change detection */
+  private translateDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  private lastSourceTextForTranslate = ''
+
+  /** SimulMT state: last boundary we translated up to (#550) */
+  private simulMtLastBoundaryText = ''
+  /** SimulMT: in-flight translation promise to prevent concurrent requests */
+  private simulMtInFlight = false
+
+  /** Last diarization result for merging with STT output (#549) */
+  private lastDiarizationResult: DiarizationResult | null = null
+
+  /** Clause-level overlap: source text already sent for translation (#615) */
+  private clauseTranslatedPrefix = ''
+  /** Clause-level overlap: translation result for the translated prefix (#615) */
+  private clauseTranslation = ''
+  /** Clause-level overlap: in-flight flag to prevent concurrent clause translations */
+  private clauseTranslationInFlight = false
+
+  private deps: StreamingDeps
+
+  constructor(deps: StreamingDeps) {
+    this.deps = deps
+  }
+
+  get isLocked(): boolean {
+    return this.streamingLock
+  }
+
+  /**
+   * Whether a result scheduled under generation `gen` may still be emitted (#719).
+   * Returns true when generation tracking is unavailable (no getGeneration dep).
+   */
+  private isCurrentGeneration(gen: number | undefined): boolean {
+    return gen === undefined || this.deps.getGeneration?.() === gen
+  }
+
+  /** Reset all streaming state */
+  reset(): void {
+    this.streamingLock = false
+    for (const r of this.streamingLockResolvers) r()
+    this.streamingLockResolvers = []
+    this.lastTranslatedConfirmed = ''
+    this.simulMtPreviousOutput = ''
+    if (this.translateDebounceTimer) {
+      clearTimeout(this.translateDebounceTimer)
+      this.translateDebounceTimer = null
+    }
+    this.lastSourceTextForTranslate = ''
+    this.simulMtLastBoundaryText = ''
+    this.simulMtInFlight = false
+    this.clauseTranslatedPrefix = ''
+    this.clauseTranslation = ''
+    this.clauseTranslationInFlight = false
+
+    // Reset persistent SimulMT session in worker
+    const translator = this.deps.getTranslator()
+    if (translator?.resetSimulMtSession) {
+      translator.resetSimulMtSession()
+    }
+  }
+
+  async processStreaming(
+    audioBuffer: Float32Array,
+    sampleRate: number
+  ): Promise<TranslationResult | null> {
+    const sttEngine = this.deps.getSTTEngine()
+    if (!sttEngine) return null
+    // Drop chunk if another streaming call is in-flight — acceptable because
+    // the rolling buffer re-sends accumulated audio on the next interval (#103)
+    if (this.streamingLock) return null
+
+    this.deps.incrementProcessing()
+    this.streamingLock = true
+    const gen = this.deps.getGeneration?.()
+    try {
+      // Fire draft STT in parallel for fast interim results (#536)
+      const draftSttEngine = this.deps.getDraftSTTEngine?.()
+      if (draftSttEngine) {
+        this.runDraftStt(draftSttEngine, audioBuffer, sampleRate)
+      }
+
+      // Fire diarization in parallel with STT (#549)
+      const diarizer = this.deps.getDiarizer?.()
+      if (diarizer) {
+        this.runDiarization(diarizer, audioBuffer, sampleRate)
+      }
+
+      const t0 = performance.now()
+      const sttResult = await sttEngine.processAudio(audioBuffer, sampleRate)
+      const sttMs = (performance.now() - t0).toFixed(0)
+      if (!sttResult || !sttResult.text.trim()) {
+        log.info(`STT: ${sttMs}ms → (no result, ${(audioBuffer.length / sampleRate).toFixed(1)}s audio)`)
+        // Reset agreement on silence to prevent stale state accumulation (#75)
+        this.deps.agreement.reset()
+        this.lastTranslatedConfirmed = ''
+        this.simulMtPreviousOutput = ''
+        return null
+      }
+      log.info(`STT: ${sttMs}ms → "${sttResult.text}" [${sttResult.language}]`)
+
+      const agreement = this.deps.agreement.update(sttResult.text)
+      const targetLang = this.deps.resolveTargetLanguage(sttResult.language)
+
+      const fullSourceText = agreement.confirmedText + agreement.interimText
+
+      const simulMtConfig = this.deps.getSimulMtConfig()
+      const translator = this.deps.getTranslator()
+      const useSimulMt = simulMtConfig.enabled && translator?.translateSimulMt
+
+      if (useSimulMt) {
+        // SimulMT mode (#550): translate at clause boundaries using KV cache reuse
+        this.handleSimulMtStreaming(
+          fullSourceText,
+          sttResult.language,
+          targetLang,
+          agreement.confirmedText,
+          agreement.interimText,
+          simulMtConfig.waitK
+        )
+      } else {
+        // Fire clause-level overlap translation when new confirmed text is available (#615).
+        // This runs in parallel (fire-and-forget) so translation starts before STT
+        // finishes the next chunk, reducing perceived latency.
+        if (agreement.newConfirmed) {
+          this.runClauseTranslation(
+            agreement.confirmedText,
+            fullSourceText,
+            sttResult.language,
+            targetLang
+          )
+        }
+
+        // Standard debounced translation: schedule translation when source text stabilizes for 1s.
+        // This avoids translating on every interim update while still translating
+        // during continuous speech (at natural pauses / breathing points).
+        if (fullSourceText !== this.lastSourceTextForTranslate) {
+          this.lastSourceTextForTranslate = fullSourceText
+          if (this.translateDebounceTimer) clearTimeout(this.translateDebounceTimer)
+          this.translateDebounceTimer = setTimeout(() => {
+            this.translateDebounceTimer = null
+            const dbTranslator = this.deps.getTranslator()
+            if (!dbTranslator || !fullSourceText.trim()) return
+            const glossaryEntries = this.deps.getGlossary()
+            const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
+            const ctx = this.deps.contextBuffer.getContext(glossary)
+
+            // Use SSBD for re-translation when we have a previous translation,
+            // since most of the output likely remains valid (#607)
+            const translatePromise = (dbTranslator.translateSSBD && this.lastTranslatedConfirmed)
+              ? dbTranslator.translateSSBD(
+                  fullSourceText,
+                  this.lastTranslatedConfirmed,
+                  sttResult.language,
+                  targetLang,
+                  ctx
+                ).catch((ssbdErr) => {
+                  log.warn('SSBD debounced translation failed, falling back:', ssbdErr)
+                  return dbTranslator.translate(fullSourceText, sttResult.language, targetLang, ctx)
+                })
+              : dbTranslator.translate(fullSourceText, sttResult.language, targetLang, ctx)
+
+            translatePromise.then((translated) => {
+              // Drop stale results before mutating shared state, so a switch mid-flight
+              // cannot leave a resurfacing translatedText for the next generation (#719).
+              if (!this.isCurrentGeneration(gen)) return
+              this.lastTranslatedConfirmed = translated
+              const debouncedResult: TranslationResult = {
+                sourceText: fullSourceText,
+                confirmedText: agreement.confirmedText,
+                interimText: agreement.interimText,
+                translatedText: translated,
+                sourceLanguage: sttResult.language,
+                targetLanguage: targetLang,
+                timestamp: Date.now(),
+                isInterim: true
+              }
+              this.deps.emitter.emit('interim-result', debouncedResult)
+            }).catch((err) => {
+              log.warn('Debounced translation failed:', err)
+            })
+          }, TRANSLATE_DEBOUNCE_MS)
+        }
+      }
+
+      const interimResult: TranslationResult = {
+        sourceText: fullSourceText,
+        confirmedText: agreement.confirmedText,
+        interimText: agreement.interimText,
+        translatedText: this.lastTranslatedConfirmed,
+        sourceLanguage: sttResult.language,
+        targetLanguage: targetLang,
+        timestamp: Date.now(),
+        isInterim: true,
+        ...(this.lastDiarizationResult && {
+          speakerLabel: this.lastDiarizationResult.speakerLabel,
+          speakerIndex: this.lastDiarizationResult.speakerIndex
+        })
+      }
+
+      this.deps.emitter.emit('interim-result', interimResult)
+      return interimResult
+    } catch (err) {
+      this.deps.emitter.emit('error', err instanceof Error ? err : new Error(String(err)))
+      return null
+    } finally {
+      this.streamingLock = false
+      this.deps.decrementProcessing()
+      for (const r of this.streamingLockResolvers) r()
+      this.streamingLockResolvers = []
+    }
+  }
+
+  async finalizeStreaming(
+    audioChunk: Float32Array,
+    sampleRate: number
+  ): Promise<TranslationResult | null> {
+    const sttEngine = this.deps.getSTTEngine()
+    if (!sttEngine) return null
+
+    if (this.streamingLock) {
+      await this.waitForStreamingLock()
+    }
+    this.deps.incrementProcessing()
+    this.streamingLock = true
+
+    try {
+      const sttResult = await sttEngine.processAudio(audioChunk, sampleRate)
+      if (!sttResult || !sttResult.text.trim()) {
+        this.deps.agreement.reset()
+        this.lastTranslatedConfirmed = ''
+        this.simulMtPreviousOutput = ''
+        return null
+      }
+
+      const agreement = this.deps.agreement.finalize(sttResult.text)
+      const targetLang = this.deps.resolveTargetLanguage(sttResult.language)
+
+      const glossaryEntries = this.deps.getGlossary()
+      const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
+      const translator = this.deps.getTranslator()
+
+      const simulMtConfig = this.deps.getSimulMtConfig()
+      const useSimulMt = simulMtConfig.enabled && translator?.translateSimulMt
+
+      let translatedText = ''
+      let translationStage: 'simulmt-revised' | undefined
+
+      if (useSimulMt && translator && agreement.confirmedText.trim()) {
+        // SimulMT revision: retranslate the full clause for accuracy (#550)
+        translatedText = await translator.translateSimulMt!(
+          agreement.confirmedText,
+          this.simulMtPreviousOutput,
+          sttResult.language,
+          targetLang,
+          true, // revision mode — full clause available
+          this.deps.contextBuffer.getContext(glossary)
+        )
+        translationStage = 'simulmt-revised'
+        this.deps.contextBuffer.add(agreement.confirmedText, translatedText)
+
+        // Reset SimulMT session for the next speech segment
+        translator.resetSimulMtSession?.()
+      } else if (translator && agreement.confirmedText.trim()) {
+        translatedText = await translator.translate(
+          agreement.confirmedText,
+          sttResult.language,
+          targetLang,
+          this.deps.contextBuffer.getContext(glossary)
+        )
+        this.deps.contextBuffer.add(agreement.confirmedText, translatedText)
+      }
+
+      this.lastTranslatedConfirmed = ''
+      this.simulMtPreviousOutput = ''
+      this.simulMtLastBoundaryText = ''
+      this.simulMtInFlight = false
+      this.clauseTranslatedPrefix = ''
+      this.clauseTranslation = ''
+      this.clauseTranslationInFlight = false
+
+      const result: TranslationResult = {
+        sourceText: agreement.confirmedText,
+        translatedText,
+        sourceLanguage: sttResult.language,
+        targetLanguage: targetLang,
+        timestamp: Date.now(),
+        isInterim: false,
+        confidence: sttResult.confidence,
+        ...(translationStage && { translationStage }),
+        ...(this.lastDiarizationResult && {
+          speakerLabel: this.lastDiarizationResult.speakerLabel,
+          speakerIndex: this.lastDiarizationResult.speakerIndex
+        })
+      }
+
+      this.deps.emitter.emit('result', result)
+
+      // Fire-and-forget GER correction on finalized result (async, non-blocking)
+      const ger = this.deps.getGER?.()
+      if (ger) {
+        ger.maybeCorrect(
+          agreement.confirmedText,
+          sttResult.confidence,
+          sttResult.language,
+          targetLang,
+          result.timestamp,
+          translatedText || undefined
+        )
+      }
+
+      return result
+    } catch (err) {
+      this.deps.agreement.reset()
+      this.lastTranslatedConfirmed = ''
+      this.deps.emitter.emit('error', err instanceof Error ? err : new Error(String(err)))
+      return null
+    } finally {
+      this.streamingLock = false
+      this.deps.decrementProcessing()
+      for (const r of this.streamingLockResolvers) r()
+      this.streamingLockResolvers = []
+    }
+  }
+
+  /**
+   * Handle SimulMT streaming translation (#550).
+   *
+   * Instead of debouncing for 1s, translates at clause/phrase boundaries
+   * detected by the ClauseBoundaryDetector. Uses translateSimulMt() which
+   * maintains a persistent KV cache session for lower latency.
+   *
+   * Translation triggers:
+   * 1. New clause boundary detected (particle-based for JA, whitespace for EN)
+   * 2. Enough units accumulated beyond waitK threshold
+   * 3. Source text changed since last boundary translation
+   */
+  private handleSimulMtStreaming(
+    fullSourceText: string,
+    sourceLang: Language,
+    targetLang: Language,
+    confirmedText: string,
+    interimText: string,
+    waitK: number
+  ): void {
+    const translator = this.deps.getTranslator()
+    if (!translator?.translateSimulMt || !fullSourceText.trim()) return
+
+    // Skip if a SimulMT request is already in-flight
+    if (this.simulMtInFlight) return
+
+    // Check if we have enough units to start translating (wait-k policy)
+    const unitCount = countUnits(fullSourceText, sourceLang)
+    if (unitCount < waitK) return
+
+    // Detect clause boundary in the source text
+    const boundary = detectClauseBoundary(fullSourceText, sourceLang)
+    const textToTranslate = boundary ? boundary.stablePrefix : fullSourceText
+
+    // Skip if we already translated this exact boundary text
+    if (textToTranslate === this.simulMtLastBoundaryText) return
+
+    this.simulMtLastBoundaryText = textToTranslate
+    this.simulMtInFlight = true
+
+    const gen = this.deps.getGeneration?.()
+    const glossaryEntries = this.deps.getGlossary()
+    const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
+
+    translator.translateSimulMt(
+      textToTranslate,
+      this.simulMtPreviousOutput,
+      sourceLang,
+      targetLang,
+      false, // not a revision — incremental
+      this.deps.contextBuffer.getContext(glossary)
+    ).then((translated) => {
+      if (!this.isCurrentGeneration(gen)) return
+
+      this.simulMtPreviousOutput = translated
+      this.lastTranslatedConfirmed = translated
+
+      const simulMtResult: TranslationResult = {
+        sourceText: fullSourceText,
+        confirmedText,
+        interimText,
+        translatedText: translated,
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+        timestamp: Date.now(),
+        isInterim: true,
+        translationStage: 'simulmt-partial'
+      }
+
+      this.deps.emitter.emit('interim-result', simulMtResult)
+    }).catch((err) => {
+      log.warn('SimulMT translation failed:', err)
+    }).finally(() => {
+      this.simulMtInFlight = false
+    })
+  }
+
+  /**
+   * Run draft STT (Moonshine Tiny JA) in parallel with primary STT.
+   * Emits result as 'draft-stt-result' immediately for fast interim display (#536).
+   * Fire-and-forget — errors are logged but do not affect primary pipeline.
+   */
+  private runDraftStt(draftEngine: STTEngine, audioBuffer: Float32Array, sampleRate: number): void {
+    const t0 = performance.now()
+    const gen = this.deps.getGeneration?.()
+    draftEngine.processAudio(audioBuffer, sampleRate)
+      .then((draftResult) => {
+        const draftMs = (performance.now() - t0).toFixed(0)
+        if (!draftResult || !draftResult.text.trim()) {
+          log.info(`Draft STT: ${draftMs}ms → (no result)`)
+          return
+        }
+        log.info(`Draft STT: ${draftMs}ms → "${draftResult.text}" [${draftResult.language}]`)
+
+        if (!this.isCurrentGeneration(gen)) return
+
+        const targetLang = this.deps.resolveTargetLanguage(draftResult.language)
+
+        const draftTranslationResult: TranslationResult = {
+          sourceText: draftResult.text,
+          translatedText: '', // Draft STT only provides source text — no translation yet
+          sourceLanguage: draftResult.language,
+          targetLanguage: targetLang,
+          timestamp: Date.now(),
+          isInterim: true
+        }
+
+        this.deps.emitter.emit('draft-stt-result', draftTranslationResult)
+      })
+      .catch((err) => {
+        log.warn('Draft STT error (non-fatal):', err instanceof Error ? err.message : err)
+      })
+  }
+
+  /**
+   * Run speaker diarization in parallel with primary STT (#549).
+   * Fire-and-forget — errors are logged but do not affect primary pipeline.
+   * Updates lastDiarizationResult for the next emit cycle.
+   */
+  private runDiarization(diarizer: SpeakerDiarizer, audioBuffer: Float32Array, sampleRate: number): void {
+    const t0 = performance.now()
+    diarizer.processAudio(audioBuffer, sampleRate)
+      .then((result) => {
+        const diarizeMs = (performance.now() - t0).toFixed(0)
+        if (!result) {
+          log.info(`Diarization: ${diarizeMs}ms → (no speaker)`)
+          return
+        }
+        log.info(`Diarization: ${diarizeMs}ms → ${result.speakerLabel} (confidence: ${result.confidence.toFixed(2)})`)
+        this.lastDiarizationResult = result
+      })
+      .catch((err) => {
+        log.warn('Diarization error (non-fatal):', err instanceof Error ? err.message : err)
+      })
+  }
+
+  /**
+   * Run clause-level overlap translation when new confirmed text arrives (#615).
+   *
+   * Detects a clause boundary in the confirmed text and translates up to that
+   * boundary immediately (fire-and-forget), without waiting for the debounce timer.
+   * This overlaps translation with the next STT chunk, reducing end-to-end latency.
+   *
+   * Uses SSBD when a previous clause translation exists to avoid re-translating
+   * the already-translated prefix.
+   */
+  private runClauseTranslation(
+    confirmedText: string,
+    fullSourceText: string,
+    sourceLang: Language,
+    targetLang: Language
+  ): void {
+    const translator = this.deps.getTranslator()
+    if (!translator || !confirmedText.trim()) return
+
+    // Skip if already translating a clause or nothing new to translate
+    if (this.clauseTranslationInFlight) return
+    if (confirmedText === this.clauseTranslatedPrefix) return
+
+    // Detect clause boundary in confirmed text
+    const boundary = detectClauseBoundary(confirmedText, sourceLang)
+    if (!boundary) return
+
+    const textToTranslate = boundary.stablePrefix
+
+    // Skip if this boundary was already translated
+    if (textToTranslate === this.clauseTranslatedPrefix) return
+
+    this.clauseTranslationInFlight = true
+
+    const gen = this.deps.getGeneration?.()
+    const glossaryEntries = this.deps.getGlossary()
+    const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
+    const ctx = this.deps.contextBuffer.getContext(glossary)
+
+    const t0 = performance.now()
+
+    // Use SSBD if we have a previous clause translation to build on (#607)
+    const translatePromise = (translator.translateSSBD && this.clauseTranslation)
+      ? translator.translateSSBD(
+          textToTranslate,
+          this.clauseTranslation,
+          sourceLang,
+          targetLang,
+          ctx
+        ).catch((ssbdErr) => {
+          log.warn('SSBD clause translation failed, falling back:', ssbdErr)
+          return translator.translate(textToTranslate, sourceLang, targetLang, ctx)
+        })
+      : translator.translate(textToTranslate, sourceLang, targetLang, ctx)
+
+    translatePromise.then((translated) => {
+      const clauseMs = (performance.now() - t0).toFixed(0)
+      log.info(`Clause translation: ${clauseMs}ms → "${translated}" (prefix: "${textToTranslate}")`)
+
+      if (!this.isCurrentGeneration(gen)) return
+
+      this.clauseTranslatedPrefix = textToTranslate
+      this.clauseTranslation = translated
+      this.lastTranslatedConfirmed = translated
+
+      const clauseResult: TranslationResult = {
+        sourceText: fullSourceText,
+        translatedText: translated,
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+        timestamp: Date.now(),
+        isInterim: true
+      }
+      this.deps.emitter.emit('interim-result', clauseResult)
+    }).catch((err) => {
+      log.warn('Clause translation error (non-fatal):', err instanceof Error ? err.message : err)
+    }).finally(() => {
+      this.clauseTranslationInFlight = false
+    })
+  }
+
+  /**
+   * Wait for the streaming lock to be released with a timeout and backpressure cap.
+   * If more than MAX_STREAMING_LOCK_RESOLVERS are already waiting, the oldest
+   * resolvers are auto-resolved to prevent unbounded growth (#292, #431).
+   */
+  private waitForStreamingLock(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      // Evict oldest waiters when the queue is full to prevent unbounded growth (#431)
+      if (this.streamingLockResolvers.length >= MAX_STREAMING_LOCK_RESOLVERS) {
+        const evictCount = this.streamingLockResolvers.length - MAX_STREAMING_LOCK_RESOLVERS + 1
+        log.warn(
+          `streamingLock resolver queue overflow: evicting ${evictCount} oldest resolver(s) (queue size: ${this.streamingLockResolvers.length})`
+        )
+        for (let i = 0; i < evictCount; i++) {
+          const oldest = this.streamingLockResolvers.shift()
+          if (oldest) oldest()
+        }
+      }
+
+      // Auto-resolve after timeout so callers never hang indefinitely
+      const timer = setTimeout(() => {
+        const idx = this.streamingLockResolvers.indexOf(resolve)
+        if (idx !== -1) {
+          this.streamingLockResolvers.splice(idx, 1)
+          log.warn('streamingLock wait timed out')
+          resolve()
+        }
+      }, STREAMING_LOCK_TIMEOUT_MS)
+
+      this.streamingLockResolvers.push(() => {
+        clearTimeout(timer)
+        resolve()
+      })
+    })
+  }
+
+  /**
+   * Count words in text. For CJK text (Japanese/Chinese/Korean), count characters
+   * since there are no space-delimited word boundaries.
+   */
+  private countWords(text: string, language: Language): number {
+    if (language === 'ja' || language === 'zh') {
+      return text.replace(/\s/g, '').length
+    }
+    if (language === 'ko') {
+      return text.replace(/\s/g, '').length
+    }
+    return text.trim().split(/\s+/).filter(Boolean).length
+  }
+}

@@ -1,0 +1,327 @@
+import React, { useEffect, useState } from 'react'
+import { useSettingsState } from '../hooks/useSettingsState'
+import { Onboarding } from './Onboarding'
+import {
+  AudioSettings,
+  LanguageSettings,
+  STTSettings,
+  TranslatorSettings,
+  SubtitleSettings,
+  TTSSettings,
+  VirtualMicSettings,
+  SessionControls,
+  UpdateStatus,
+  CrashRecoveryBanner,
+  ConfigSummary,
+  EnterpriseSettings,
+  KeyboardShortcuts,
+  AccessibilitySettings,
+  SpeakerSettings,
+  CorrectionHistory,
+  ModelDownloadProgress
+} from './settings'
+
+function SettingsPanel(): React.JSX.Element {
+  const s = useSettingsState()
+  const disabled = s.isRunning || s.isStarting
+
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingChecked, setOnboardingChecked] = useState(false)
+
+  // Decide whether to show the first-run Onboarding (#708)
+  useEffect(() => {
+    window.api.quickStartIsCompleted().then((completed) => {
+      setShowOnboarding(!completed)
+      setOnboardingChecked(true)
+    }).catch(() => {
+      setOnboardingChecked(true)
+    })
+  }, [])
+
+  // Listen for global shortcut actions from main process (#551)
+  useEffect(() => {
+    const unsub = window.api.onShortcutAction?.((action: string) => {
+      if (action === 'toggle-capture-start' && !s.isRunning && !s.isStarting) {
+        s.handleStart()
+      } else if (action === 'toggle-capture-stop' && s.isRunning) {
+        s.handleStop()
+      }
+    })
+    const unsubLang = window.api.onLanguageSwitched?.((data: { sourceLanguage: string; targetLanguage: string }) => {
+      s.setSourceLanguage(data.sourceLanguage as never)
+      s.setTargetLanguage(data.targetLanguage as never)
+    })
+    return () => {
+      unsub?.()
+      unsubLang?.()
+    }
+  }, [s.isRunning, s.isStarting, s.handleStart, s.handleStop])
+
+  // Show nothing until we know whether to show Onboarding
+  if (!onboardingChecked) {
+    return <div style={containerStyle} />
+  }
+
+  // Show the three-step onboarding for first-time users (#708)
+  if (showOnboarding) {
+    return (
+      <div style={containerStyle}>
+        <Onboarding onComplete={() => setShowOnboarding(false)} />
+      </div>
+    )
+  }
+
+  return (
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>live-translate</h1>
+
+      {disabled && (
+        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '12px', padding: '8px 12px', background: '#1e293b', borderRadius: '6px' }}>
+          Settings are locked while translation is active. Stop the session to make changes.
+        </div>
+      )}
+
+      {/* Crash recovery banner */}
+      {s.crashedSession && !s.isRunning && (
+        <CrashRecoveryBanner
+          isStarting={s.isStarting}
+          onResume={s.handleResume}
+          onDismiss={s.handleDismissResume}
+        />
+      )}
+
+      {/* Audio Input — always visible (#501: supports mic, system, or both) */}
+      <AudioSettings
+        audio={s.audio}
+        disabled={disabled}
+        noiseSuppressionEnabled={s.noiseSuppression.enabled}
+        onNoiseSuppressionChange={s.noiseSuppression.setEnabled}
+        platform={s.platform}
+        streamingIntervalMs={s.streamingIntervalMs}
+        onStreamingIntervalChange={(v) => {
+          s.setStreamingIntervalMs(v)
+          window.api.saveSettings({ streamingIntervalMs: v })
+        }}
+      />
+
+      {/* Current config summary — always visible */}
+      <ConfigSummary
+        sttEngine={s.sttEngine}
+        whisperVariant={s.whisperVariant}
+        engineMode={s.engineMode}
+        sourceLanguage={s.sourceLanguage}
+        targetLanguage={s.targetLanguage}
+        gpuInfo={s.gpuInfo}
+      />
+
+      {/* Onboarding: model download progress (#575) */}
+      <ModelDownloadProgress
+        onSwitchToLocal={(engine) => {
+          s.setEngineMode(engine as never)
+          window.api.saveSettings({ translationEngine: engine })
+        }}
+        onDismiss={() => {
+          // No-op: banner hides itself
+        }}
+        disabled={disabled}
+      />
+
+      {/* Advanced Settings toggle */}
+      <button
+        onClick={() => s.setShowAdvanced(!s.showAdvanced)}
+        aria-expanded={s.showAdvanced}
+        aria-controls="advanced-settings-content"
+        style={advancedToggleStyle}
+      >
+        <span>Advanced Settings</span>
+        <span style={{ transform: s.showAdvanced ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+          ▼
+        </span>
+      </button>
+
+      {/* Advanced Settings content */}
+      {s.showAdvanced && (
+        <div id="advanced-settings-content" style={{ marginBottom: '16px' }}>
+          <LanguageSettings
+            sourceLanguage={s.sourceLanguage}
+            onSourceLanguageChange={s.setSourceLanguage}
+            targetLanguage={s.targetLanguage}
+            onTargetLanguageChange={s.setTargetLanguage}
+            disabled={disabled}
+          />
+
+          <STTSettings
+            sttEngine={s.sttEngine}
+            onSttEngineChange={s.setSttEngine}
+            whisperVariant={s.whisperVariant}
+            onWhisperVariantChange={s.setWhisperVariant}
+            platform={s.platform}
+            isMacOS26={s.isMacOS26}
+            disabled={disabled}
+            sourceLanguage={s.sourceLanguage}
+            draftSttEnabled={s.draftSttEnabled}
+            onDraftSttEnabledChange={s.setDraftSttEnabled}
+          />
+
+          <TranslatorSettings
+            engineMode={s.engineMode}
+            onEngineModeChange={s.setEngineMode}
+            platform={s.platform}
+            disabled={disabled}
+            gpuInfo={s.gpuInfo}
+            slmKvCacheQuant={s.slmKvCacheQuant}
+            onSlmKvCacheQuantChange={s.setSlmKvCacheQuant}
+            slmSpeculativeDecoding={s.slmSpeculativeDecoding}
+            onSlmSpeculativeDecodingChange={s.setSlmSpeculativeDecoding}
+            simulMtEnabled={s.simulMtEnabled}
+            onSimulMtEnabledChange={s.setSimulMtEnabled}
+            simulMtWaitK={s.simulMtWaitK}
+            onSimulMtWaitKChange={s.setSimulMtWaitK}
+            adaptiveRoutingEnabled={s.adaptiveRoutingEnabled}
+            onAdaptiveRoutingEnabledChange={s.setAdaptiveRoutingEnabled}
+            adaptiveRoutingShortThreshold={s.adaptiveRoutingShortThreshold}
+            onAdaptiveRoutingShortThresholdChange={s.setAdaptiveRoutingShortThreshold}
+            adaptiveRoutingLongThreshold={s.adaptiveRoutingLongThreshold}
+            onAdaptiveRoutingLongThresholdChange={s.setAdaptiveRoutingLongThreshold}
+            adaptiveRoutingQualityEngine={s.adaptiveRoutingQualityEngine}
+            onAdaptiveRoutingQualityEngineChange={s.setAdaptiveRoutingQualityEngine}
+            apiKey={s.apiKey}
+            onApiKeyChange={s.setApiKey}
+            deeplApiKey={s.deeplApiKey}
+            onDeeplApiKeyChange={s.setDeeplApiKey}
+            geminiApiKey={s.geminiApiKey}
+            onGeminiApiKeyChange={s.setGeminiApiKey}
+            microsoftApiKey={s.microsoftApiKey}
+            onMicrosoftApiKeyChange={s.setMicrosoftApiKey}
+            microsoftRegion={s.microsoftRegion}
+            onMicrosoftRegionChange={s.setMicrosoftRegion}
+            openaiApiKey={s.openaiApiKey}
+            onOpenaiApiKeyChange={s.setOpenaiApiKey}
+            cloudRealtimeEnabled={s.cloudRealtimeEnabled}
+            onCloudRealtimeEnabledChange={s.setCloudRealtimeEnabled}
+            geminiLiveApiKey={s.geminiLiveApiKey}
+            onGeminiLiveApiKeyChange={s.setGeminiLiveApiKey}
+            geminiLiveEnabled={s.geminiLiveEnabled}
+            onGeminiLiveEnabledChange={s.setGeminiLiveEnabled}
+            showApiOptions={s.showApiOptions}
+            onShowApiOptionsChange={s.setShowApiOptions}
+            glossaryTerms={s.glossaryTerms}
+            onGlossaryTermsChange={s.setGlossaryTerms}
+            orgGlossaryTerms={s.orgGlossaryTerms}
+            onOrgGlossaryTermsChange={s.setOrgGlossaryTerms}
+          />
+
+          <CorrectionHistory />
+
+          <SubtitleSettings
+            fontSize={s.subtitleFontSize}
+            onFontSizeChange={(v) => { s.setSubtitleFontSize(v); s.pushSubtitleSettings({ fontSize: v }) }}
+            sourceColor={s.subtitleSourceColor}
+            onSourceColorChange={(v) => { s.setSubtitleSourceColor(v); s.pushSubtitleSettings({ sourceTextColor: v }) }}
+            translatedColor={s.subtitleTranslatedColor}
+            onTranslatedColorChange={(v) => { s.setSubtitleTranslatedColor(v); s.pushSubtitleSettings({ translatedTextColor: v }) }}
+            bgOpacity={s.subtitleBgOpacity}
+            onBgOpacityChange={(v) => { s.setSubtitleBgOpacity(v); s.pushSubtitleSettings({ backgroundOpacity: v }) }}
+            position={s.subtitlePosition}
+            onPositionChange={(v) => { s.setSubtitlePosition(v); s.pushSubtitleSettings({ position: v }) }}
+            showConfidenceIndicator={s.showConfidenceIndicator}
+            onShowConfidenceIndicatorChange={(v) => {
+              s.setShowConfidenceIndicator(v)
+              s.pushSubtitleSettings({ showConfidenceIndicator: v })
+              window.api.saveSettings({ showConfidenceIndicator: v })
+            }}
+            displays={s.displays}
+            selectedDisplay={s.selectedDisplay}
+            onDisplayChange={s.handleDisplayChange}
+          />
+
+          <AccessibilitySettings
+            highContrast={s.accessibility.highContrast}
+            onHighContrastChange={(v) => { s.accessibility.setHighContrast(v); s.pushSubtitleSettings({ accessibility: { highContrast: v, dyslexiaFont: s.accessibility.dyslexiaFont, reducedMotion: s.accessibility.reducedMotion, letterSpacing: s.accessibility.letterSpacing, wordSpacing: s.accessibility.wordSpacing } }) }}
+            dyslexiaFont={s.accessibility.dyslexiaFont}
+            onDyslexiaFontChange={(v) => { s.accessibility.setDyslexiaFont(v); s.pushSubtitleSettings({ accessibility: { highContrast: s.accessibility.highContrast, dyslexiaFont: v, reducedMotion: s.accessibility.reducedMotion, letterSpacing: s.accessibility.letterSpacing, wordSpacing: s.accessibility.wordSpacing } }) }}
+            reducedMotion={s.accessibility.reducedMotion}
+            onReducedMotionChange={(v) => { s.accessibility.setReducedMotion(v); s.pushSubtitleSettings({ accessibility: { highContrast: s.accessibility.highContrast, dyslexiaFont: s.accessibility.dyslexiaFont, reducedMotion: v, letterSpacing: s.accessibility.letterSpacing, wordSpacing: s.accessibility.wordSpacing } }) }}
+            letterSpacing={s.accessibility.letterSpacing}
+            onLetterSpacingChange={(v) => { s.accessibility.setLetterSpacing(v); s.pushSubtitleSettings({ accessibility: { highContrast: s.accessibility.highContrast, dyslexiaFont: s.accessibility.dyslexiaFont, reducedMotion: s.accessibility.reducedMotion, letterSpacing: v, wordSpacing: s.accessibility.wordSpacing } }) }}
+            wordSpacing={s.accessibility.wordSpacing}
+            onWordSpacingChange={(v) => { s.accessibility.setWordSpacing(v); s.pushSubtitleSettings({ accessibility: { highContrast: s.accessibility.highContrast, dyslexiaFont: s.accessibility.dyslexiaFont, reducedMotion: s.accessibility.reducedMotion, letterSpacing: s.accessibility.letterSpacing, wordSpacing: v } }) }}
+          />
+
+          <SpeakerSettings
+            speakerDiarizationEnabled={s.speakerDiarizationEnabled}
+            onSpeakerDiarizationEnabledChange={s.setSpeakerDiarizationEnabled}
+            platform={s.platform}
+            disabled={disabled}
+          />
+
+          <TTSSettings disabled={disabled} />
+
+          <VirtualMicSettings disabled={disabled} />
+
+          <EnterpriseSettings disabled={disabled} />
+
+          <KeyboardShortcuts />
+
+          <UpdateStatus />
+        </div>
+      )}
+
+      {/* Session controls — always visible */}
+      <SessionControls
+        isRunning={s.isRunning}
+        isStarting={s.isStarting}
+        engineMode={s.engineMode}
+        apiKey={s.apiKey}
+        deeplApiKey={s.deeplApiKey}
+        geminiApiKey={s.geminiApiKey}
+        microsoftApiKey={s.microsoftApiKey}
+        status={s.status}
+        sessionDuration={s.sessionDuration}
+        onStart={s.handleStart}
+        onStop={s.handleStop}
+        lastTranscriptPath={s.lastTranscriptPath}
+        summaryText={s.summaryText}
+        isSummarizing={s.isSummarizing}
+        onGenerateSummary={s.handleGenerateSummary}
+        onSetStatus={s.setStatus}
+        sessions={s.sessions}
+      />
+    </div>
+  )
+}
+
+const containerStyle: React.CSSProperties = {
+  padding: '1.25rem 1.5rem',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  color: '#e2e8f0',
+  background: '#0f172a',
+  minHeight: '100%',
+  fontSize: '0.875rem'
+}
+
+const titleStyle: React.CSSProperties = {
+  fontSize: '18px',
+  fontWeight: 700,
+  marginBottom: '20px',
+  color: '#f8fafc',
+  letterSpacing: '-0.02em'
+}
+
+const advancedToggleStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'transparent',
+  border: '1px solid #334155',
+  borderRadius: '8px',
+  color: '#94a3b8',
+  fontSize: '13px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: '16px'
+}
+
+export default SettingsPanel
