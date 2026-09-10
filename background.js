@@ -1,4 +1,8 @@
 import {RecordingQueue} from './recording-queue.mjs';
+import {NativeClient} from './native-client.mjs';
+let desktopClient;
+const desktop={request:(...args)=>(desktopClient??=new NativeClient(chrome.runtime)).request(...args)};
+let engineMode='browser';
 import {ResultGate} from './stream-core.mjs';
 import {CueCursor} from './cue-cursor.mjs';
 import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
@@ -24,6 +28,11 @@ async function makeDraft(text){
  if(typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的中文');
  text=text.trim();
  const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
+ if((await settings()).speechMode==='desktop'){
+  await desktop.request('init',{},180000);
+  const result=await desktop.request('translate',{text,direction:'zh-ja'});
+  return {draft:validateTranslation(result.text,'zh-ja',text),mode:'本機翻譯 · 禮貌親切草稿'};
+ }
  try{return {draft:await textMemo.run('styled:'+text,()=>styledTranslation(text,'zh-ja')),mode:'可愛禮貌'};}
  catch(_error){return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}
 }
@@ -54,7 +63,7 @@ async function translate(text,direction,priority=false){
 let recordingReady,recordingPreview=null;
 const recording=new RecordingQueue({
  save:entries=>chrome.storage.local.set({recordedCaptions:entries}),
- translate:text=>textMemo.run('record:'+text,async()=>{const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;try{return await styledTranslation(text,'ja-zh');}catch(_){return translateCaption(text);}}),
+ translate:text=>textMemo.run('record:'+engineMode+':'+text,async()=>{const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;if(engineMode==='desktop')return translateCaption(text);try{return await styledTranslation(text,'ja-zh');}catch(_){return translateCaption(text);}}),
  onChange:()=>{if(captionMode==='record'&&running)pushSubtitle(recordingItem());},
  onError:()=>{lastError='字幕記錄無法儲存，請匯出記錄並檢查儲存空間';if(running)stopCapture();}
 });
@@ -75,6 +84,10 @@ const captionRequests=new Map();
 function cancelTranslations(){translationPending=null;publishedId=-1;for(const controller of captionRequests.values())controller.abort();captionRequests.clear();}
 async function translateCaption(text,signal){
  const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
+ if(engineMode==='desktop'){
+  const result=await desktop.request('translate',{text});
+  return validateTranslation(result.text,'ja-zh',text);
+ }
  const primary=async s=>validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW',s)),'ja-zh',text);
  const {nvidiaKey}=await settings();
  if(!nvidiaKey)return primary(deadline(signal,3000));
@@ -146,16 +159,22 @@ async function resetCapture(){
 async function startCapture(tabId){
  if(!Number.isInteger(tabId))throw new Error('請先選擇影片分頁');
  await stopCapture();const prefs=(await settings()).subtitleSettings;setHold(prefs?.holdSeconds);captionMode=prefs?.captionMode==='realtime'?'realtime':'record';if(captionMode==='record')await initRecording();captureTabId=tabId;diagnostics={};lastError='';
+ engineMode=(await settings()).speechMode==='desktop'?'desktop':'browser';
+ if(engineMode==='desktop'){modelStatus='正在啟動桌面模型…';await desktop.request('init',{},180000);}
  await ensureOffscreen();
  const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});
  running=true;modelStatus='正在擷取分頁聲音';
- const reply=await chrome.runtime.sendMessage({type:'offscreen-start',streamId,mode:'browser',recording:captionMode==='record',session:gate.session});
+ const reply=await chrome.runtime.sendMessage({type:'offscreen-start',streamId,mode:engineMode,recording:captionMode==='record',session:gate.session});
  if(!reply?.ok){running=false;throw new Error(reply?.error||'無法擷取分頁聲音');}
  await chrome.storage.local.set({captionsHidden:false});
  return{running};
 }
 chrome.tabs.onRemoved.addListener(id=>{if(id===captureTabId)stopCapture();});
 chrome.runtime.onMessage.addListener((m,s,send)=>{
+ if(m.type==='desktop-request'){
+  if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||engineMode!=='desktop'||!['init','decode'].includes(m.op))return;
+  desktop.request(m.op,m.op==='decode'?{audio:m.audio}:{},m.op==='init'?180000:60000).then(text=>send({ok:true,text}),e=>send({ok:false,error:e.message}));return true;
+ }
  if(['speech-result','model-status','speech-error','audio-health'].includes(m.type)){
   if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||m.session!==gate.session)return;
   if(m.type==='speech-result')addTranscript(m);

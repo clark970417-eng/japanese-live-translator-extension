@@ -1,5 +1,6 @@
 import {SpeechResultFilter,cleanText} from './stream-core.mjs';
 import {Agreement,DecodeQueue,Measurements} from './streaming.mjs';
+import {DesktopWorker} from './desktop-worker.js';
 let active=null;
 const send=(s,type,extra={})=>{if(active===s)chrome.runtime.sendMessage({type,session:s.session,...extra}).catch(()=>{});};
 function stop(){
@@ -10,7 +11,7 @@ function stop(){
 }
 function resetAudio(s){
  s.epoch++;s.queue.clear();s.filter.reset();s.agreement.reset();s.vadQueue=[];s.lastId=null;s.previewId=null;s.origin=Date.now();
- s.vad?.postMessage({type:'reset',epoch:s.epoch,origin:s.origin,rate:s.context.sampleRate});
+ s.vad?.postMessage({type:'reset',epoch:s.epoch,origin:s.origin,rate:s.context.sampleRate,desktop:s.desktop});
 }
 function decode(s,job){
  if(job.epoch!==s.epoch||(s.recording&&!job.final))return;
@@ -18,7 +19,7 @@ function decode(s,job){
  if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
  s.busy=job;s.started=performance.now();s.metrics.add('queueMs',Date.now()-job.audioEndAt);
- s.timeout=setTimeout(()=>restartWorker(s,'辨識逾時'),15000);
+ s.timeout=setTimeout(()=>restartWorker(s,'辨識逾時'),s.desktop?60000:15000);
  const audio=job.audio.slice();s.worker.postMessage({type:'decode',id:job.id,audio},[audio.buffer]);
 }
 function drainVad(s){
@@ -43,7 +44,7 @@ function restartWorker(s,reason){
  send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
 }
 function initializeWorker(s){
- const worker=s.worker=new Worker('speech-worker.js?v=3.4.8',{type:'module'});
+ const worker=s.worker=s.desktop?new DesktopWorker():new Worker('speech-worker.js?v=3.4.8',{type:'module'});
  worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
  worker.onmessage=({data})=>{
@@ -88,11 +89,12 @@ function initializeVad(s){
   if(m.type==='processed'){clearTimeout(s.vadTimeout);s.vadBusy=false;s.probability=m.probability;s.metrics.add('vadMs',m.vadMs);drainVad(s);}
   if(m.type==='segment'&&m.job.epoch===s.epoch&&!s.nativeUntil)decode(s,m.job);
  };
- s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate});
+ s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate,desktop:s.desktop});
 }
 async function start(m){
  stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording)}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
  try{
+  s.desktop=m.mode==='desktop';
   s.stream=await navigator.mediaDevices.getUserMedia({audio:{mandatory:{chromeMediaSource:'tab',chromeMediaSourceId:m.streamId}},video:false});
   if(active!==s){s.stream.getTracks().forEach(t=>t.stop());return;}
   s.context=new AudioContext();await s.context.resume();s.source=s.context.createMediaStreamSource(s.stream);s.source.connect(s.context.destination);

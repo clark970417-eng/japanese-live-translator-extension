@@ -1,4 +1,6 @@
 const $=s=>document.querySelector(s);
+chrome.storage.local.get('speechMode').then(s=>$('#engineMode').value=s.speechMode==='desktop'?'desktop':'browser');
+$('#engineMode').onchange=()=>chrome.storage.local.set({speechMode:$('#engineMode').value});
 const defaults={japaneseColor:"#ffffff",chineseColor:"#ffffff",fontSize:22,outlineWidth:1,captionOpacity:100,backgroundColor:"#000000",backgroundOpacity:60,position:6,holdSeconds:3,captionMode:'record'};
 const send=m=>new Promise((resolve,reject)=>chrome.runtime.sendMessage(m,r=>chrome.runtime.lastError||!r?.ok?reject(new Error(r?.error||"無法連線")):resolve(r.text)));
 const controls=["japaneseColor","chineseColor","fontSize","outlineWidth","position","holdSeconds","captionMode","backgroundColor","backgroundOpacity","captionOpacity"];

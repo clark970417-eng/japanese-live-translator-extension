@@ -42,7 +42,7 @@ export class SpeechWindows {
   this.parts.push(frame);this.samples+=n;
   if(speech)this.voiced+=n;
   this.silent=speech?0:this.silent+n;
-  const ended=this.silent>=10240, cut=this.samples>=80000;
+  const ended=this.silent>=10240, cut=this.samples>=(this.maxSamples||80000);
   let job=null;
   if(this.voiced>=3584 && ((ended||cut) || (this.samples>=12800&&this.clock-this.lastEmission>=interval*16000))){
    const audio=new Float32Array(this.samples);let at=0;for(const part of this.parts){audio.set(part,at);at+=part.length;}
@@ -51,7 +51,7 @@ export class SpeechWindows {
   }
   if(ended){this.active=false;this.parts=[];this.samples=0;this.pre=[];this.onset=0;}
   else if(cut){
-   this.parts=this.parts.slice(-32);this.samples=this.parts.reduce((a,b)=>a+b.length,0);
+   this.parts=this.parts.slice(-(this.overlapFrames||32));this.samples=this.parts.reduce((a,b)=>a+b.length,0);
    this.start=this.clock-this.samples;this.id++;this.overlap=true;this.voiced=0;this.speechStart=this.clock;
   }
   return job;

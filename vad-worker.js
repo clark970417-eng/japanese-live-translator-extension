@@ -5,7 +5,7 @@ ort.env.wasm.numThreads=1;
 let context=new Float32Array(64);
 let session,state,sr,resampler,windows,gain,pending=[],epoch=0,origin=0;
 function reset(m){
- context=new Float32Array(64);epoch=m.epoch;origin=m.origin;pending=[];resampler=new Resampler(m.rate);windows=new SpeechWindows();gain=new SpeechGain();
+ context=new Float32Array(64);epoch=m.epoch;origin=m.origin;pending=[];resampler=new Resampler(m.rate);windows=new SpeechWindows();windows.maxSamples=m.desktop?40000:80000;windows.overlapFrames=m.desktop?16:32;gain=new SpeechGain();
  state?.dispose();state=new ort.Tensor('float32',new Float32Array(256),[2,1,128]);
 }
 let chain=Promise.resolve();
