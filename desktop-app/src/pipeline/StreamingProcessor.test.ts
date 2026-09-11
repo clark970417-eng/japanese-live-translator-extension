@@ -126,3 +126,32 @@ it('times out a finalization behind stalled recognition without entering STT con
     await pending
   } finally {processor.reset();vi.useRealTimers()}
 })
+
+it('does not replace an already translated hypothesis with a shorter clause on confirmation', async () => {
+  vi.useFakeTimers()
+  let source = '今日は魚を見ました。'
+  const translate = vi.fn(async (text: string) => text === '今日は魚を見ました。' ? '今天看到了魚。' : '今天的魚')
+  const emitter = new EventEmitter()
+  const updates: Array<{translatedText: string}> = []
+  emitter.on('interim-result', result => updates.push(result))
+  const processor = new StreamingProcessor({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text:source,language:'ja'})}),
+    getTranslator: () => ({translate}), getGlossary: () => [],
+    getSimulMtConfig: () => ({enabled:false,waitK:3}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  try {
+    await processor.processStreaming(new Float32Array(16000),16000)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(processor.lastTranslatedConfirmed).toBe('今天看到了魚。')
+    await processor.processStreaming(new Float32Array(32000),16000)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(translate).toHaveBeenCalledOnce()
+    expect(updates.at(-1)?.translatedText).toBe('今天看到了魚。')
+    source = '今日は鳥を見ました。'
+    await processor.processStreaming(new Float32Array(48000),16000)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(translate).toHaveBeenLastCalledWith(source, 'ja', 'zh', expect.anything())
+  } finally {processor.reset();vi.useRealTimers()}
+})

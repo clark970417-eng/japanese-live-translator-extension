@@ -20,6 +20,18 @@ export interface ClauseBoundary {
   boundaryIndex: number
 }
 
+/** A normal sentence translator cannot safely complete a Japanese case particle.
+ * Keep particle boundaries for the dedicated SimulMT engine only.
+ */
+export function detectTranslationBoundary(text: string, language: string): ClauseBoundary | null {
+  if (language !== 'ja') return detectClauseBoundary(text, language)
+  const endings = [...text.matchAll(/[。！？!?]/gu)]
+  const last = endings.at(-1)
+  if (!last || last.index === undefined) return null
+  const boundaryIndex = last.index + last[0].length
+  return { stablePrefix: text.slice(0, boundaryIndex), pendingSuffix: text.slice(boundaryIndex), boundaryIndex }
+}
+
 /**
  * Japanese particles that mark phrase boundaries.
  * Listed in descending length to match multi-char particles first.

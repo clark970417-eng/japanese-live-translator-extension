@@ -11,7 +11,7 @@ import type { STTEngine } from '../engines/types'
 import type { LocalAgreement } from './LocalAgreement'
 import type { ContextBuffer } from './ContextBuffer'
 import type { GERProcessor } from './GERProcessor'
-import { detectClauseBoundary, countUnits } from './ClauseBoundaryDetector'
+import { detectClauseBoundary, detectTranslationBoundary, countUnits } from './ClauseBoundaryDetector'
 import { createLogger } from '../main/logger'
 
 const log = createLogger('pipeline:stream')
@@ -580,13 +580,20 @@ export class StreamingProcessor {
     if (confirmedText === this.clauseTranslatedPrefix) return
 
     // Detect clause boundary in confirmed text
-    const boundary = detectClauseBoundary(confirmedText, sourceLang)
+    const boundary = detectTranslationBoundary(confirmedText, sourceLang)
     if (!boundary) return
 
     const textToTranslate = boundary.stablePrefix
 
     // Skip if this boundary was already translated
     if (textToTranslate === this.clauseTranslatedPrefix) return
+
+    // Confirmation can trail a successful full-hypothesis translation. Do not
+    // spend another decode replacing it with a shorter prefix. Only reuse it
+    // while it still matches the current hypothesis; corrections must translate.
+    if (this.lastTranslatedConfirmed &&
+        this.samePrefix(textToTranslate, this.lastTranslatedSource) &&
+        this.samePrefix(this.lastTranslatedSource, fullSourceText)) return
 
     this.clauseTranslationInFlight = true
 

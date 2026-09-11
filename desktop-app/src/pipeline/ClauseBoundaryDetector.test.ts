@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectClauseBoundary, countUnits } from './ClauseBoundaryDetector'
+import { detectClauseBoundary, detectTranslationBoundary, countUnits } from './ClauseBoundaryDetector'
 
 describe('ClauseBoundaryDetector', () => {
   describe('detectClauseBoundary (Japanese)', () => {
@@ -124,5 +124,20 @@ describe('ClauseBoundaryDetector', () => {
     it('ignores whitespace in CJK counting', () => {
       expect(countUnits('猫 が', 'ja')).toBe(2)
     })
+  })
+})
+
+ describe('normal translation boundaries', () => {
+  it('does not translate a case particle as a completed clause', () => {
+    expect(detectTranslationBoundary('私は学生です', 'ja')).toBeNull()
+    expect(detectTranslationBoundary('今日は魚を', 'ja')).toBeNull()
+  })
+  it('keeps the unfinished tail out of the completed clause', () => {
+    expect(detectTranslationBoundary('こんにちは。今日は石井', 'ja')?.stablePrefix).toBe('こんにちは。')
+    expect(detectTranslationBoundary('こんにちは。今日は石井', 'ja')?.pendingSuffix).toBe('今日は石井')
+  })
+  it('accepts complete sentences and retains dedicated SimulMT behavior', () => {
+    expect(detectTranslationBoundary('魚が逃げた！', 'ja')?.stablePrefix).toBe('魚が逃げた！')
+    expect(detectClauseBoundary('私は学生です', 'ja')).not.toBeNull()
   })
 })
