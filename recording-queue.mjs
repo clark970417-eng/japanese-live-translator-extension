@@ -2,13 +2,18 @@
 // independent of API latency. Failed entries remain available for explicit retry.
 export class RecordingQueue {
  constructor({save,translate,onChange=()=>{},onError=()=>{},timeoutMs=15000}){this.timeoutMs=timeoutMs;this.save=save;this.translate=translate;this.onChange=onChange;this.onError=onError;this.entries=[];this.busy=false;this.writes=Promise.resolve();}
- async restore(entries=[]){this.entries=entries.map(e=>({...e,state:e.state==='working'?'pending':e.state}));this.onChange();this.pump();}
+ async restore(entries=[]){this.entries=entries.map(e=>({...e,state:e.state==='working'?'pending':e.state==='streaming'?'failed':e.state}));this.onChange();this.pump();}
  persist(){const snapshot=this.entries.map(e=>({...e}));const operation=this.writes.catch(()=>{}).then(()=>this.save(snapshot));this.writes=operation;return operation;}
  async add(entry){
   if(this.entries.some(e=>e.key===entry.key))return;
   this.entries.push({...entry,state:'pending',translated:''});
   try{await this.persist();}catch(error){this.onError(error);throw error;}
   this.onChange();this.pump();
+ }
+ async updateExternal(entry){
+  let existing=this.entries.find(e=>e.key===entry.key);
+  if(existing)Object.assign(existing,entry);else this.entries.push({...entry});
+  this.onChange();await this.persist();
  }
  async pump(){
   if(this.busy)return;this.busy=true;
@@ -31,6 +36,6 @@ export class RecordingQueue {
   for(const e of this.entries){if(e.session!==session)continue;let row=groups.get(e.group);if(!row){row={id:e.group,original:'',translated:'',pending:0};groups.set(e.group,row);}row.original+=(row.original?' ':'')+e.original;row.translated+=(row.translated&&e.translated?' ':'')+e.translated;if(e.state!=='done')row.pending++;}
   return [...groups.values()].slice(-4);
  }
- get pending(){return this.entries.filter(e=>e.state==='pending'||e.state==='working').length;}
+ get pending(){return this.entries.filter(e=>e.state==='pending'||e.state==='working'||e.state==='streaming').length;}
  get failed(){return this.entries.filter(e=>e.state==='failed').length;}
 }

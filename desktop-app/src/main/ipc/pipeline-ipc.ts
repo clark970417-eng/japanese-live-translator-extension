@@ -40,7 +40,7 @@ const QUOTA_LIMITS = {
 } as const
 
 /** Pipeline start config with API keys */
-interface PipelineStartConfig extends EngineConfig {
+export interface PipelineStartConfig extends EngineConfig {
   apiKey?: string
   deeplApiKey?: string
   geminiApiKey?: string
@@ -52,10 +52,8 @@ interface PipelineStartConfig extends EngineConfig {
   geminiLiveApiKey?: string
 }
 
-/** Register pipeline control IPC handlers */
-export function registerPipelineIpc(ctx: AppContext): void {
-  ipcMain.handle('pipeline-start', async (_event, config: PipelineStartConfig) => {
-    if (ctx.extensionConnected) return { error: 'Caption session is controlled by the browser extension.' }
+/** Shared start path for desktop capture and the browser companion. */
+export async function startPipeline(ctx: AppContext, config: PipelineStartConfig) {
     if (!ctx.pipeline) return { error: 'Pipeline not initialized' }
     if (ctx.pipeline.active) {
       await ctx.pipeline.stop() // Auto-stop before restart
@@ -207,6 +205,37 @@ export function registerPipelineIpc(ctx: AppContext): void {
         )
       }
 
+      // Load merged glossary (personal + org) from store (#517)
+      const personal = store.get('glossaryTerms') || []
+      const org = store.get('orgGlossaryTerms') || []
+      const { mergeGlossaries } = await import('../../engines/translator/glossary-manager')
+      ctx.pipeline!.setGlossary(mergeGlossaries(personal, org))
+
+      // Configure language settings (#263)
+      ctx.pipeline!.setLanguageConfig(store.get('sourceLanguage'), store.get('targetLanguage'))
+
+      ctx.pipeline!.setGEREnabled(!!store.get('gerEnabled'))
+
+      // Configure SimulMT (#239)
+      ctx.pipeline!.setSimulMt(store.get('simulMtEnabled'), store.get('simulMtWaitK'))
+
+      // Configure adaptive quality routing (#547)
+      ctx.pipeline!.setAdaptiveRouting(
+        {
+          enabled: store.get('adaptiveRoutingEnabled'),
+          shortThreshold: store.get('adaptiveRoutingShortThreshold'),
+          longThreshold: store.get('adaptiveRoutingLongThreshold')
+        },
+        store.get('adaptiveRoutingQualityEngine')
+      )
+
+      // Configure draft STT (#536)
+      ctx.pipeline!.setDraftSttEnabled(store.get('draftSttEnabled'))
+
+      // Configure speaker diarization (#549)
+      ctx.pipeline!.setDiarizationEnabled(store.get('speakerDiarizationEnabled'))
+
+
       try {
         await ctx.pipeline.switchEngine(config)
       } catch (err) {
@@ -238,34 +267,6 @@ export function registerPipelineIpc(ctx: AppContext): void {
         }
       }
 
-      // Load merged glossary (personal + org) from store (#517)
-      const personal = store.get('glossaryTerms') || []
-      const org = store.get('orgGlossaryTerms') || []
-      const { mergeGlossaries } = await import('../../engines/translator/glossary-manager')
-      ctx.pipeline!.setGlossary(mergeGlossaries(personal, org))
-
-      // Configure language settings (#263)
-      ctx.pipeline!.setLanguageConfig(store.get('sourceLanguage'), store.get('targetLanguage'))
-
-      // Configure SimulMT (#239)
-      ctx.pipeline!.setSimulMt(store.get('simulMtEnabled'), store.get('simulMtWaitK'))
-
-      // Configure adaptive quality routing (#547)
-      ctx.pipeline!.setAdaptiveRouting(
-        {
-          enabled: store.get('adaptiveRoutingEnabled'),
-          shortThreshold: store.get('adaptiveRoutingShortThreshold'),
-          longThreshold: store.get('adaptiveRoutingLongThreshold')
-        },
-        store.get('adaptiveRoutingQualityEngine')
-      )
-
-      // Configure draft STT (#536)
-      ctx.pipeline!.setDraftSttEnabled(store.get('draftSttEnabled'))
-
-      // Configure speaker diarization (#549)
-      ctx.pipeline!.setDiarizationEnabled(store.get('speakerDiarizationEnabled'))
-
       // Start logger
       ctx.logger = new TranscriptLogger((msg) => ctx.mainWindow?.webContents.send('status-update', msg))
       const sessionLabel = config.mode === 'e2e'
@@ -294,6 +295,13 @@ export function registerPipelineIpc(ctx: AppContext): void {
     } catch (err) {
       return { error: sanitizeErrorMessage(String(err)) }
     }
+}
+
+/** Register pipeline control IPC handlers */
+export function registerPipelineIpc(ctx: AppContext): void {
+  ipcMain.handle('pipeline-start', async (_event, config: PipelineStartConfig) => {
+    if (ctx.extensionConnected) return { error: 'Caption session is controlled by the browser extension.' }
+    return startPipeline(ctx, config)
   })
 
   ipcMain.handle('pipeline-stop', async () => {

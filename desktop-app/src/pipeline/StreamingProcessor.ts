@@ -28,6 +28,7 @@ export interface StreamingDeps {
   getSTTEngine(): STTEngine | null
   getTranslator(): TranslatorEngine | null
   getGlossary(): GlossaryEntry[]
+  translateFinal?(text: string, from: Language, to: Language): Promise<string>
   getSimulMtConfig(): { enabled: boolean; waitK: number }
   resolveTargetLanguage(detectedLang: Language): Language
   /** Notify that processing count changed */
@@ -53,11 +54,13 @@ export class StreamingProcessor {
   private streamingLockResolvers: Array<() => void> = []
 
   // Streaming translation state
+  private lastTranslatedSource = ''
   lastTranslatedConfirmed = ''
   simulMtPreviousOutput = ''
 
   /** Debounced translation: timer and last source text for change detection */
   private translateDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  private debouncedTranslationInFlight = false
   private lastSourceTextForTranslate = ''
 
   /** SimulMT state: last boundary we translated up to (#550) */
@@ -89,15 +92,24 @@ export class StreamingProcessor {
    * Whether a result scheduled under generation `gen` may still be emitted (#719).
    * Returns true when generation tracking is unavailable (no getGeneration dep).
    */
-  private isCurrentGeneration(gen: number | undefined): boolean {
-    return gen === undefined || this.deps.getGeneration?.() === gen
+  private samePrefix(prefix: string, text: string): boolean {
+    const normalize = (s: string) => s.replace(/[\p{P}\s]/gu, '')
+    return normalize(text).startsWith(normalize(prefix))
+  }
+
+  private utteranceGeneration = 0
+
+  private isCurrentGeneration(gen: number | undefined, utterance: number): boolean {
+    return utterance === this.utteranceGeneration && (gen === undefined || this.deps.getGeneration?.() === gen)
   }
 
   /** Reset all streaming state */
   reset(): void {
+    this.utteranceGeneration++
     this.streamingLock = false
     for (const r of this.streamingLockResolvers) r()
     this.streamingLockResolvers = []
+    this.lastTranslatedSource = ''
     this.lastTranslatedConfirmed = ''
     this.simulMtPreviousOutput = ''
     if (this.translateDebounceTimer) {
@@ -110,6 +122,7 @@ export class StreamingProcessor {
     this.clauseTranslatedPrefix = ''
     this.clauseTranslation = ''
     this.clauseTranslationInFlight = false
+    this.debouncedTranslationInFlight = false
 
     // Reset persistent SimulMT session in worker
     const translator = this.deps.getTranslator()
@@ -131,6 +144,7 @@ export class StreamingProcessor {
     this.deps.incrementProcessing()
     this.streamingLock = true
     const gen = this.deps.getGeneration?.()
+    const utterance = this.utteranceGeneration
     try {
       // Fire draft STT in parallel for fast interim results (#536)
       const draftSttEngine = this.deps.getDraftSTTEngine?.()
@@ -146,13 +160,13 @@ export class StreamingProcessor {
 
       const t0 = performance.now()
       const sttResult = await sttEngine.processAudio(audioBuffer, sampleRate)
+      if (!this.isCurrentGeneration(gen, utterance)) return null
       const sttMs = (performance.now() - t0).toFixed(0)
       if (!sttResult || !sttResult.text.trim()) {
         log.info(`STT: ${sttMs}ms → (no result, ${(audioBuffer.length / sampleRate).toFixed(1)}s audio)`)
         // Reset agreement on silence to prevent stale state accumulation (#75)
         this.deps.agreement.reset()
-        this.lastTranslatedConfirmed = ''
-        this.simulMtPreviousOutput = ''
+        this.reset()
         return null
       }
       log.info(`STT: ${sttMs}ms → "${sttResult.text}" [${sttResult.language}]`)
@@ -195,8 +209,14 @@ export class StreamingProcessor {
         if (fullSourceText !== this.lastSourceTextForTranslate) {
           this.lastSourceTextForTranslate = fullSourceText
           if (this.translateDebounceTimer) clearTimeout(this.translateDebounceTimer)
-          this.translateDebounceTimer = setTimeout(() => {
+          const translateWhenIdle = (): void => {
             this.translateDebounceTimer = null
+            if (!this.isCurrentGeneration(gen, utterance)) return
+            if (this.clauseTranslationInFlight || this.debouncedTranslationInFlight) {
+              this.translateDebounceTimer = setTimeout(translateWhenIdle, 150)
+              return
+            }
+            if (fullSourceText === this.lastTranslatedSource) return
             const dbTranslator = this.deps.getTranslator()
             if (!dbTranslator || !fullSourceText.trim()) return
             const glossaryEntries = this.deps.getGlossary()
@@ -205,6 +225,7 @@ export class StreamingProcessor {
 
             // Use SSBD for re-translation when we have a previous translation,
             // since most of the output likely remains valid (#607)
+            this.debouncedTranslationInFlight = true
             const translatePromise = (dbTranslator.translateSSBD && this.lastTranslatedConfirmed)
               ? dbTranslator.translateSSBD(
                   fullSourceText,
@@ -221,10 +242,11 @@ export class StreamingProcessor {
             translatePromise.then((translated) => {
               // Drop stale results before mutating shared state, so a switch mid-flight
               // cannot leave a resurfacing translatedText for the next generation (#719).
-              if (!this.isCurrentGeneration(gen)) return
+              if (!this.isCurrentGeneration(gen, utterance) || !this.samePrefix(fullSourceText, this.lastSourceTextForTranslate)) return
+              this.lastTranslatedSource = fullSourceText
               this.lastTranslatedConfirmed = translated
               const debouncedResult: TranslationResult = {
-                sourceText: fullSourceText,
+                sourceText: this.lastSourceTextForTranslate,
                 confirmedText: agreement.confirmedText,
                 interimText: agreement.interimText,
                 translatedText: translated,
@@ -235,9 +257,12 @@ export class StreamingProcessor {
               }
               this.deps.emitter.emit('interim-result', debouncedResult)
             }).catch((err) => {
-              log.warn('Debounced translation failed:', err)
+              if (this.isCurrentGeneration(gen, utterance)) log.warn('Debounced translation failed:', err)
+            }).finally(() => {
+              if (this.isCurrentGeneration(gen, utterance)) this.debouncedTranslationInFlight = false
             })
-          }, TRANSLATE_DEBOUNCE_MS)
+          }
+          this.translateDebounceTimer = setTimeout(translateWhenIdle, TRANSLATE_DEBOUNCE_MS)
         }
       }
 
@@ -245,7 +270,7 @@ export class StreamingProcessor {
         sourceText: fullSourceText,
         confirmedText: agreement.confirmedText,
         interimText: agreement.interimText,
-        translatedText: this.lastTranslatedConfirmed,
+        translatedText: this.samePrefix(this.lastTranslatedSource, fullSourceText) ? this.lastTranslatedConfirmed : '',
         sourceLanguage: sttResult.language,
         targetLanguage: targetLang,
         timestamp: Date.now(),
@@ -281,17 +306,21 @@ export class StreamingProcessor {
     }
     this.deps.incrementProcessing()
     this.streamingLock = true
+    const gen = this.deps.getGeneration?.()
+    const utterance = ++this.utteranceGeneration
+    if (this.translateDebounceTimer) { clearTimeout(this.translateDebounceTimer); this.translateDebounceTimer = null }
 
     try {
       const sttResult = await sttEngine.processAudio(audioChunk, sampleRate)
+      if (!this.isCurrentGeneration(gen, utterance)) return null
       if (!sttResult || !sttResult.text.trim()) {
         this.deps.agreement.reset()
-        this.lastTranslatedConfirmed = ''
-        this.simulMtPreviousOutput = ''
+        this.reset()
         return null
       }
 
       const agreement = this.deps.agreement.finalize(sttResult.text)
+      this.deps.emitter.emit('source-result', agreement.confirmedText)
       const targetLang = this.deps.resolveTargetLanguage(sttResult.language)
 
       const glossaryEntries = this.deps.getGlossary()
@@ -315,20 +344,23 @@ export class StreamingProcessor {
           this.deps.contextBuffer.getContext(glossary)
         )
         translationStage = 'simulmt-revised'
+        if (!this.isCurrentGeneration(gen, utterance)) return null
         this.deps.contextBuffer.add(agreement.confirmedText, translatedText)
 
         // Reset SimulMT session for the next speech segment
         translator.resetSimulMtSession?.()
       } else if (translator && agreement.confirmedText.trim()) {
-        translatedText = await translator.translate(
+        translatedText = this.deps.translateFinal ? await this.deps.translateFinal(agreement.confirmedText, sttResult.language, targetLang) : await translator.translate(
           agreement.confirmedText,
           sttResult.language,
           targetLang,
           this.deps.contextBuffer.getContext(glossary)
         )
+        if (!this.isCurrentGeneration(gen, utterance)) return null
         this.deps.contextBuffer.add(agreement.confirmedText, translatedText)
       }
 
+      this.lastTranslatedSource = ''
       this.lastTranslatedConfirmed = ''
       this.simulMtPreviousOutput = ''
       this.simulMtLastBoundaryText = ''
@@ -336,6 +368,7 @@ export class StreamingProcessor {
       this.clauseTranslatedPrefix = ''
       this.clauseTranslation = ''
       this.clauseTranslationInFlight = false
+      this.debouncedTranslationInFlight = false
 
       const result: TranslationResult = {
         sourceText: agreement.confirmedText,
@@ -370,6 +403,7 @@ export class StreamingProcessor {
       return result
     } catch (err) {
       this.deps.agreement.reset()
+      this.lastTranslatedSource = ''
       this.lastTranslatedConfirmed = ''
       this.deps.emitter.emit('error', err instanceof Error ? err : new Error(String(err)))
       return null
@@ -422,6 +456,7 @@ export class StreamingProcessor {
     this.simulMtInFlight = true
 
     const gen = this.deps.getGeneration?.()
+    const utterance = this.utteranceGeneration
     const glossaryEntries = this.deps.getGlossary()
     const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
 
@@ -433,7 +468,7 @@ export class StreamingProcessor {
       false, // not a revision — incremental
       this.deps.contextBuffer.getContext(glossary)
     ).then((translated) => {
-      if (!this.isCurrentGeneration(gen)) return
+      if (!this.isCurrentGeneration(gen, utterance)) return
 
       this.simulMtPreviousOutput = translated
       this.lastTranslatedConfirmed = translated
@@ -466,6 +501,7 @@ export class StreamingProcessor {
   private runDraftStt(draftEngine: STTEngine, audioBuffer: Float32Array, sampleRate: number): void {
     const t0 = performance.now()
     const gen = this.deps.getGeneration?.()
+    const utterance = this.utteranceGeneration
     draftEngine.processAudio(audioBuffer, sampleRate)
       .then((draftResult) => {
         const draftMs = (performance.now() - t0).toFixed(0)
@@ -475,7 +511,7 @@ export class StreamingProcessor {
         }
         log.info(`Draft STT: ${draftMs}ms → "${draftResult.text}" [${draftResult.language}]`)
 
-        if (!this.isCurrentGeneration(gen)) return
+        if (!this.isCurrentGeneration(gen, utterance)) return
 
         const targetLang = this.deps.resolveTargetLanguage(draftResult.language)
 
@@ -537,7 +573,7 @@ export class StreamingProcessor {
     if (!translator || !confirmedText.trim()) return
 
     // Skip if already translating a clause or nothing new to translate
-    if (this.clauseTranslationInFlight) return
+    if (this.clauseTranslationInFlight || this.debouncedTranslationInFlight) return
     if (confirmedText === this.clauseTranslatedPrefix) return
 
     // Detect clause boundary in confirmed text
@@ -552,6 +588,7 @@ export class StreamingProcessor {
     this.clauseTranslationInFlight = true
 
     const gen = this.deps.getGeneration?.()
+    const utterance = this.utteranceGeneration
     const glossaryEntries = this.deps.getGlossary()
     const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
     const ctx = this.deps.contextBuffer.getContext(glossary)
@@ -576,14 +613,15 @@ export class StreamingProcessor {
       const clauseMs = (performance.now() - t0).toFixed(0)
       log.info(`Clause translation: ${clauseMs}ms → "${translated}" (prefix: "${textToTranslate}")`)
 
-      if (!this.isCurrentGeneration(gen)) return
+      if (!this.isCurrentGeneration(gen, utterance) || !this.samePrefix(fullSourceText, this.lastSourceTextForTranslate)) return
 
       this.clauseTranslatedPrefix = textToTranslate
       this.clauseTranslation = translated
+      this.lastTranslatedSource = textToTranslate
       this.lastTranslatedConfirmed = translated
 
       const clauseResult: TranslationResult = {
-        sourceText: fullSourceText,
+        sourceText: this.lastSourceTextForTranslate,
         translatedText: translated,
         sourceLanguage: sourceLang,
         targetLanguage: targetLang,
@@ -594,7 +632,7 @@ export class StreamingProcessor {
     }).catch((err) => {
       log.warn('Clause translation error (non-fatal):', err instanceof Error ? err.message : err)
     }).finally(() => {
-      this.clauseTranslationInFlight = false
+      if (this.isCurrentGeneration(gen, utterance)) this.clauseTranslationInFlight = false
     })
   }
 

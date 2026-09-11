@@ -161,6 +161,7 @@ export interface SettingsState {
   setStreamingIntervalMs: (v: number) => void
 
   // Actions
+  handleSaveSettings: () => Promise<void>
   handleStart: () => Promise<void>
   handleStop: () => Promise<void>
   handleResume: () => Promise<void>
@@ -192,13 +193,7 @@ export function useSettingsState(): SettingsState {
     geminiLiveApiKey: engine.geminiLiveApiKey
   }
 
-  const handleStart = async (): Promise<void> => {
-    if (session.isStarting) return
-    session.setIsStarting(true)
-
-    try {
-      session.setStatus('Starting pipeline...')
-
+  const saveCurrentSettings = async (): Promise<void> => {
       await withIpcTimeout(window.api.saveSettings({
         translationEngine: engine.engineMode,
         googleApiKey: engine.apiKey,
@@ -230,6 +225,20 @@ export function useSettingsState(): SettingsState {
         adaptiveRoutingQualityEngine: engine.adaptiveRoutingQualityEngine,
         streamingIntervalMs: session.streamingIntervalMs
       }), 10_000, 'saveSettings')
+  }
+  const handleSaveSettings = async (): Promise<void> => {
+    try { await saveCurrentSettings(); session.setStatus('Settings saved. Restart browser captions to apply.') }
+    catch (error) { session.setStatus(`Could not save settings: ${String(error)}`) }
+  }
+
+  const handleStart = async (): Promise<void> => {
+    if (session.isStarting) return
+    session.setIsStarting(true)
+
+    try {
+      session.setStatus('Starting pipeline...')
+
+      await saveCurrentSettings()
 
       const resolvedMode = resolveEngineMode(engine.engineMode, apiKeys, engine.gpuInfo)
       const config = buildEngineConfig(resolvedMode, language.sttEngine, apiKeys, {
@@ -393,7 +402,7 @@ export function useSettingsState(): SettingsState {
     showApiOptions, setShowApiOptions,
 
     // Actions
-    handleStart, handleStop, handleResume, handleDismissResume,
+    handleSaveSettings, handleStart, handleStop, handleResume, handleDismissResume,
     handleGenerateSummary
   }
 }

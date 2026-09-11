@@ -1,3 +1,5 @@
+import { initAutoUpdater } from './auto-updater'
+import type { Language } from '../engines/types'
 import { app, protocol, net } from 'electron'
 import { initMain as initAudioLoopback } from 'electron-audio-loopback'
 import { TranslationPipeline } from '../pipeline/TranslationPipeline'
@@ -73,6 +75,7 @@ async function initPipeline(): Promise<void> {
   // mlx-whisper is Apple Silicon only — skip registration on other platforms
   if (process.platform === 'darwin') {
     ctx.pipeline.registerSTT('mlx-whisper', () => new MlxWhisperEngine({
+      language: store.get('sourceLanguage') === 'auto' ? undefined : store.get('sourceLanguage') as Language,
       onProgress: (msg) => ctx.mainWindow?.webContents.send('status-update', msg)
     }))
     // Kotoba-Whisper v2.0: JA-optimized MLX Whisper variant (JA CER 5.6%, JA-only output)
@@ -292,11 +295,12 @@ initAudioLoopback()
 
 if (!app.requestSingleInstanceLock()) app.quit()
 app.whenReady().then(async () => {
-  if (process.argv.includes('--jtl-companion')) {
+  if (process.argv.includes('--jtl-companion') && !store.get('hasCompletedSetup')) {
     store.set('isFirstRun', false)
     store.set('sourceLanguage', 'ja')
     store.set('targetLanguage', 'zh')
-    store.set('translationEngine', 'hunyuan-mt-15')
+    store.set('translationEngine', 'offline-hymt15')
+    store.set('hasCompletedSetup', true)
   }
   // Serve VAD assets (ONNX, WASM, worklet) from filesystem.
   // In packaged app, these are in app.asar.unpacked; dynamic import() can't read from asar.
@@ -390,6 +394,7 @@ app.whenReady().then(async () => {
   cleanupDisplayHandlers = registerDisplayHandlers(ctx)
   cleanupShortcuts = registerGlobalShortcuts(ctx)
   // This local fork must never replace itself with an upstream release.
+  initAutoUpdater(ctx)
   if (process.argv.includes('--jtl-companion')) return
 
   // #694: Start progressive model download for instant offline start

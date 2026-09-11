@@ -136,6 +136,7 @@ export interface AppSettings {
   /** Enable speaker diarization via FluidAudio for multi-speaker identification (#549) */
   speakerDiarizationEnabled: boolean
   /** Enable adaptive quality routing between fast and quality translation engines (#547) */
+  gerEnabled: boolean
   adaptiveRoutingEnabled: boolean
   /** Adaptive routing: token count below this → fast engine only (default 10) */
   adaptiveRoutingShortThreshold: number
@@ -218,6 +219,7 @@ export const store = new Store<AppSettings>({
     telemetryConsent: false,
     telemetryConsentShown: false,
     speakerDiarizationEnabled: false,
+    gerEnabled: false,
     adaptiveRoutingEnabled: false,
     adaptiveRoutingShortThreshold: 10,
     adaptiveRoutingLongThreshold: 50,

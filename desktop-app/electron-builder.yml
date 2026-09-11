@@ -20,6 +20,8 @@ asarUnpack:
   - 'out/renderer/vad/**'
 publish:
   provider: github
+  owner: clark970417-eng
+  repo: japanese-live-translator-extension
 mac:
   target:
     - target: dmg

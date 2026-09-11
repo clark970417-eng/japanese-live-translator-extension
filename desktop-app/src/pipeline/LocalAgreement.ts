@@ -28,6 +28,11 @@ export class LocalAgreement {
   update(newTranscript: string): AgreementResult {
     const commonPrefix = longestCommonPrefix(this.previousTranscript, newTranscript)
 
+    // A revised hypothesis may retract punctuation or words already confirmed.
+    // Keep only the prefix actually present in both, never splice by a stale length.
+    if (!newTranscript.startsWith(this.confirmedText)) {
+      this.confirmedText = longestCommonPrefix(this.confirmedText, newTranscript)
+    }
     let newConfirmed = ''
     if (commonPrefix.length > this.confirmedText.length) {
       newConfirmed = commonPrefix.slice(this.confirmedText.length)

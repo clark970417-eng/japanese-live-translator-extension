@@ -5,6 +5,7 @@ import struct
 import subprocess
 import sys
 import time
+import threading
 from pathlib import Path
 from opencc import OpenCC
 
@@ -30,43 +31,49 @@ def main():
                 if time.monotonic() >= deadline:
                     raise RuntimeError('Desktop app did not start; inspect app.log')
                 time.sleep(.2)
-    stream = connection.makefile('rb')
     output = sys.stdout.buffer
+    directions = {}
+    def requests():
+        try:
+            while True:
+                header = sys.stdin.buffer.read(4)
+                if not header:
+                    break
+                if len(header) != 4:
+                    raise ValueError('Truncated native header')
+                size = struct.unpack('<I', header)[0]
+                if size > 2_000_000:
+                    raise ValueError('Native request too large')
+                payload = sys.stdin.buffer.read(size)
+                if len(payload) != size:
+                    raise ValueError('Truncated native request')
+                message = json.loads(payload)
+                directions[message['id']] = message.get('direction', 'ja-zh')
+                connection.sendall(json.dumps(message).encode() + b'\n')
+        finally:
+            connection.shutdown(socket.SHUT_RDWR)
+    threading.Thread(target=requests, daemon=True).start()
     try:
-        while True:
-            header = sys.stdin.buffer.read(4)
-            if not header:
-                break
-            if len(header) != 4:
-                raise ValueError('Truncated native header')
-            size = struct.unpack('<I', header)[0]
-            if size > 2_000_000:
-                raise ValueError('Native request too large')
-            payload = sys.stdin.buffer.read(size)
-            if len(payload) != size:
-                raise ValueError('Truncated native request')
-            message = json.loads(payload)
-            connection.sendall(json.dumps(message).encode() + b'\n')
+        with connection.makefile('rb') as stream:
             while True:
                 line = stream.readline(2_000_001)
-                if not line or len(line) > 2_000_000:
-                    raise RuntimeError('Desktop connection interrupted')
+                if not line:
+                    break
+                if len(line) > 2_000_000:
+                    raise ValueError('Desktop response too large')
                 reply = json.loads(line)
-                if reply.get('id') != message.get('id'):
-                    raise ValueError('Mismatched desktop response')
                 result = reply.get('result')
                 if isinstance(result, dict):
                     if isinstance(result.get('translated'), str):
                         result['translated'] = traditional.convert(result['translated'])
-                    if message.get('op') == 'translate' and message.get('direction', 'ja-zh') == 'ja-zh' and isinstance(result.get('text'), str):
+                    if not reply.get('event') and directions.get(reply.get('id')) == 'ja-zh' and isinstance(result.get('text'), str) and 'translated' not in result:
                         result['text'] = traditional.convert(result['text'])
+                if not reply.get('event'):
+                    directions.pop(reply.get('id'), None)
                 data = json.dumps(reply, ensure_ascii=False).encode()
                 output.write(struct.pack('<I', len(data)) + data)
                 output.flush()
-                if 'event' not in reply:
-                    break
     finally:
-        stream.close()
         connection.close()
 
 if __name__ == '__main__':

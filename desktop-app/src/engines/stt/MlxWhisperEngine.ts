@@ -12,14 +12,17 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
   readonly name: string = 'mlx-whisper (Apple Silicon)'
   readonly isOffline = true
 
+  private language?: Language
   private model: string
   private onProgress?: (message: string) => void
 
   constructor(options?: {
+    language?: Language
     model?: string
     onProgress?: (message: string) => void
   }) {
     super()
+    this.language = options?.language
     this.model = options?.model ?? 'mlx-community/whisper-large-v3-turbo'
     this.onProgress = options?.onProgress
   }
@@ -72,7 +75,8 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
         result = await this.sendCommand({
           action: 'transcribe',
           audio_path: tempPath,
-          sample_rate: sampleRate
+          sample_rate: sampleRate,
+          language: this.language
         })
       } catch (err) {
         // Timeout or bridge error — return null per interface contract

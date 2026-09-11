@@ -10,5 +10,9 @@
     "declarationMap": true,
     "composite": true
   },
-  "include": ["src/renderer/**/*", "src/preload/index.d.ts"]
+  "include": [
+    "src/renderer/**/*",
+    "src/preload/index.d.ts",
+    "src/engine-selection.ts"
+  ]
 }

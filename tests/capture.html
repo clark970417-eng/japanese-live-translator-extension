@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="../content.css">
 <style>body{background:#171b24;color:white;font:18px system-ui;padding:24px}#movie_player{position:relative;background:#222;height:300px;max-width:900px}video{width:100%;height:100%}td,th{text-align:left;padding:8px;border-bottom:1px solid #555}table{width:100%;font-size:16px}</style>
 <h1>分頁收音 → 日文 → 中文</h1><p>先點一次工具列的翻譯助手圖示，再關閉彈出視窗以授權此分頁。按「開始完整測試」會等待模型、播放已知日文音檔、檢查字幕清空並停止收音。此頁使用正式收音與翻譯流程。</p>
-<button id="full-test">開始完整測試</button><p id="test-status" role="status">尚未開始</p>
+<label>測試模式 <select id="test-mode"><option value="record">四組記錄</option><option value="realtime">單組即時</option></select></label> <label>播放次數 <select id="test-cycles"><option value="1">1</option><option value="6">6（檢查四組輪替）</option></select></label> <button id="full-test">開始完整測試</button><p id="test-status" role="status">尚未開始</p>
 <div id="movie_player"><video controls src="japanese-fixture.wav"></video></div>
 <p id="health">等待擴充功能</p><table><thead><tr><th>播放後秒數</th><th>日文</th><th>中文</th></tr></thead><tbody id="events"></tbody></table>
 <link rel="stylesheet" href="../caption-window.css"><script src="../caption-window.js"></script><script src="../content.js"></script><script src="capture.js"></script>

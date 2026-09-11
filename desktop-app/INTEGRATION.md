@@ -15,9 +15,12 @@ Japanese reply drafts, single-pair and four-group caption modes, and movable,
 resizable caption styling. Japanese source events are returned before translation
 finishes. Completed translations are reused by the extension rather than requested
 twice. The desktop pipeline owns recognition, context, translation cache and engine
-recovery. The browser adapter currently uses the upstream finalized-chunk process
-entry point, as its original Chrome adapter did; it does not claim true incremental
-audio decoding or zero latency.
+recovery. The browser adapter uses `processStreaming` and `finalizeStreaming`, with asynchronous
+caption events and segment identifiers. This is repeated decoding of growing audio
+windows, not stateful incremental acoustic decoding or zero latency. Desktop and
+browser startup share saved engine settings, glossary, routing, and logging.
+The extension can open the complete desktop settings interface; saving does not
+require starting desktop audio capture.
 
 Local changes add Traditional Chinese target prompts, friendly Japanese reply
 style, retryable translator initialization, bounded local requests, disconnection
@@ -29,7 +32,8 @@ For a local arm64 app, run `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-build
 --mac dir --publish never`. This produces an unsigned local build, not a notarized
 public distribution. Register `desktop/install.py --extension-id ID --app EXECUTABLE`
 using the companion Python environment. Start the app with `--jtl-companion` to
-avoid automatic onboarding downloads and upstream update checks. No GitHub Release
+use the browser companion route. Update metadata points to this fork; automatic
+downloads are disabled. No GitHub Release
 is required.
 
 The legacy Python inference host remains available by reinstalling without `--app`.

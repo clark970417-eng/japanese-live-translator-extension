@@ -61,3 +61,11 @@ describe('LocalAgreement', () => {
     expect(result.interimText).toBe('')
   })
 })
+
+it('does not splice a stale confirmed prefix into a corrected hypothesis', () => {
+  const agreement = new LocalAgreement()
+  agreement.update('こんにちは。今日は、一週。')
+  agreement.update('こんにちは。今日は、一週。')
+  const result = agreement.update('こんにちは。今日は一緒に遊びましょう。')
+  expect(result.confirmedText + result.interimText).toBe('こんにちは。今日は一緒に遊びましょう。')
+})

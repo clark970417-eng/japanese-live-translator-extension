@@ -4,6 +4,8 @@ document.querySelector('#full-test').onclick=async event=>{
  event.target.disabled=true;
  try{
   document.querySelector('#events').replaceChildren();last='';started=0;lastExpiry=0;hideDrift=null;
+  const saved=await chrome.storage.local.get('subtitleSettings');
+  await chrome.storage.local.set({subtitleSettings:{...saved.subtitleSettings,captionMode:document.querySelector('#test-mode').value}});
   const tab=await chrome.tabs.getCurrent();
   const reply=await chrome.runtime.sendMessage({type:'subtitle-control',action:'start',tabId:tab.id});
   if(!reply?.ok)throw Error(reply?.error||'啟動失敗');
@@ -16,8 +18,11 @@ document.querySelector('#full-test').onclick=async event=>{
    if(Date.now()>deadline)throw Error('模型載入逾時');
    await new Promise(r=>setTimeout(r,500));
   }
-  status.textContent='播放音檔並記錄字幕';video.currentTime=0;await video.play();
-  await new Promise(resolve=>video.addEventListener('ended',resolve,{once:true}));
+  for(let i=0;i<Number(document.querySelector('#test-cycles').value);i++){
+   status.textContent='播放第 '+(i+1)+' 次音檔並記錄字幕';video.currentTime=0;await video.play();
+   await new Promise(resolve=>video.addEventListener('ended',resolve,{once:true}));
+   await new Promise(r=>setTimeout(r,2500));
+  }
   status.textContent='等待辨識與翻譯完成（最多 60 秒）';await new Promise(r=>setTimeout(r,60000));
   const mode=(await chrome.runtime.sendMessage({type:'health'})).text.captionMode;
   const visible=document.querySelector('#jtl-subtitles')?.classList.contains('jtl-visible');
@@ -26,7 +31,7 @@ document.querySelector('#full-test').onclick=async event=>{
  }catch(error){status.textContent='測試未通過：'+error.message;}
  finally{video.pause();await chrome.runtime.sendMessage({type:'subtitle-control',action:'stop'});event.target.disabled=false;}
 };
-document.querySelector('video').addEventListener('play',()=>{started=performance.now();});
+document.querySelector('video').addEventListener('play',()=>{if(!started)started=performance.now();});
 setInterval(()=>{
  chrome.runtime.sendMessage({type:'health'},reply=>{if(reply?.ok)document.querySelector('#health').textContent=reply.text.modelStatus+' / '+JSON.stringify(reply.text.diagnostics?.metrics||{});});
  const overlay=document.querySelector('#jtl-subtitles');

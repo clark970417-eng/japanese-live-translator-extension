@@ -51,7 +51,7 @@ export class SpeechWindows {
   }
   if(ended){this.active=false;this.parts=[];this.samples=0;this.pre=[];this.onset=0;}
   else if(cut){
-   this.parts=this.parts.slice(-(this.overlapFrames||32));this.samples=this.parts.reduce((a,b)=>a+b.length,0);
+   const keep=this.overlapFrames??32;this.parts=keep?this.parts.slice(-keep):[];this.samples=this.parts.reduce((a,b)=>a+b.length,0);
    this.start=this.clock-this.samples;this.id++;this.overlap=true;this.voiced=0;this.speechStart=this.clock;
   }
   return job;

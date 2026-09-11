@@ -3,7 +3,7 @@ export class DesktopWorker {
  constructor(){this.token=crypto.randomUUID();this.listener=m=>{if(m.type==='desktop-partial'&&m.workerToken===this.token&&m.decodeId===this.id&&!this.closed)this.onmessage?.({data:{type:'partial',id:this.id,text:m.text}});};chrome.runtime.onMessage.addListener(this.listener);}
  postMessage(data){
   this.id=data.id;
-  const fields={};
+  const fields={segment:data.segment,utterance:data.utterance,final:data.final,speechAt:data.speechAt,audioEndAt:data.audioEndAt};
   if(data.type==='decode'){
    const bytes=new Uint8Array(data.audio.buffer,data.audio.byteOffset,data.audio.byteLength);
    let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));

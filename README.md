@@ -31,13 +31,13 @@ The extension never publishes a message automatically. Its optional writing assi
 - A movable and resizable caption panel with configurable type size, color, outline, background, and opacity.
 - Persistent transcript records, failed-translation retry, and text export.
 - Translation of YouTube titles, chat, comments, and X posts.
-- No analytics, automatic posting, or cloud upload of source audio.
+- Local audio processing by default, with optional cloud engines in the desktop application; no automatic posting.
 
 ## System design
 
 Audio is captured from the active tab with Chromium's tab capture API. An `AudioWorklet` streams samples to a resampler and a Silero V5 worker. Speech windows are sent to a separate Whisper worker so interface updates, detection, and recognition do not block one another.
 
-Continuous speech is divided into bounded five-second windows with approximately one second of overlap. Consecutive recognition hypotheses are aligned to avoid displaying older text again. Japanese output is published first; translation runs independently and fills the matching Chinese line later. In ordered-record mode, completed recognition is stored before translation so a slow network request does not prevent the next utterance from being recorded.
+The desktop path sends growing speech windows to the upstream streaming processor, with a twenty-second safety bound and no cross-window overlap. Local agreement aligns recognition hypotheses. Japanese output is published first; asynchronous translation fills the matching line without starting a duplicate browser translation request. The browser-only fallback keeps its existing bounded overlapping windows. Ordered-record mode retains completed utterances while translations finish.
 
 This is windowed incremental recognition rather than a stateful streaming acoustic model. It reduces perceived latency, but it cannot provide zero-delay transcription or perfect recognition.
 
@@ -56,7 +56,7 @@ download. Website text translation retains its existing provider routing.
 
 ## Privacy and security
 
-Source audio is processed locally in the browser and is not uploaded by this project. Recognized text is sent to the selected translation endpoint. API credentials are stored in `chrome.storage.local` and are not included in this repository. Transcript text remains in browser storage until the user clears it. The project contains no analytics or telemetry.
+The default browser and MLX desktop recognition paths process audio locally. Browser-mode and website translation may send recognized or page text to the selected provider. Optional cloud engines in the full desktop application can send audio or text to their configured providers. Extension credentials are stored in `chrome.storage.local`; desktop settings use the application store. Neither is committed. Transcripts remain locally until cleared. The upstream application also retains its local usage metrics and session logging.
 
 ## Repository structure
 
@@ -78,10 +78,11 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The integration passes 45 extension tests, 486 desktop tests, and five Python
+The integration passes 47 extension tests, 490 desktop tests, and five Python
 bridge tests. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
-These tests do not establish long-session or commercial-product parity.
+These tests do not establish long-session or commercial-product parity. See
+[3.7 verification](RETEST-3.7.0.md) and the [upstream comparison](COMPARISON-LIVETRANSLATE.md).
 
 The end-to-end browser fixture at `tests/capture.html` uses the production capture
 and caption path with a 10.7-second synthetic Japanese recording. Historical
@@ -91,7 +92,7 @@ they should not be interpreted as measurements of the new desktop backend.
 ## Limitations
 
 - Recognition quality can decrease with music, overlapping speakers, proper names, noise, and very short utterances.
-- Translation quality and latency depend on the external service and network conditions.
+- Translation quality and latency depend on model choice, available compute, and, for network providers, service and network conditions.
 - Picture-in-picture windows cannot host a normal page content-script overlay.
 - Long-duration livestream stability has not been certified through a formal soak test.
 - The model has not been fine-tuned for this project.

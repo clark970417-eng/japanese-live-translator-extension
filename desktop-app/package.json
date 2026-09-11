@@ -1,7 +1,7 @@
 {
   "name": "live-translate",
   "version": "0.2.0",
-  "description": "Real-time speech translation overlay — local-first, free, JA↔EN bidirectional with pluggable engines",
+  "description": "Real-time speech translation overlay \u2014 local-first, free, JA\u2194EN bidirectional with pluggable engines",
   "main": "./out/main/index.js",
   "scripts": {
     "postinstall": "node scripts/fix-whisper-addon.js",
@@ -58,5 +58,10 @@
     "typescript-eslint": "^8.57.2",
     "vite": "^5.4.0",
     "vitest": "^4.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clark970417-eng/japanese-live-translator-extension.git",
+    "directory": "desktop-app"
   }
 }

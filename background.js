@@ -1,7 +1,8 @@
 import {RecordingQueue} from './recording-queue.mjs';
 import {NativeClient} from './native-client.mjs';
 let desktopClient;
-const desktop={request:(...args)=>(desktopClient??=new NativeClient(chrome.runtime)).request(...args)};
+const desktop={request:(...args)=>{if(!desktopClient){desktopClient=new NativeClient(chrome.runtime);desktopClient.onEvent=desktopEvent;}return desktopClient.request(...args);}};
+const desktopSegments=new Map();
 let engineMode='browser';
 const desktopTranslations=new Map();
 import {ResultGate} from './stream-core.mjs';
@@ -96,6 +97,29 @@ async function translateCaption(text,signal){
  return firstTranslation(primary,async s=>validateTranslation(polishChinese(text,await styledTranslation(text,'ja-zh',s)),'ja-zh',text),deadline(signal,3000),400);
 }
 const translationCache=new Map();
+function desktopEvent(event){
+ if(!['caption','source'].includes(event.event))return;
+ const meta=desktopSegments.get(event.segment);if(!meta||((meta.session!==gate.session||!running)&&meta.mode!=='record'))return;
+ const result=event.result||{text:event.text};
+ const original=String(result.text||(result.final?meta.caption?.original:'')||'').trim();if(!original)return;
+ let translated=String(result.translated||'').trim();
+ if(translated&&(!result.targetLanguage||result.targetLanguage==='zh')){try{translated=validateTranslation(translated,'ja-zh',original);}catch{translated='';}}
+ const previous=meta.caption;
+ if(previous?.final&&!result.correction)return;
+ // An old translation must never be paired with a new source hypothesis.
+ if(previous?.original!==original&&!result.final&&translated===previous?.translated)translated='';
+ meta.caption={original,translated,final:!!result.final||!!(result.correction&&previous?.final)};
+ diagnostics.lastRecognition=Date.now();modelStatus='已辨識日文';
+ if(translated)diagnostics.chineseLagMs=Date.now()-meta.audioEndAt;
+ if(meta.mode==='record'){
+  recording.updateExternal({key:event.segment,session:meta.session,group:meta.group,createdAt:meta.createdAt,original,translated,state:translated?'done':result.final?'failed':'streaming'}).catch(()=>{lastError='字幕記錄無法儲存';});
+ }else{
+  if(meta.createdAt<(diagnostics.desktopLatestAt||0))return;
+  diagnostics.desktopLatestAt=meta.createdAt;
+  const item={id:event.segment,original,translated,updatedAt:Date.now()/1000,expiresAt:Date.now()/1000+captionHold};
+  items.length=0;items.push(item);pushSubtitle(item);
+ }
+}
 function pushSubtitle(item){if(captureTabId)chrome.tabs.sendMessage(captureTabId,{type:'subtitle-update',item}).catch(()=>{});}
 async function translateItem(job){
  // Finish useful work; keep only the newest waiting revision. Repeatedly
@@ -146,6 +170,7 @@ async function stopCapture(){
  running=false;gate.reset();items.length=0;translationPending=null;pushSubtitle(null);
  await chrome.storage.local.set({captionsHidden:true});
  await chrome.runtime.sendMessage({type:'offscreen-stop'}).catch(()=>{});
+ if(desktopClient)await desktop.request('stop',{},60000).catch(()=>{});
  modelStatus='已停止';return{running};
 }
 async function resetCapture(){
@@ -173,12 +198,18 @@ async function startCapture(tabId){
 }
 chrome.tabs.onRemoved.addListener(id=>{if(id===captureTabId)stopCapture();});
 chrome.runtime.onMessage.addListener((m,s,send)=>{
+ if(m.type==='desktop-settings' && s.url===chrome.runtime.getURL('popup.html')){
+  desktop.request('settings',{},30000).then(text=>send({ok:true,text}),e=>send({ok:false,error:e.message}));return true;
+ }
  if(m.type==='desktop-request'){
   if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||engineMode!=='desktop'||!['init','decode'].includes(m.op))return;
-  desktop.request(m.op,m.op==='decode'?{audio:m.audio}:{},m.op==='init'?600000:60000,event=>{
-   if(event.event==='source')chrome.runtime.sendMessage({type:'desktop-partial',decodeId:m.decodeId,workerToken:m.workerToken,text:event.text}).catch(()=>{});
-  }).then(text=>{
-   if(text.text&&text.translated){try{desktopTranslations.set(text.text.trim(),validateTranslation(text.translated,'ja-zh',text.text));if(desktopTranslations.size>200)desktopTranslations.delete(desktopTranslations.keys().next().value);}catch{}}
+  const segment=gate.session+':'+m.segment;
+  if(m.op==='decode'){
+   desktopSegments.set(segment,{session:gate.session,mode:captionMode,group:gate.session+':'+m.utterance,createdAt:m.speechAt,audioEndAt:m.audioEndAt,final:m.final});
+   if(desktopSegments.size>100)desktopSegments.delete(desktopSegments.keys().next().value);
+  }
+  desktop.request(m.op,m.op==='decode'?{audio:m.audio,segment,final:!!m.final}:{},m.op==='init'?600000:60000).then(text=>{
+   if(m.op==='decode'&&m.final)desktopEvent({event:'caption',segment,result:{...text,final:true}});
    send({ok:true,text});
   },e=>send({ok:false,error:e.message}));return true;
  }

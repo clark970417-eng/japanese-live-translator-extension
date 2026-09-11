@@ -14,3 +14,10 @@ test('native responses correlate by ID; disconnect rejects pending work',async()
  const c=client.request('decode');const rejection=assert.rejects(c,/disconnected/);
  disconnected();await rejection;assert.equal(client.pending.size,0);
 });
+test('late caption events remain observable after a decode response',async()=>{
+ let receive;const port={onMessage:{addListener:f=>receive=f},onDisconnect:{addListener(){}},postMessage(){},disconnect(){}};
+ const client=new NativeClient({connectNative:()=>port});const events=[];client.onEvent=e=>events.push(e);
+ const pending=client.request('decode');receive({id:1,ok:true,result:{text:'魚'}});await pending;
+ receive({event:'caption',segment:'one',result:{text:'魚',translated:'魚'}});
+ assert.equal(events.length,1);assert.equal(client.pending.size,0);client.close();
+});

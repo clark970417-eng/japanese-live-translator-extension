@@ -14,13 +14,13 @@ function resetAudio(s){
  s.vad?.postMessage({type:'reset',epoch:s.epoch,origin:s.origin,rate:s.context.sampleRate,desktop:s.desktop});
 }
 function decode(s,job){
- if(job.epoch!==s.epoch||(s.recording&&!job.final))return;
+ if(job.epoch!==s.epoch||(s.recording&&!s.desktop&&!job.final))return;
  if(!s.ready){if(s.recording){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}}return;}
  if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
  s.busy=job;s.started=performance.now();s.metrics.add('queueMs',Date.now()-job.audioEndAt);
  s.timeout=setTimeout(()=>restartWorker(s,'辨識逾時'),s.desktop?60000:15000);
- const audio=job.audio.slice();s.worker.postMessage({type:'decode',id:job.id,audio},[audio.buffer]);
+ const audio=job.audio.slice();s.worker.postMessage({type:'decode',id:job.id,audio,segment:s.epoch+':'+job.id,utterance:s.epoch+':'+job.utteranceId,final:job.final,speechAt:job.speechAt,audioEndAt:job.audioEndAt},[audio.buffer]);
 }
 function drainVad(s){
  if(s.vadBusy||!s.vadReady)return;
@@ -53,6 +53,7 @@ function initializeWorker(s){
   if(data.type==='ready'){clearTimeout(s.timeout);s.ready=true;s.model=data.model;s.dtype=data.dtype;send(s,'model-status',{text:data.model+' 已就緒，等待人聲'});const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);return;}
   if(data.type==='error'){restartWorker(s,data.error);return;}
   if(data.type==='partial'){
+   if(s.desktop)return;
    const job=s.busy;
    if(!job||data.id!==job.id||job.epoch!==s.epoch||s.nativeUntil||Date.now()-job.audioEndAt>=5000)return;
    const text=cleanText(data.text);
@@ -66,13 +67,14 @@ function initializeWorker(s){
   clearTimeout(s.timeout);s.decodeMs=performance.now()-s.started;s.metrics.add('decodeMs',s.decodeMs);
   const job=s.busy;s.busy=null;
   if(job&&job.epoch===s.epoch&&!s.nativeUntil&&(s.recording||Date.now()-job.audioEndAt<5000)){
-   const text=s.filter.accept(data.text,job);
+   if(s.desktop&&data.text&&s.lastId!==job.id){s.lastId=job.id;s.metrics.add('firstJapaneseMs',Date.now()-job.speechAt);s.metrics.add('audioLagMs',Date.now()-job.audioEndAt);}
+   const text=s.desktop?null:s.filter.accept(data.text,job);
    const result=text?s.agreement.accept(text,job):null;
    if(result){
     if(s.lastId!==job.id){s.metrics.add('firstJapaneseMs',Date.now()-job.speechAt);s.lastId=job.id;}
     s.metrics.add('audioLagMs',Date.now()-job.audioEndAt);
     send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,final:job.final,utteranceId:s.epoch*1000000+job.utteranceId,utteranceEnd:job.utteranceEnd,decodeMs:Math.round(s.decodeMs),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
-   }else s.rejected++;
+   }else if(!s.desktop)s.rejected++;
   }
   const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);
  };

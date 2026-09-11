@@ -4,6 +4,7 @@ export class NativeClient {
   if(this.port)return;
   const port=this.port=this.runtime.connectNative('org.jtl.companion');
   port.onMessage.addListener(message=>{
+   if(message.event)this.onEvent?.(message);
    const job=this.pending.get(message.id);if(!job)return;
    if(message.event){job.progress?.(message);return;}
    clearTimeout(job.timer);this.pending.delete(message.id);

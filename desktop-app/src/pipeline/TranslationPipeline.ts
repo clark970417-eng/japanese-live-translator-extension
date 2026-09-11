@@ -136,6 +136,16 @@ export class TranslationPipeline extends EventEmitter {
       getSTTEngine: () => this.engineManager.sttEngine,
       getTranslator: () => this.engineManager.translator,
       getGlossary: () => this.glossary,
+      translateFinal: async (text, from, to) => {
+        const cached = this.translationCache.get(text, from, to)
+        if (cached !== undefined) return cached
+        const context = this.contextBuffer.getContext(this.glossary.length ? this.glossary : undefined)
+        const translated = this.adaptiveRouter.getConfig().enabled && this.adaptiveRouter.isReady
+          ? (await this.adaptiveRouter.translate(text, from, to, context)).translated
+          : await this.engineManager.translator!.translate(text, from, to, context)
+        this.translationCache.set(text, from, to, translated)
+        return translated
+      },
       getSimulMtConfig: () => ({ enabled: this.simulMtEnabled, waitK: this.simulMtWaitK }),
       resolveTargetLanguage: (lang) => this.resolveTargetLanguage(lang),
       incrementProcessing: () => { this.processingCount++ },

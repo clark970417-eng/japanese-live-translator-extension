@@ -37,7 +37,7 @@ def init_model(model_name="mlx-community/whisper-large-v3-turbo"):
         whisper_model = None
         output({"error": str(e)})
 
-def transcribe(audio_path, sample_rate=16000):
+def transcribe(audio_path, sample_rate=16000, language=None):
     global whisper_model
     if not whisper_model:
         output({"error": "Model not initialized"})
@@ -61,15 +61,19 @@ def transcribe(audio_path, sample_rate=16000):
         with contextlib.redirect_stdout(sys.stderr):
             result = mlx_whisper.transcribe(
                 audio, path_or_hf_repo=whisper_model,
-                language=None, condition_on_previous_text=False,
+                language=language, condition_on_previous_text=False,
                 temperature=0, verbose=False,
             )
 
+        segments = result.get("segments", [])
+        if segments and all(s.get("no_speech_prob", 0) > 0.6 and s.get("avg_logprob", 0) < -0.8 for s in segments):
+            output({"text": "", "language": language or "ja"})
+            return
         text = result.get("text", "").strip()
         language = result.get("language", "en")
 
         # Map to our language codes
-        lang = "ja" if language == "ja" else "en"
+        lang = language
 
         output({"text": text, "language": lang})
     except Exception as e:
@@ -96,7 +100,7 @@ def main():
             if action == "init":
                 init_model(msg.get("model", "mlx-community/whisper-large-v3-turbo"))
             elif action == "transcribe":
-                transcribe(msg["audio_path"], msg.get("sample_rate", 16000))
+                transcribe(msg["audio_path"], msg.get("sample_rate", 16000), msg.get("language"))
             elif action == "dispose":
                 output({"disposed": True})
                 sys.exit(0)

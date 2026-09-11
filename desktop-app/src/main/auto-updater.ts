@@ -29,6 +29,7 @@ function sendStatus(ctx: AppContext, status: UpdateStatus): void {
  * Must be called after app.whenReady() and window creation.
  */
 export function initAutoUpdater(ctx: AppContext): void {
+  autoUpdater.autoDownload = false
   // Skip auto-updater for unsigned/local builds — app-update.yml won't exist
   const { app } = require('electron')
   if (!app.isPackaged) {

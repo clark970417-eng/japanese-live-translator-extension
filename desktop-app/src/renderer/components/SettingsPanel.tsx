@@ -23,6 +23,8 @@ import {
 
 function SettingsPanel(): React.JSX.Element {
   const s = useSettingsState()
+  const [gerEnabled, setGerEnabled] = useState(false)
+  useEffect(() => { window.api.getSettings().then(v => setGerEnabled(!!v.gerEnabled)) }, [])
   const disabled = s.isRunning || s.isStarting
 
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -267,6 +269,17 @@ function SettingsPanel(): React.JSX.Element {
         </div>
       )}
 
+      <label style={{ display: 'block', marginTop: 12 }}>
+        <input type="checkbox" checked={gerEnabled} onChange={async e => {
+          const enabled = e.target.checked
+          try { await window.api.saveSettings({gerEnabled: enabled}); setGerEnabled(enabled); s.setStatus('Correction setting saved. Restart captions to apply.') }
+          catch (error) { s.setStatus(`Could not save: ${String(error)}`) }
+        }} /> Correct uncertain recognition (experimental; uses extra processing)
+      </label>
+      <button type="button" onClick={s.handleSaveSettings} disabled={s.isStarting}
+        style={{ width: '100%', padding: '12px', marginTop: '12px', borderRadius: '8px', cursor: 'pointer' }}>
+        Save settings for browser captions
+      </button>
       {/* Session controls — always visible */}
       <SessionControls
         isRunning={s.isRunning}

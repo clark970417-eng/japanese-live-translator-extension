@@ -202,9 +202,9 @@ function buildContextPrompt(ctx?: {
   // Previous segments for coherence
   if (ctx.previousSegments && ctx.previousSegments.length > 0) {
     const history = ctx.previousSegments
-      .map((s) => `  ${s.source} → ${s.translated}`)
+      .map((s) => `  ${s.source}`)
       .join('\n')
-    parts.push(`Previous translations for context:\n${history}`)
+    parts.push(`Previous speech for reference only. Do not translate or repeat this history:\n${history}`)
   }
 
   return parts.length > 0 ? parts.join('\n\n') + '\n\n' : ''
@@ -239,7 +239,7 @@ function buildTranslationPrompt(
     const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
     if (isChinese) {
       const targetZh = LANG_NAMES_ZH[to] ?? to
-      const style = from === 'zh' && to === 'ja' ? '使用自然、礼貌、亲切而稍微可爱的观众留言语气；不添加原文没有的亲密关系或意思，避免生硬的「あなた」。' : ''
+      const style = from === 'zh' && to === 'ja' ? '使用自然、礼貌、亲切而稍微可爱的观众留言语气；不添加原文没有的亲密关系或意思，避免生硬的「あなた」。' : '忠实保留原文的意思、否定、数字与语气；不要添加问候、赞美、总结或原文没有的信息。'
       return `${contextSection}将以下文本翻译为${targetZh}，${style}注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
     }
     return `${contextSection}Translate the following segment into ${toLang}, without additional explanation.\n\n${text}`
@@ -251,7 +251,7 @@ function buildTranslationPrompt(
       return `${contextSection}把下面的文本翻译成${toLang}，不要额外解释。\n\n${text}`
     }
     if (isChinese && to === 'zh') {
-      return `${contextSection}把下面的文本翻译成中文，不要额外解释。\n\n${text}`
+      return `${contextSection}把下面的文本翻译成繁体中文，不要额外解释。\n\n${text}`
     }
     return `${contextSection}Translate the following segment into ${toLang}, without additional explanation.\n\n${text}`
   }
@@ -276,7 +276,7 @@ function getInferenceParams(): { temperature: number; maxTokens: number; topK?: 
     return { temperature: 0.5, maxTokens: 512, topP: 1.0, minP: 0.1, repeatPenalty: { penalty: 1.05 } }
   }
   if (activeModelType === 'hunyuan-mt' || activeModelType === 'hunyuan-mt-15') {
-    return { temperature: 0.7, maxTokens: 512, topK: 20, topP: 0.6, repeatPenalty: { penalty: 1.05 } }
+    return { temperature: 0, maxTokens: 512, repeatPenalty: { penalty: 1.05 } }
   }
   return { temperature: 0.1, maxTokens: 512 }
 }
@@ -547,6 +547,14 @@ async function handleTranslateSSBD(
     const promptMs = performance.now() - t0
     const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
 
+    // The persistent prefix cache may own the only available sequence. Avoid
+    // throwing on every streaming update when speculative decoding is unavailable.
+    if (context.sequencesLeft === 0) {
+      const { response } = await runInference(prompt, undefined, systemPrompt)
+      process.parentPort!.postMessage({ type: 'result', id, text: response })
+      return
+    }
+
     // Tokenize the previous output for use as speculative draft
     const previousTokens = model.tokenize(previousOutput, false)
 
@@ -577,12 +585,10 @@ async function handleTranslateSSBD(
       const inferenceParams = getInferenceParams()
       const t1 = performance.now()
 
-      // Use responsePrefix to seed the model with previous output tokens.
-      // Combined with our FixedSequenceTokenPredictor, this enables
-      // speculative verification of the previous output.
+      // Draft tokens must be verified, not forced into the response: an earlier
+      // translation can become incorrect when the source hypothesis changes.
       const response = await ssbdSession.prompt(prompt, {
-        ...inferenceParams,
-        responsePrefix: previousOutput
+        ...inferenceParams
       })
       const inferenceMs = performance.now() - t1
 
