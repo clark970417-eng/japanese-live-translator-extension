@@ -34,10 +34,25 @@ not enabled in production.
 [Before](tests/results/stage1-language-before.json) ·
 [After](tests/results/stage1-language-after.json)
 
+## 2. Translation quality: measured improvements, residual style limitation
+
+A 16-case local-model spot check preserves the tested negation, counts, direction,
+and present/future versus past distinction. A general tense contrast in the prompt
+corrected the previously past-tense rendering of a future inability to stay.
+Contextual terminology now keeps livestream and game-clear terminology. Thanks
+for coming is more grammatical in Chinese. This is a small authored set, not a
+blind or statistically representative accuracy score.
+
+One additional Japanese draft still uses plain form despite polite-style guidance;
+awkward wording also remains. The local-draft label no longer promises verified
+politeness. No arbitrary string replacement is applied to force grammar.
+Text-only drafts now request translation directly instead of initializing speech
+recognition first. They remain drafts and are never posted automatically.
+
+[Local model outputs](tests/results/stage2-translation-quality.json).
+
 ## Remaining work, in order
 
-2. Translation quality: negation, tense, quantities, direction, speaker perspective,
-   and natural polite Japanese. Preserve meaning before style.
 3. Sustained behavior: slow translation, delayed replies, silence, noise, reconnect,
    and repeated start/stop without stale or duplicated captions.
 4. UI feedback: distinguish missing audio, recognition work and translation work;

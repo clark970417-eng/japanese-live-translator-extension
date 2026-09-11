@@ -239,8 +239,10 @@ function buildTranslationPrompt(
     const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
     if (isChinese) {
       const targetZh = LANG_NAMES_ZH[to] ?? to
-      const style = from === 'zh' && to === 'ja' ? '使用自然、礼貌、亲切而稍微可爱的观众留言语气；不添加原文没有的亲密关系或意思，避免生硬的「あなた」。' : '忠实保留原文的意思、否定、数字与语气；不要添加问候、赞美、总结或原文没有的信息。'
-      return `${contextSection}将以下文本翻译为${targetZh}，${style}注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
+      const tenseGuide = from === 'zh' && to === 'ja' ? '时态示例：明天不能参加。→明日は参加できません。昨天没能参加。→昨日は参加できませんでした。以下只翻译待译文本，不输出示例。\n' : ''
+      const terms = to === 'zh' && /配信|クリア/.test(text) ? '在直播或游戏语境中，配信译为直播，クリア译为通关。' : ''
+      const style = from === 'zh' && to === 'ja' ? '完整保留每个分句、否定、数量、说话者和时间关系；尚未发生的计划或做不到的事情不可改成过去式。每个完整句子必须用日语敬体です／ます或ません，禁止以だ、だよ、ないよ等普通体结句。自然亲切、温柔但不过分亲密；省略不必要的あなた，不添加爱意、承诺或原文没有的信息。' : '用自然流畅的台湾繁体中文口语，按中文语序表达；完整保留每个分句、否定、数字、时态和说话者。未说完的内容不要补完，不要添加问候、赞美、总结或原文没有的信息。'
+      return `${contextSection}${tenseGuide}将以下文本翻译为${targetZh}，${style}${terms}注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
     }
     return `${contextSection}Translate the following segment into ${toLang}, without additional explanation.\n\n${text}`
   }

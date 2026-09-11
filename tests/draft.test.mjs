@@ -37,3 +37,15 @@ test('NVIDIA draft uses supported non-thinking model and never exposes truncated
  assert.equal(bodies[0].chat_template_kwargs.enable_thinking,false);
  bad=true;const result=await call('明天也想繼續看新的遊戲');assert.match(result.text.mode,/一般機翻/);assert.doesNotMatch(result.text.draft,/Thinking/);
 });
+test('local text drafts do not initialize speech capture or promise verified style',async()=>{
+ let listener;const calls=[];
+ const chrome={storage:{local:{get:async()=>({speechMode:'desktop'})}},tabs:{onRemoved:{addListener(){}}},runtime:{onMessage:{addListener:f=>listener=f}}};
+ class NativeClient {async request(op,data){calls.push({op,data});return {text:'今日は終わりまでいられない。'};}}
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,...policy,Date});
+ const result=await new Promise(resolve=>listener({type:'make-draft',text:'今天不能待到結束'},{},resolve));
+ assert.equal(result.ok,true);
+ assert.deepEqual(calls.map(c=>c.op),['translate']);
+ assert.match(result.text.mode,/請確認語氣/);
+ assert.equal(result.text.draft,'今日は終わりまでいられない。');
+});

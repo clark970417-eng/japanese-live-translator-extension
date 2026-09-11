@@ -31,9 +31,8 @@ async function makeDraft(text){
  text=text.trim();
  const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
  if((await settings()).speechMode==='desktop'){
-  await desktop.request('init',{},600000);
   const result=await desktop.request('translate',{text,direction:'zh-ja'});
-  return {draft:validateTranslation(result.text,'zh-ja',text),mode:'本機翻譯 · 禮貌親切草稿'};
+  return {draft:validateTranslation(result.text,'zh-ja',text),mode:'本機翻譯草稿 · 請確認語氣'};
  }
  try{return {draft:await textMemo.run('styled:'+text,()=>styledTranslation(text,'zh-ja')),mode:'可愛禮貌'};}
  catch(_error){return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}
