@@ -31,7 +31,7 @@ function drainVad(s){
 function sample(s,data){
  if(active!==s)return;
  s.frames++;let energy=0;for(const v of data)energy+=v*v;s.level=Math.sqrt(energy/data.length);
- if(!s.ready||!s.vadReady)return;
+ if(!s.vadReady||(!s.ready&&!(s.recording&&s.receiving)))return;
  if(s.nativeUntil){if(Date.now()<s.nativeUntil)return;s.nativeUntil=0;resetAudio(s);}
  if(!s.receiving){s.receiving=true;resetAudio(s);}
  if(s.vadQueue.length>=(s.recording?120:12)){if(s.recording){send(s,'speech-error',{error:'收音處理積壓，已停止收音；已辨識文字仍保留'});stop();return;}s.overruns++;resetAudio(s);}
@@ -40,7 +40,7 @@ function sample(s,data){
 function restartWorker(s,reason){
  if(active!==s)return;
  if(s.restarts++>=1){send(s,'speech-error',{error:reason+'，請重新開始'});stop();return;}
- clearTimeout(s.timeout);if(s.recording&&s.busy)s.queue.jobs.unshift(s.busy);s.worker?.terminate();s.ready=false;s.busy=null;s.receiving=false;if(!s.recording)resetAudio(s);
+ clearTimeout(s.timeout);if(s.recording&&s.busy)s.queue.jobs.unshift(s.busy);s.worker?.terminate();s.ready=false;s.busy=null;if(!s.recording){s.receiving=false;resetAudio(s);}
  send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
 }
 function initializeWorker(s){

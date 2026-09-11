@@ -53,8 +53,22 @@ recognition first. They remain drafts and are never posted automatically.
 
 ## Remaining work, in order
 
-3. Sustained behavior: slow translation, delayed replies, silence, noise, reconnect,
-   and repeated start/stop without stale or duplicated captions.
+3. Sustained behavior: a fault-injection test now feeds real controller
+   audio events before and after decoder restart. Previously the first resumed
+   frame reset the audio epoch and cleared retained jobs. Recording recovery now
+   keeps that epoch and continues VAD intake while the decoder reloads; queued
+   utterances survive the retry. The updated regression failed before the fix and
+   passes after it in both browser and desktop decoder modes.
+
+   The actual-engine run completed 140 rounds in 1,906.807 seconds (31.8 minutes),
+   with 14 stop/reinitializations and 15 silent probes. Every final contained
+   Chinese; silent probes returned no text; there were no pipeline fatal/error
+   events. The existing initialization fallback from unsupported KV-value
+   quantization to default precision still occurred. Main-process RSS ranged
+   37.5–86.8 MiB; this excludes Python/Metal and includes harness event storage.
+   This repeated synthetic, sequential engine test bypasses browser capture/VAD;
+   it does not establish stability for arbitrary hours-long live streams.
+   [Raw run](tests/results/stage3-soak.json).
 4. UI feedback: distinguish missing audio, recognition work and translation work;
    preserve existing website translation and caption modes.
 5. Controlled upstream comparison: shared audio and language settings, cold/warm
