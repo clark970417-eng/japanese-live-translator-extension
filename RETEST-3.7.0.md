@@ -45,3 +45,17 @@ Suspend-affected timings were rejected. Latest packaged changes still require an
 Opera reload and a fresh awake test, including six utterances for four-group rollover,
 single-pair expiry, and the full desktop settings save flow. No zero-latency,
 long-session stability, or universal feature-parity claim is made.
+
+
+## Awake follow-up
+
+The final 3.7.0 extension was reloaded in Opera and completed a new capture run:
+first Japanese 1.77 seconds, first Chinese 2.97 seconds, final translation 13.92
+seconds from playback start, followed by normal stop. The previous same-fixture
+browser run finalized at 16.09 seconds; this single-run difference is encouraging
+but is not a statistically established latency improvement.
+
+A separate awake upstream/fork pipeline comparison is now recorded in
+`COMPARISON-LIVETRANSLATE.md`. Its timing shows no clear overall speed winner.
+Four-group rollover, single-pair expiry, and the desktop settings flow are being
+checked separately from those engine measurements.

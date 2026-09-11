@@ -27,17 +27,33 @@ browser messaging, so it is not an end-to-end UI comparison.
 | Stop lifecycle | Original subprocess cleanup logged a null-process error | Fork already captures the child process before asynchronous disposal; additional stale-work guards added |
 | Chinese suitability | Simplified Chinese output, with context sometimes repeated ahead of the current source | Traditional Chinese output and source-only context; awkward wording still occurs |
 
-## Timing conclusion
+## Awake A/B results
 
-No defensible overall speed winner is established. Both applications ran while the
-Mac was locked; several rounds were interrupted by system sleep. Those timings are
-invalid for ranking. Even the uninterrupted-looking short runs are insufficient to
-establish performance under normal active use. The final coalescing optimization
-requires a fresh awake A/B run.
+The comparison was repeated while awake on September 11, 2026. Values below are
+elapsed seconds from the beginning of a 10.7223-second recording. Engines were
+warmed; each implementation ran separately with the same audio and model weights.
 
-The earlier Opera test of the fork produced first Japanese at 1.70 seconds and
-first Chinese at 3.03 seconds, but it must not be compared directly with this
-pipeline-only harness. See `RETEST-3.7.0.md` for the boundary of that result.
+| Measurement | Upstream round 1 / 2 | Fork round 1 / 2 |
+| --- | --- | --- |
+| First Japanese | 2.007 / 2.017 | 1.970 / 1.966 |
+| First Chinese | 3.416 / 4.052 | 3.298 / 4.202 |
+| Final translation | 12.306 / 12.329 | 12.551 / 11.851 |
+| One second of silent PCM | Incorrect “Thank you.” / “谢谢。” | No caption |
+
+Speed is effectively similar in this small comparison. Differences of a few
+hundredths or tenths of a second do not establish a general performance advantage.
+The fork's silence behavior was better in this test. Both translators expanded
+some wording; neither is proven more accurate on a representative speech corpus.
+The repeated second round retained context and is not an independent quality sample.
+
+[Raw events](tests/results/livetranslate-3.7-awake.json) are retained for review.
+Prior sleep-interrupted runs remain excluded. This still does not establish a
+winner for the complete UI or every optional upstream feature.
+
+Separately, the updated fork completed an Opera capture run: Japanese appeared at
+1.77 seconds, Chinese at 2.97 seconds, and final translation at 13.92 seconds.
+This browser measurement includes a different capture/scheduling path and must
+not be ranked directly against the pipeline-only values above.
 
 ## Reproduction
 
