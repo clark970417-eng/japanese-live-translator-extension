@@ -85,3 +85,9 @@ The UI now uses compact white/black CH/JP and JP/CH buttons. Installed composer
 fixtures verified separate YouTube and Shorts editors and translation insertion.
 These fixtures model website markup; they do not establish compatibility with
 every future YouTube/X layout. No comments were posted.
+
+Final installed-site check: the real Shorts page exposed the draft control after
+expanding its comment editor, and existing Japanese comments showed JP/CH. The
+X fixture generated a draft and reported successful insertion. The reviewed
+compliment rendered as どれもとっても素敵ですね！ through the installed extension.
+No live-site comment was submitted.
