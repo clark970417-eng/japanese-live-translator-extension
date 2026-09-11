@@ -40,3 +40,10 @@ test('failed primary starts backup immediately and cancellation aborts both',asy
  await assert.rejects(firstTranslation(async()=>{called++;},async()=>{called++;},controller.signal,1));
  assert.equal(called,0);
 });
+
+test('reviewed warm viewer phrases preserve meaning, names and supplied emoji without matching larger messages',()=>{
+ assert.equal(phraseTranslation('都好好聽啊','zh-ja'),'どれもとっても素敵ですね！');
+ assert.equal(phraseTranslation('睡飽飽補精神喔🤎✨','zh-ja'),'たっぷり寝て、元気をチャージしてくださいね🤎✨');
+ assert.match(phraseTranslation('如果有不懂的漢字和功能，可以問我ww','zh-ja'),/漢字や機能.*ww$/);
+ assert.equal(phraseTranslation('都好好聽啊，但我比較喜歡以前的版本','zh-ja'),undefined);
+});

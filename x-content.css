@@ -10,3 +10,7 @@
 .jtl-x-live-status { display: inline; margin-left: 8px; font-size: 11px; color: #afc9bb; }
 .jtl-x-original { color: #ddd; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jtl-x-translated { color: #fff; margin-top: 2px; font-size: 14px; font-weight: 600; max-height: 42px; overflow: auto; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; }
+
+.jtl-x-composer { position: relative; flex: 0 0 auto; width: 100%; box-sizing: border-box; min-width: 0; padding: 4px 0; }
+
+.jtl-x-controls .jtl-x-language { background: #fff; color: #111; border: 1px solid #d4d4d4; border-radius: 12px; padding: 3px 8px; font: 600 12px/1.4 -apple-system, sans-serif; }

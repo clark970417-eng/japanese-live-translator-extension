@@ -8,3 +8,7 @@
 #jtl-subtitles {display:none;}
 #jtl-subtitles.jtl-visible{display:block;}
 #movie_player.jtl-native-active .ytp-caption-window-container { opacity: 0; }
+
+.jtl-composer-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+
+.jtl-compose, .jtl-comment-action { background: #fff; color: #111; border: 1px solid #d4d4d4; border-radius: 12px; padding: 3px 8px; margin: 3px 4px; font: 600 12px/1.4 -apple-system, sans-serif; }

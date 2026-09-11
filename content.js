@@ -70,7 +70,7 @@ function installCommentButtons() {
     const action = document.createElement("button");
     action.type = "button";
     action.className = "jtl-comment-action";
-    action.textContent = "翻成繁中";
+    action.textContent = "JP/CH";
     action.addEventListener("click", async () => {
       action.disabled = true;
       action.textContent = "翻譯中…";
@@ -184,32 +184,46 @@ function replaceEditable(box, text) {
   box.dispatchEvent(new InputEvent("input", {bubbles: true, inputType: "insertText", data: text}));
 }
 
+const composerControls = new WeakMap();
 function installComposerButton() {
-  const box = document.querySelector("#input[contenteditable='true'], #input.yt-live-chat-text-input-field-renderer");
-  if (!box || document.querySelector(".jtl-compose")) return;
-  const button = document.createElement("button");
-  button.className = "jtl-compose";
-  button.type = "button";
-  button.textContent = "中 → 日";
-  const status = document.createElement("span");
-  status.className = "jtl-status";
-  button.addEventListener("click", async () => {
-    const text = editableText(box);
-    if (!text) return;
-    if (!hasChinese(text)) { status.textContent = "請先輸入中文"; return; }
-    button.disabled = true;
-    status.textContent = "翻譯中…";
-    try {
-      const result = await runtimeMessage({type:'make-draft',text});
-      if(editableText(box)!==text){status.textContent='原文已修改，請重新翻譯';return;}
-      replaceEditable(box, result.draft);
-      status.textContent = `${result.mode}，確認後按送出`;
-    } catch (error) {
-      status.textContent = `翻譯失敗：${error.message}`;
-    } finally { button.disabled = false; }
-  });
-  const anchor = box.closest("yt-live-chat-text-input-field-renderer") || box.parentElement;
-  anchor.parentElement?.append(button, status);
+  // Comment editors are created lazily for watch pages, Shorts and replies.
+  const boxes = document.querySelectorAll("#input[contenteditable='true'], #input.yt-live-chat-text-input-field-renderer, #contenteditable-root[contenteditable='true']");
+  for (const box of boxes) {
+    const previous = composerControls.get(box);
+    if (previous?.isConnected) continue;
+    const controls = document.createElement("div");
+    controls.className = "jtl-composer-controls";
+    const button = document.createElement("button");
+    button.className = "jtl-compose";
+    button.type = "button";
+    button.textContent = "CH/JP";
+    button.setAttribute("aria-label", "將這則中文留言翻成日文草稿");
+    const status = document.createElement("span");
+    status.className = "jtl-status";
+    status.setAttribute("role", "status");
+    button.addEventListener("click", async () => {
+      const text = editableText(box), epoch = textEpoch;
+      if (!text) { status.textContent = "請先輸入中文"; return; }
+      if (!hasChinese(text)) { status.textContent = "請先輸入中文"; return; }
+      button.disabled = true;
+      status.textContent = "翻譯中…";
+      try {
+        const result = await runtimeMessage({type:'make-draft',text});
+        if (!websiteTextEnabled || epoch !== textEpoch || !box.isConnected || !controls.isConnected) return;
+        if(editableText(box)!==text){status.textContent='原文已修改，請重新翻譯';return;}
+        if (!result.draft?.trim()) throw new Error("沒有收到日文草稿");
+        replaceEditable(box, result.draft);
+        status.textContent = `${result.mode}，確認後自行送出`;
+      } catch (error) {
+        status.textContent = `翻譯失敗：${error.message}`;
+      } finally { button.disabled = false; }
+    });
+    controls.append(button, status);
+    const live = box.closest("yt-live-chat-text-input-field-renderer");
+    const host = live?.parentElement || box.closest("ytd-commentbox, ytd-comment-simplebox-renderer") || box.parentElement;
+    host?.append(controls);
+    composerControls.set(box, controls);
+  }
 }
 
 function setWebsiteText(enabled){
@@ -220,9 +234,9 @@ function setWebsiteText(enabled){
 chrome.storage.local.get('websiteTextEnabled').then(s=>setWebsiteText(s.websiteTextEnabled!==false));
 let timer;
 new MutationObserver(() => {
-  clearTimeout(timer);
-  timer = setTimeout(scan, 250);
-}).observe(document.documentElement, {childList: true, subtree: true});
+  if (!timer) timer = setTimeout(() => { timer = null; scan(); }, 250);
+}).observe(document.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ["contenteditable"]});
+document.addEventListener("focusin", () => { if (websiteTextEnabled && !contextInvalid) installComposerButton(); });
 scan();
 if (window.top === window) {
  pollTimer=setInterval(pollSubtitles,700);

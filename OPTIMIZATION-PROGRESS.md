@@ -51,7 +51,7 @@ recognition first. They remain drafts and are never posted automatically.
 
 [Local model outputs](tests/results/stage2-translation-quality.json).
 
-## Remaining work, in order
+## 3. Sustained behavior
 
 3. Sustained behavior: a fault-injection test now feeds real controller
    audio events before and after decoder restart. Previously the first resumed
@@ -69,8 +69,26 @@ recognition first. They remain drafts and are never posted automatically.
    This repeated synthetic, sequential engine test bypasses browser capture/VAD;
    it does not establish stability for arbitrary hours-long live streams.
    [Raw run](tests/results/stage3-soak.json).
-4. UI feedback: distinguish missing audio, recognition work and translation work;
-   preserve existing website translation and caption modes.
-5. Controlled upstream comparison: shared audio and language settings, cold/warm
-   trials, longer sessions, and normal multitasking. Report both typical and slow
-   cases with accuracy checks. Do not label untested optional features as verified.
+## 4. UI feedback and installation
+
+Version 3.7.3 distinguishes no audio, non-speech audio, recognition, pending
+translation, updated captions, and a missing capture heartbeat. An older utterance
+cannot replace the current phase. Existing website translation and both caption
+modes remain available. Opera's extension manager and popup visibly showed 3.7.3.
+The installed local typed-translation test passed in 2,709 ms without starting
+voice capture. Its output preserved the present/future meaning, although the
+Japanese wording remains literal.
+
+## 5. Upstream comparison
+
+See [the measured comparison and its limitations](RETEST-3.7.3.md). The current
+evidence does not establish overall superiority. Source errors, provisional
+translation errors, and non-polite Japanese drafts remain open quality issues.
+
+## Follow-up: comment controls and tone
+
+Extension 3.7.4 adds watch-page and Shorts draft controls, relocates X draft
+controls outside the clipped editor, and uses compact white language buttons.
+The desktop remains at 3.7.3. Reviewed warm short phrases and the provider prompt
+were updated from user preferences; general local-model quality is still limited.
+See [verification details](RETEST-3.7.3.md).

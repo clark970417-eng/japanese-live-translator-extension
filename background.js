@@ -109,6 +109,7 @@ function desktopEvent(event){
  if(previous?.original!==original&&!result.final&&translated===previous?.translated)translated='';
  meta.caption={original,translated,final:!!result.final||!!(result.correction&&previous?.final)};
  diagnostics.lastRecognition=Date.now();modelStatus='已辨識日文';
+ if(meta.session===gate.session&&meta.createdAt>=(diagnostics.captionPhaseAt||0)){diagnostics.captionPhase=translated?'translated':'translating';diagnostics.captionPhaseAt=meta.createdAt;}
  if(translated)diagnostics.chineseLagMs=Date.now()-meta.audioEndAt;
  if(meta.mode==='record'){
   recording.updateExternal({key:event.segment,session:meta.session,group:meta.group,createdAt:meta.createdAt,original,translated,state:translated?'done':result.final?'failed':'streaming'}).catch(()=>{lastError='字幕記錄無法儲存';});
@@ -204,6 +205,7 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
   if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||engineMode!=='desktop'||!['init','decode'].includes(m.op))return;
   const segment=gate.session+':'+m.segment;
   if(m.op==='decode'){
+   diagnostics.captionPhase='recognizing';diagnostics.captionPhaseAt=m.speechAt;
    desktopSegments.set(segment,{session:gate.session,mode:captionMode,group:gate.session+':'+m.utterance,createdAt:m.speechAt,audioEndAt:m.audioEndAt,final:m.final});
    if(desktopSegments.size>100)desktopSegments.delete(desktopSegments.keys().next().value);
   }

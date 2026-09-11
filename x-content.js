@@ -1,6 +1,6 @@
 // X uses a separate script so YouTube's player and composer stay independent.
 (() => {
-  let websiteTextEnabled=false;
+  let websiteTextEnabled=false, textEpoch=0;
   const composers = new WeakMap();
   const posts = new WeakMap();
   let panel,captionBox;
@@ -29,10 +29,25 @@
 
   function read(box) { return (box.innerText || box.textContent || '').trim(); }
 
+  function composerToolbar(box) {
+    // The rich-text area has a clipped height. Mount next to the toolbar instead.
+    for (let host = box.parentElement; host && host !== document.body; host = host.parentElement) {
+      const editors = host.querySelectorAll('[contenteditable="true"][data-testid^="tweetTextarea_"]');
+      if (editors.length > 1) break;
+      const toolbar = host.querySelector('[data-testid="toolBar"]');
+      if (toolbar) return toolbar;
+    }
+    return null;
+  }
   function addComposer(box) {
-    if (composers.get(box)?.isConnected) return;
+    const toolbar = composerToolbar(box);
+    const previous = composers.get(box);
+    if (previous?.isConnected) {
+      if (toolbar && previous.nextElementSibling !== toolbar) toolbar.insertAdjacentElement('beforebegin', previous);
+      return;
+    }
     const controls = document.createElement('div');
-    controls.className = 'jtl-x-controls';
+    controls.className = 'jtl-x-controls jtl-x-composer';
     const status = document.createElement('span');
     status.setAttribute('role', 'status');
     const preview = document.createElement('textarea');
@@ -57,14 +72,16 @@
         : '未能放入，請從上方草稿複製日文。';
     });
     apply.hidden = true;
-    const translate = button('中 → 日 · 親切可愛', async () => {
+    const translate = button('CH/JP', async () => {
       source = read(box);
+      const epoch = textEpoch;
       if (!source) { status.textContent = '請先輸入中文。'; return; }
       translate.disabled = true;
       apply.hidden = true;
       status.textContent = '翻譯中…';
       try {
         const result = await message({type: 'make-draft', text: source});
+        if (!websiteTextEnabled || epoch !== textEpoch || !box.isConnected || !controls.isConnected) return;
         if(read(box)!==source){status.textContent='原文已修改，請重新翻譯';return;}
         preview.value = result.draft;
         preview.hidden = false;
@@ -73,9 +90,12 @@
       } catch (error) { status.textContent = error.message; }
       finally { translate.disabled = false; }
     });
+    translate.setAttribute('aria-label', '中文翻成日文草稿');
+    translate.classList.add('jtl-x-language');
     controls.append(translate, status, preview, apply);
-    const anchor = box.closest('[data-testid="tweetTextarea_0RichTextInputContainer"]') || box.parentElement;
-    anchor.insertAdjacentElement('afterend', controls);
+    const anchor = box.closest('[data-testid$="RichTextInputContainer"]') || box.parentElement;
+    if (toolbar) toolbar.insertAdjacentElement('beforebegin', controls);
+    else anchor?.parentElement?.insertAdjacentElement('afterend', controls);
     composers.set(box, controls);
   }
 
@@ -85,7 +105,7 @@
     controls.className = 'jtl-x-controls';
     const result = document.createElement('div');
     result.setAttribute('role', 'status');
-    const translate = button('翻成繁中', async () => {
+    const translate = button('JP/CH', async () => {
       const source = read(text);
       translate.disabled = true;
       result.textContent = '翻譯中…';
@@ -95,6 +115,8 @@
       } catch (error) { result.textContent = error.message; }
       finally { translate.disabled = false; }
     });
+    translate.setAttribute('aria-label', '日文翻成繁體中文');
+    translate.classList.add('jtl-x-language');
     controls.append(translate, result);
     text.insertAdjacentElement('afterend', controls);
     posts.set(text, controls);
@@ -202,7 +224,7 @@
     syncSpacePanel();
   }
   function setWebsiteText(enabled){
-    websiteTextEnabled=enabled;
+    websiteTextEnabled=enabled;textEpoch++;
     if(!enabled)document.querySelectorAll('.jtl-x-controls').forEach(el=>el.remove());
     scan();
   }
@@ -216,7 +238,8 @@
     if (scheduled) return;
     scheduled = true;
     setTimeout(() => { scheduled = false; scan(); }, 400);
-  }).observe(document.documentElement, {subtree: true, childList: true});
+  }).observe(document.documentElement, {subtree: true, childList: true, attributes: true, attributeFilter: ["contenteditable"]});
+  document.addEventListener("focusin", () => { if (websiteTextEnabled) scan(); });
   scan();
   setInterval(poll, 1000);
 })();

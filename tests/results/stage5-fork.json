@@ -1,0 +1,700 @@
+[
+  {
+    "type": "stage",
+    "run": "init",
+    "seconds": 11.16,
+    "sessionSeconds": 11.16,
+    "stage": "stt",
+    "phase": "initialization",
+    "durationMs": 5555.748917,
+    "audioSeconds": 10.7223125
+  },
+  {
+    "type": "stage",
+    "run": "init",
+    "seconds": 11.941,
+    "sessionSeconds": 11.941,
+    "stage": "translate",
+    "phase": "initialization",
+    "durationMs": 780.2297090000011,
+    "inputLength": 9
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 2.562,
+    "sessionSeconds": 14.503,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 1360.2446249999994,
+    "audioSeconds": 1.2
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 2.564,
+    "sessionSeconds": 14.505,
+    "sourceText": "皆さん、こんにちは。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119109776,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 2.565,
+    "sessionSeconds": 14.506,
+    "sourceText": "皆さん、こんにちは。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119109776,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 2.839,
+    "sessionSeconds": 14.78,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 273.71612500000083,
+    "inputLength": 10
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 2.839,
+    "sessionSeconds": 14.78,
+    "sourceText": "皆さん、こんにちは。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119110051,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 5.147,
+    "sessionSeconds": 17.088,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 2344.073125000001,
+    "audioSeconds": 2.8
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 5.148,
+    "sessionSeconds": 17.089,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "confirmedText": "皆さん、こんにちは。",
+    "interimText": "今日は、一週。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119112360,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 5.148,
+    "sessionSeconds": 17.089,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "confirmedText": "皆さん、こんにちは。",
+    "interimText": "今日は、一週。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119112360,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 5.653,
+    "sessionSeconds": 17.594,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 505.0784170000006,
+    "inputLength": 9
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 5.653,
+    "sessionSeconds": 17.594,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119112865,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 453.083,
+    "sessionSeconds": 465.024,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 447927.915666,
+    "audioSeconds": 4.5
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 453.103,
+    "sessionSeconds": 465.044,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 447379.557333,
+    "inputLength": 17
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 457.353,
+    "sessionSeconds": 469.294,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 4236.003917000024,
+    "inputLength": 17
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 467.79,
+    "sessionSeconds": 479.731,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 14626.30683299998,
+    "audioSeconds": 6.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 467.792,
+    "sessionSeconds": 479.733,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119575004,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 467.793,
+    "sessionSeconds": 479.734,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119575004,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 471.182,
+    "sessionSeconds": 483.123,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 3388.374332999985,
+    "inputLength": 40
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 471.182,
+    "sessionSeconds": 483.123,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "translatedText": "各位，大家好。今天就一起享受遊戲的樂趣吧。請稍等一下。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119578394,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 472.962,
+    "sessionSeconds": 484.903,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 5164.15954100003,
+    "audioSeconds": 8.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 472.963,
+    "sessionSeconds": 484.904,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。",
+    "confirmedText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "interimText": "魚が逃げてしまいました。",
+    "translatedText": "各位，大家好。今天就一起享受遊戲的樂趣吧。請稍等一下。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119580175,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 472.963,
+    "sessionSeconds": 484.904,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。",
+    "confirmedText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "interimText": "魚が逃げてしまいました。",
+    "translatedText": "各位，大家好。今天就一起享受遊戲的樂趣吧。請稍等一下。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119580175,
+    "isInterim": true
+  },
+  {
+    "type": "final-start",
+    "run": "zh-1",
+    "seconds": 472.966,
+    "sessionSeconds": 484.907,
+    "audioDurationSeconds": 10.7223125
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 476.694,
+    "sessionSeconds": 488.635,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 3730.8100829999894,
+    "inputLength": 32
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 477.198,
+    "sessionSeconds": 489.139,
+    "stage": "stt",
+    "phase": "final",
+    "durationMs": 4226.201332999975,
+    "audioSeconds": 10.7223125
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 479.219,
+    "sessionSeconds": 491.16,
+    "stage": "translate",
+    "phase": "final",
+    "durationMs": 2019.971959000046,
+    "inputLength": 68
+  },
+  {
+    "type": "final",
+    "run": "zh-1",
+    "seconds": 479.22,
+    "sessionSeconds": 491.161,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。来てくれてありがとうございます。",
+    "translatedText": "各位，大家好。今天就一起享受遊戲的樂趣吧。請稍等一下，有條魚不小心跑掉了。感謝大家的參與，謝謝大家。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119586432,
+    "isInterim": false
+  },
+  {
+    "type": "memory",
+    "run": "zh-1",
+    "seconds": 480.726,
+    "sessionSeconds": 492.667,
+    "rssBytes": 61358080,
+    "heapUsedBytes": 4517888,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 60224
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 22992
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 17328
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 1285840
+      }
+    ]
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 1.955,
+    "sessionSeconds": 494.622,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 750.2267499999725,
+    "audioSeconds": 1.2
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 1.955,
+    "sessionSeconds": 494.622,
+    "sourceText": "皆さん、こんにちは。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119589893,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 1.955,
+    "sessionSeconds": 494.622,
+    "sourceText": "皆さん、こんにちは。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119589893,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 2.121,
+    "sessionSeconds": 494.788,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 163.95866699999897,
+    "inputLength": 10
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 2.121,
+    "sessionSeconds": 494.788,
+    "sourceText": "皆さん、こんにちは。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119590059,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 5.36,
+    "sessionSeconds": 498.027,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 2554.9130000000005,
+    "audioSeconds": 2.8
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 5.361,
+    "sessionSeconds": 498.028,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "confirmedText": "皆さん、こんにちは。",
+    "interimText": "今日は、一週。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119593299,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 5.361,
+    "sessionSeconds": 498.028,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "confirmedText": "皆さん、こんにちは。",
+    "interimText": "今日は、一週。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119593299,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 5.979,
+    "sessionSeconds": 498.646,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 618.2406249999767,
+    "inputLength": 9
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 5.979,
+    "sessionSeconds": 498.646,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "translatedText": "各位，您好。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119593917,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 7.567,
+    "sessionSeconds": 500.234,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 1440.235875000013,
+    "inputLength": 17
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 7.567,
+    "sessionSeconds": 500.234,
+    "sourceText": "皆さん、こんにちは。今日は、一週。",
+    "confirmedText": "皆さん、こんにちは。",
+    "interimText": "今日は、一週。",
+    "translatedText": "各位，您好。今天是週一。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119595505,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 7.612,
+    "sessionSeconds": 500.279,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 2248.6132080000243,
+    "audioSeconds": 4.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 7.615,
+    "sessionSeconds": 500.282,
+    "sourceText": "みなさん、こんにちは。今日は一緒にゲームを楽しみましょう。",
+    "confirmedText": "",
+    "interimText": "みなさん、こんにちは。今日は一緒にゲームを楽しみましょう。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119595553,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 7.616,
+    "sessionSeconds": 500.283,
+    "sourceText": "みなさん、こんにちは。今日は一緒にゲームを楽しみましょう。",
+    "confirmedText": "",
+    "interimText": "みなさん、こんにちは。今日は一緒にゲームを楽しみましょう。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119595553,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 10.361,
+    "sessionSeconds": 503.028,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 2742.9706250000163,
+    "audioSeconds": 6.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 10.361,
+    "sessionSeconds": 503.028,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119598299,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 10.362,
+    "sessionSeconds": 503.029,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "confirmedText": "",
+    "interimText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119598299,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 10.999,
+    "sessionSeconds": 503.666,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 3130.637624999974,
+    "inputLength": 29
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 13.407,
+    "sessionSeconds": 506.074,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 3043.0395000000135,
+    "audioSeconds": 8.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 13.407,
+    "sessionSeconds": 506.074,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。",
+    "confirmedText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "interimText": "魚が逃げてしまいました。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119601345,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 13.408,
+    "sessionSeconds": 506.075,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。",
+    "confirmedText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。",
+    "interimText": "魚が逃げてしまいました。",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119601345,
+    "isInterim": true
+  },
+  {
+    "type": "final-start",
+    "run": "zh-2",
+    "seconds": 13.41,
+    "sessionSeconds": 506.077,
+    "audioDurationSeconds": 10.7223125
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 15.207,
+    "sessionSeconds": 507.874,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 4130.20745799999,
+    "inputLength": 40
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 15.907,
+    "sessionSeconds": 508.574,
+    "stage": "stt",
+    "phase": "final",
+    "durationMs": 2496.9784999999683,
+    "audioSeconds": 10.7223125
+  },
+  {
+    "type": "final",
+    "run": "zh-2",
+    "seconds": 15.907,
+    "sessionSeconds": 508.574,
+    "sourceText": "皆さん、こんにちは。今日は一緒にゲームを楽しみましょう。ちょっと待ってください。魚が逃げてしまいました。来てくれてありがとうございます。",
+    "translatedText": "各位，大家好。今天就一起享受遊戲的樂趣吧。請稍等一下，有條魚不小心跑掉了。感謝大家的參與，謝謝大家。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789119603845,
+    "isInterim": false
+  },
+  {
+    "type": "memory",
+    "run": "zh-2",
+    "seconds": 17.414,
+    "sessionSeconds": 510.081,
+    "rssBytes": 60047360,
+    "heapUsedBytes": 4487896,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 58816
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 23632
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 17344
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 1275168
+      }
+    ]
+  },
+  {
+    "type": "stage",
+    "run": "silence",
+    "seconds": 0.002,
+    "sessionSeconds": 510.083,
+    "stage": "stt",
+    "phase": "final",
+    "durationMs": 2.0942500000237487,
+    "audioSeconds": 1
+  },
+  {
+    "type": "silence",
+    "run": "silence",
+    "seconds": 0.002,
+    "sessionSeconds": 510.083
+  }
+]

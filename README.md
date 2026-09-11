@@ -78,7 +78,7 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The integration passes 48 extension tests, 495 desktop tests, and five Python
+The integration passes 56 extension tests, 496 desktop tests, and five Python
 bridge tests. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See
@@ -94,7 +94,7 @@ they should not be interpreted as measurements of the new desktop backend.
 - Recognition quality can decrease with music, overlapping speakers, proper names, noise, and very short utterances.
 - Translation quality and latency depend on model choice, available compute, and, for network providers, service and network conditions.
 - Picture-in-picture windows cannot host a normal page content-script overlay.
-- A 40-round, 19-minute local-engine stress test completed; hours-long live streams and all optional engines remain unverified. See `RETEST-3.7.2.md`.
+- A 140-round, 31.8-minute local-engine test completed with 14 reinitializations; hours-long live streams and all optional engines remain unverified. See [the staged optimization report](OPTIMIZATION-PROGRESS.md).
 - The model has not been fine-tuned for this project.
 
 ## Third-party components

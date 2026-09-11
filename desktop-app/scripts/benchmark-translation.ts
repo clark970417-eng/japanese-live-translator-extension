@@ -5,6 +5,13 @@ import { HunyuanMT15Translator } from '../src/engines/translator/HunyuanMT15Tran
 if (!process.env.COMPARE_PROFILE || !process.env.COMPARE_REPORT) throw new Error('Set isolated COMPARE_PROFILE and COMPARE_REPORT')
 app.setPath('userData',process.env.COMPARE_PROFILE)
 const cases = [
+  ['zh','ja','都好好聽呀～！'],
+  ['zh','ja','以前和現在的歌聲都很好聽，我都很喜歡！'],
+  ['zh','ja','晚安啊，REC加油～'],
+  ['zh','ja','睡飽飽補精神喔🤎✨'],
+  ['zh','ja','謝謝排程，了解🫡'],
+  ['zh','ja','鹿乃chan，今天也辛苦了！'],
+  ['zh','ja','如果有不懂的漢字和功能，可以問我ww'],
   ['ja','zh','今日は配信しません。明日の夜八時に会いましょう。'],
   ['ja','zh','あと二回だけ挑戦します。まだクリアしていません。'],
   ['ja','zh','右じゃなくて、左の扉を開けてください。'],
