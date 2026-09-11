@@ -43,6 +43,6 @@ and models. No feature is represented as validated solely because its source exi
 
 ## Acceptance status
 
-Core integration checks pass; full awake browser acceptance remains pending. See
+Core integration checks and a 40-round engine stress test pass. See `RETEST-3.7.2.md`,
 `RETEST-3.7.0.md` and `COMPARISON-LIVETRANSLATE.md` for measurements and limitations.
 Neither universal parity nor superior performance across every engine is claimed.

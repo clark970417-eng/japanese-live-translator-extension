@@ -86,3 +86,43 @@ it('coalesces newer interim text while translation is busy', async () => {
     await Promise.resolve()
   } finally {processor.reset();vi.useRealTimers()}
 })
+
+it('starts the first Chinese translation without waiting for another recognition window', async () => {
+  vi.useFakeTimers()
+  const translate = vi.fn(async () => '大家好')
+  const processor = new StreamingProcessor({
+    emitter: new EventEmitter(), agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text:'みなさんこんにちは',language:'ja'})}),
+    getTranslator: () => ({translate}), getGlossary: () => [],
+    getSimulMtConfig: () => ({enabled:false,waitK:3}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  try {
+    const result = await processor.processStreaming(new Float32Array(16000),16000)
+    expect(result?.sourceText).toBe('みなさんこんにちは')
+    await vi.advanceTimersByTimeAsync(1)
+    expect(translate).toHaveBeenCalledOnce()
+    expect(processor.lastTranslatedConfirmed).toBe('大家好')
+  } finally {processor.reset();vi.useRealTimers()}
+})
+
+it('times out a finalization behind stalled recognition without entering STT concurrently', async () => {
+  vi.useFakeTimers()
+  let finish!: (value: null) => void
+  const processAudio = vi.fn(() => new Promise<null>(r => { finish = r }))
+  const processor = new StreamingProcessor({
+    emitter: new EventEmitter(), agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio}), getTranslator: () => null, getGlossary: () => [],
+    getSimulMtConfig: () => ({enabled:false,waitK:3}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  try {
+    const pending = processor.processStreaming(new Float32Array(16000),16000)
+    const final = processor.finalizeStreaming(new Float32Array(16000),16000)
+    await vi.advanceTimersByTimeAsync(10001)
+    expect(await final).toBeNull()
+    expect(processAudio).toHaveBeenCalledOnce()
+    finish(null)
+    await pending
+  } finally {processor.reset();vi.useRealTimers()}
+})

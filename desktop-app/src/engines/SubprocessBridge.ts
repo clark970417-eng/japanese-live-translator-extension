@@ -133,7 +133,10 @@ export abstract class SubprocessBridge {
 
   async initialize(): Promise<void> {
     if (this.initPromise) return this.initPromise
-    this.initPromise = this.doInitialize()
+    this.initPromise = this.doInitialize().catch(error => {
+      this.initPromise = null
+      throw error
+    })
     return this.initPromise
   }
 
@@ -182,13 +185,21 @@ export abstract class SubprocessBridge {
       throw this.getSpawnError()
     }
 
-    this.process.on('error', (err) => {
+    const child = this.process
+    child.stdin!.on('error', err => {
+      if (this.process === child) this.failPending(`stdin write error: ${err.message}`)
+    })
+    child.on('error', (err) => {
       clearTimeout(timer)
       this.log.error('bridge failed to start:', err.message)
-      this.process = null
+      if (this.process === child) {
+        this.process = null
+        this.failPending(err.message)
+      }
     })
 
-    this.process.stdout!.on('data', (data: Buffer) => {
+    child.stdout!.on('data', (data: Buffer) => {
+      if (this.process !== child) return
       this.buffer += data.toString()
       const lines = this.buffer.split('\n')
       this.buffer = lines.pop() ?? ''
@@ -227,9 +238,14 @@ export abstract class SubprocessBridge {
       }
     })
 
-    this.process.on('exit', (code) => {
+    child.on('exit', (code) => {
       this.log.info(`bridge exited with code ${code}`)
-      this.process = null
+      if (this.process === child) {
+        this.process = null
+        this.initPromise = null
+        this.buffer = ''
+        this.failPending(`Bridge exited with code ${code}`)
+      }
     })
 
     // Send init command
@@ -296,20 +312,22 @@ export abstract class SubprocessBridge {
         resolve(data)
       }, timer })
 
-      const written = this.process.stdin.write(
-        JSON.stringify({ ...cmd, _reqId: reqId }) + '\n'
-      )
-      if (!written) {
-        this.process.stdin.once('drain', () => {
-          /* backpressure resolved */
-        })
-      }
-      this.process.stdin.once('error', (err) => {
+      this.process.stdin.write(JSON.stringify({ ...cmd, _reqId: reqId }) + '\n', (err) => {
+        if (!err) return
         this.pendingRequests.delete(reqId)
         clearTimeout(timer)
         reject(new Error(`stdin write error: ${err.message}`))
       })
     })
+  }
+
+  private failPending(error: string): void {
+    const pending = [...this.pendingRequests.values()]
+    this.pendingRequests.clear()
+    for (const request of pending) {
+      clearTimeout(request.timer)
+      request.resolve({ error })
+    }
   }
 
   async dispose(): Promise<void> {

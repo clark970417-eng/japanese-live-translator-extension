@@ -3,6 +3,7 @@ productName: Japanese Live Translate
 directories:
   buildResources: build
 files:
+  - '!out/main/benchmark-*.cjs'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.*'

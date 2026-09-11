@@ -1,6 +1,7 @@
 import { initAutoUpdater } from './auto-updater'
 import type { Language } from '../engines/types'
-import { app, protocol, net } from 'electron'
+import { app, protocol, net, powerSaveBlocker } from 'electron'
+import { bindPipelineActivity } from './pipeline-activity'
 import { initMain as initAudioLoopback } from 'electron-audio-loopback'
 import { TranslationPipeline } from '../pipeline/TranslationPipeline'
 import { startExtensionCompanion } from './extension-companion'
@@ -55,8 +56,10 @@ const log = createLogger('main')
 
 // Shared state — getter/setter backed so closures never hold stale references (#429)
 const ctx = createAppContext()
+let releasePipelineActivity: (() => void) | undefined
 
 async function initPipeline(): Promise<void> {
+  releasePipelineActivity?.()
   // Remove all event listeners and dispose previous pipeline to prevent
   // listener accumulation on reinitialization (#383, #428)
   if (ctx.pipeline) {
@@ -66,6 +69,7 @@ async function initPipeline(): Promise<void> {
   }
 
   ctx.pipeline = new TranslationPipeline()
+  releasePipelineActivity = bindPipelineActivity(ctx.pipeline, powerSaveBlocker)
 
   // Register STT engines
   ctx.pipeline.registerSTT('whisper-local', () => new WhisperLocalEngine({
@@ -431,6 +435,7 @@ app.on('before-quit', (event) => {
   // Async cleanup before quit — timeout after 5s to prevent hanging (#222)
   ;(async () => {
     try {
+      releasePipelineActivity?.()
       cleanupDisplayHandlers?.()
       cleanupDisplayHandlers = null
       cleanupShortcuts?.()

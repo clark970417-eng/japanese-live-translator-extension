@@ -19,7 +19,7 @@ const log = createLogger('pipeline:stream')
 const MAX_STREAMING_LOCK_RESOLVERS = 50
 const STREAMING_LOCK_TIMEOUT_MS = 10_000
 /** Debounce delay before translating interim text (ms) */
-const TRANSLATE_DEBOUNCE_MS = 1000
+const TRANSLATE_DEBOUNCE_MS = 250
 
 export interface StreamingDeps {
   readonly emitter: EventEmitter
@@ -203,9 +203,9 @@ export class StreamingProcessor {
           )
         }
 
-        // Standard debounced translation: schedule translation when source text stabilizes for 1s.
-        // This avoids translating on every interim update while still translating
-        // during continuous speech (at natural pauses / breathing points).
+        // Start the first hypothesis immediately; briefly coalesce subsequent revisions.
+        // Busy requests retain only the latest pending source, so recognition continues
+        // independently without building a translation backlog.
         if (fullSourceText !== this.lastSourceTextForTranslate) {
           this.lastSourceTextForTranslate = fullSourceText
           if (this.translateDebounceTimer) clearTimeout(this.translateDebounceTimer)
@@ -221,7 +221,8 @@ export class StreamingProcessor {
             if (!dbTranslator || !fullSourceText.trim()) return
             const glossaryEntries = this.deps.getGlossary()
             const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
-            const ctx = this.deps.contextBuffer.getContext(glossary)
+            // Partial speech must not borrow words from earlier complete utterances.
+            const ctx = { glossary, previousSegments: [] }
 
             // Use SSBD for re-translation when we have a previous translation,
             // since most of the output likely remains valid (#607)
@@ -262,7 +263,7 @@ export class StreamingProcessor {
               if (this.isCurrentGeneration(gen, utterance)) this.debouncedTranslationInFlight = false
             })
           }
-          this.translateDebounceTimer = setTimeout(translateWhenIdle, TRANSLATE_DEBOUNCE_MS)
+          this.translateDebounceTimer = setTimeout(translateWhenIdle, this.lastTranslatedSource ? TRANSLATE_DEBOUNCE_MS : 0)
         }
       }
 
@@ -303,6 +304,8 @@ export class StreamingProcessor {
 
     if (this.streamingLock) {
       await this.waitForStreamingLock()
+      // A timed-out waiter must not enter a non-reentrant STT engine.
+      if (this.streamingLock) return null
     }
     this.deps.incrementProcessing()
     this.streamingLock = true
@@ -591,7 +594,8 @@ export class StreamingProcessor {
     const utterance = this.utteranceGeneration
     const glossaryEntries = this.deps.getGlossary()
     const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
-    const ctx = this.deps.contextBuffer.getContext(glossary)
+    // Keep glossary hints without leaking previous sentences into a partial draft.
+    const ctx = { glossary, previousSegments: [] }
 
     const t0 = performance.now()
 
@@ -657,7 +661,7 @@ export class StreamingProcessor {
 
       // Auto-resolve after timeout so callers never hang indefinitely
       const timer = setTimeout(() => {
-        const idx = this.streamingLockResolvers.indexOf(resolve)
+        const idx = this.streamingLockResolvers.indexOf(release)
         if (idx !== -1) {
           this.streamingLockResolvers.splice(idx, 1)
           log.warn('streamingLock wait timed out')
@@ -665,10 +669,11 @@ export class StreamingProcessor {
         }
       }, STREAMING_LOCK_TIMEOUT_MS)
 
-      this.streamingLockResolvers.push(() => {
+      const release = (): void => {
         clearTimeout(timer)
         resolve()
-      })
+      }
+      this.streamingLockResolvers.push(release)
     })
   }
 
