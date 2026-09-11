@@ -80,6 +80,8 @@ export interface TranslationResult {
  * Implementations: WhisperLocalEngine
  */
 export interface STTEngine {
+  /** Apply a known source language, or restore automatic detection. */
+  setLanguage?(language: SourceLanguage): void
   readonly id: string
   readonly name: string
   readonly isOffline: boolean

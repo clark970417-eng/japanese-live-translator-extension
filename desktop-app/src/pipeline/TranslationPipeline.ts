@@ -232,6 +232,7 @@ export class TranslationPipeline extends EventEmitter {
     const changed = this.sourceLanguage !== source || this.targetLanguage !== target
     this.sourceLanguage = source
     this.targetLanguage = target
+    this.engineManager.sttEngine?.setLanguage?.(source)
     if (changed) {
       this.translationCache.clear()
     }
@@ -324,6 +325,7 @@ export class TranslationPipeline extends EventEmitter {
       this.translationCache.clear()
       await this.engineManager.disposeEngines()
       await this.engineManager.initializeEngines(config, this)
+      this.engineManager.sttEngine?.setLanguage?.(this.sourceLanguage)
 
       // Initialize draft STT if enabled (#536)
       if (this.draftSttEnabled) {

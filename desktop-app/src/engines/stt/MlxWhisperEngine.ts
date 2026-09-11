@@ -2,7 +2,7 @@ import { execSync, execFileSync } from 'child_process'
 import { join } from 'path'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
 import { tmpdir, homedir } from 'os'
-import type { STTEngine, STTResult, Language } from '../types'
+import type { STTEngine, STTResult, Language, SourceLanguage } from '../types'
 import { ALL_LANGUAGES } from '../types'
 import { SubprocessBridge, type SpawnConfig, type InitResult, getEnrichedPath, resolveBridgeScript } from '../SubprocessBridge'
 import { MLX_WHISPER_TRANSCRIBE_TIMEOUT_MS, MLX_WHISPER_INIT_TIMEOUT_MS, PYTHON_IMPORT_CHECK_TIMEOUT_MS } from '../constants'
@@ -25,6 +25,10 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
     this.language = options?.language
     this.model = options?.model ?? 'mlx-community/whisper-large-v3-turbo'
     this.onProgress = options?.onProgress
+  }
+
+  setLanguage(language: SourceLanguage): void {
+    this.language = language === 'auto' ? undefined : language
   }
 
   protected getLogPrefix(): string {

@@ -261,3 +261,22 @@ describe('TranslationPipeline switchEngine reset regression (#719)', () => {
     }
   })
 })
+
+it('propagates selected source language to STT across changes and engine replacement', async () => {
+  const pipeline = new TranslationPipeline()
+  const first = Object.assign(new MockSTT('first', null), {setLanguage: vi.fn()})
+  const second = Object.assign(new MockSTT('second', null), {setLanguage: vi.fn()})
+  pipeline.registerSTT('first', () => first)
+  pipeline.registerSTT('second', () => second)
+  pipeline.registerTranslator('local', () => new MockTranslator('local'))
+  try {
+    pipeline.setLanguageConfig('ja', 'zh')
+    await pipeline.switchEngine({mode:'cascade', sttEngineId:'first', translatorEngineId:'local'})
+    expect(first.setLanguage).toHaveBeenLastCalledWith('ja')
+    pipeline.setLanguageConfig('auto', 'zh')
+    expect(first.setLanguage).toHaveBeenLastCalledWith('auto')
+    pipeline.setLanguageConfig('en', 'zh')
+    await pipeline.switchEngine({mode:'cascade', sttEngineId:'second', translatorEngineId:'local'})
+    expect(second.setLanguage).toHaveBeenLastCalledWith('en')
+  } finally { await pipeline.dispose() }
+})

@@ -22,6 +22,22 @@ app.whenReady().then(async () => {
     const record = (type: string, data: any) => { const e = { type, run, seconds: (Date.now() - start) / 1000, sessionSeconds: (Date.now() - sessionStart) / 1000, ...data }; events.push(e); console.log('MEASURE ' + JSON.stringify(e)); };
     const stt = new MlxWhisperEngine();
     const translator = new HunyuanMT15Translator();
+    // Engine durations include time waiting for the shared translation worker.
+    let phase = 'initialization';
+    const originalStt = stt.processAudio.bind(stt);
+    stt.processAudio = async (...args) => {
+        const began = performance.now(), callPhase = phase;
+        try { return await originalStt(...args); }
+        finally { record('stage', {stage:'stt', phase:callPhase, durationMs:performance.now()-began, audioSeconds:args[0].length/args[1]}); }
+    };
+    for (const method of ['translate', 'translateSSBD'] as const) {
+        const original = translator[method].bind(translator);
+        (translator as any)[method] = async (...args: any[]) => {
+            const began=performance.now(), callPhase=phase;
+            try { return await (original as any)(...args); }
+            finally { record('stage', {stage:method, phase:callPhase, durationMs:performance.now()-began, inputLength:args[0].length}); }
+        };
+    }
     const pipeline = new TranslationPipeline();
     const releaseActivity = bindPipelineActivity(pipeline, powerSaveBlocker);
     pipeline.registerSTT('mlx-whisper', () => stt);
@@ -46,6 +62,7 @@ app.whenReady().then(async () => {
             for (let round = 1; round <= Number(process.env.COMPARE_ROUNDS || 2); round++) {
                 run = target + '-' + round;
                 start = Date.now();
+                phase = 'interim';
                 for (const sec of [1.2, 2.8, 4.5, 6.5, 8.5]) {
                     await sleep(sec * 1000 - (Date.now() - start));
                     const r = await pipeline.processStreaming(pcm.slice(0, Math.round(sec * 16000)), 16000);
@@ -53,6 +70,8 @@ app.whenReady().then(async () => {
                         record('source', r);
                 }
                 await sleep(pcm.length / 16 - (Date.now() - start));
+                phase = 'final';
+                record('final-start', {audioDurationSeconds:pcm.length/16000});
                 const final = await pipeline.finalizeStreaming(pcm, 16000);
                 record('final', final);
                 if (!final?.sourceText || !final.translatedText) throw new Error('Missing final caption in '+run);
