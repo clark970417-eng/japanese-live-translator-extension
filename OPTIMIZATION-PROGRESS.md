@@ -92,3 +92,12 @@ controls outside the clipped editor, and uses compact white language buttons.
 The desktop remains at 3.7.3. Reviewed warm short phrases and the provider prompt
 were updated from user preferences; general local-model quality is still limited.
 See [verification details](RETEST-3.7.3.md).
+
+## Follow-up: desktop 3.7.4
+
+The next pass corrects implicit chat instructions, the quantized-cache initialization
+configuration, and a reproduced MLX discovery failure during restart. It also
+refines viewer terminology. The previously reported 31.8-minute run belongs to
+the earlier build; the new failed run and corrective retest are recorded separately
+in [the 3.7.4 report](RETEST-3.7.4.md). General Japanese tone and translation fidelity
+remain limited, so this does not complete the goal of universal superiority.

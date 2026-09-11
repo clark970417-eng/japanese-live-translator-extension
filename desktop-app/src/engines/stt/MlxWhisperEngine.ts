@@ -1,10 +1,11 @@
-import { execSync, execFileSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import { join } from 'path'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import type { STTEngine, STTResult, Language, SourceLanguage } from '../types'
 import { ALL_LANGUAGES } from '../types'
 import { SubprocessBridge, type SpawnConfig, type InitResult, getEnrichedPath, resolveBridgeScript } from '../SubprocessBridge'
+import { MLX_MODULE_PROBE } from './mlx-module-probe'
 import { MLX_WHISPER_TRANSCRIBE_TIMEOUT_MS, MLX_WHISPER_INIT_TIMEOUT_MS, PYTHON_IMPORT_CHECK_TIMEOUT_MS } from '../constants'
 
 export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
@@ -109,6 +110,12 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
 
 /** Find a python3 binary that has mlx_whisper installed */
 function findPython3WithMlxWhisper(): string {
+  // Check package metadata, not a full MLX import. The bridge loads and validates
+  // dependencies once, with its own longer initialization timeout.
+  let timedOut = false
+  const recordFailure = (error: unknown): void => {
+    if ((error as NodeJS.ErrnoException)?.code === 'ETIMEDOUT') timedOut = true
+  }
   // Check common venv locations first
   const venvPaths = [
     join(homedir(), 'Library/Application Support/JapaneseLiveCaption/venv/bin/python3'),
@@ -120,9 +127,9 @@ function findPython3WithMlxWhisper(): string {
   for (const p of venvPaths) {
     if (!existsSync(p)) continue
     try {
-      execFileSync(p, ['-c', 'import mlx_whisper'], { stdio: 'ignore', timeout: PYTHON_IMPORT_CHECK_TIMEOUT_MS })
+      execFileSync(p, ['-c', MLX_MODULE_PROBE], { stdio: 'ignore', timeout: PYTHON_IMPORT_CHECK_TIMEOUT_MS })
       return p
-    } catch { /* mlx_whisper not installed in this venv */ }
+    } catch (error) { recordFailure(error) }
   }
 
   // Try versioned python binaries (prefer 3.12/3.13 over 3.14 due to native extension compatibility)
@@ -130,11 +137,12 @@ function findPython3WithMlxWhisper(): string {
   const env = { ...process.env, PATH: getEnrichedPath() }
   for (const bin of ['python3.12', 'python3.13', 'python3']) {
     try {
-      execSync(`${bin} -c "import mlx_whisper"`, { stdio: 'ignore', timeout: PYTHON_IMPORT_CHECK_TIMEOUT_MS, env })
+      execFileSync(bin, ['-c', MLX_MODULE_PROBE], { stdio: 'ignore', timeout: PYTHON_IMPORT_CHECK_TIMEOUT_MS, env })
       return bin
-    } catch { /* not available or mlx_whisper not installed */ }
+    } catch (error) { recordFailure(error) }
   }
 
+  if (timedOut) throw new Error('Python availability check timed out. Please retry starting speech recognition.')
   throw new Error('mlx-whisper not found')
 }
 

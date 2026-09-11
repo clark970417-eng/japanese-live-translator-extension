@@ -21,6 +21,7 @@ import type { Llama, LlamaModel, LlamaContext, LlamaContextSequence, Token } fro
 import { LANG_NAMES_EN, LANG_NAMES_ZH } from '../engines/language-names'
 import { formatGlossaryPrompt } from '../engines/translator/glossary-utils'
 import { createLogger } from './logger'
+import { resetTranslationHistory } from './translation-session'
 
 const log = createLogger('slm-worker')
 
@@ -137,6 +138,8 @@ async function handleInit(
     contextSize: TRANSLATION_CONTEXT_SIZE
   }
   if (kvCacheQuant) {
+    // Quantized V-cache requires flash attention; retain the fallback below.
+    contextOptions.flashAttention = true
     contextOptions.experimentalKvCacheKeyType = 'Q8_0'
     contextOptions.experimentalKvCacheValueType = 'Q8_0'
   }
@@ -161,6 +164,7 @@ async function handleInit(
       draftModel = await llama.loadModel({ modelPath: draftModelPath })
       const draftContextOptions: Record<string, unknown> = {}
       if (kvCacheQuant) {
+        draftContextOptions.flashAttention = true
         draftContextOptions.experimentalKvCacheKeyType = 'Q8_0'
         draftContextOptions.experimentalKvCacheValueType = 'Q8_0'
       }
@@ -175,13 +179,10 @@ async function handleInit(
     }
   }
 
+  // Initialization owns the queue until warm-up finishes. Reporting ready first
+  // allowed an immediate dispose to release the context while warm-up used it.
+  await warmPrefixCache()
   process.parentPort!.postMessage({ type: 'ready' })
-
-  // Queue prefix cache warm-up through the request queue to avoid
-  // concurrent access with incoming translate requests.
-  // This pre-evaluates the system prompt into the KV cache so the
-  // first translation avoids the cold-start penalty.
-  requestQueue = requestQueue.then(() => warmPrefixCache(), () => warmPrefixCache())
 }
 
 /** Build context sections for the translation prompt */
@@ -239,10 +240,18 @@ function buildTranslationPrompt(
     const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
     if (isChinese) {
       const targetZh = LANG_NAMES_ZH[to] ?? to
-      const tenseGuide = from === 'zh' && to === 'ja' ? '时态示例：明天不能参加。→明日は参加できません。昨天没能参加。→昨日は参加できませんでした。以下只翻译待译文本，不输出示例。\n' : ''
+      if (from === 'zh' && to === 'ja') {
+        const terms: Array<[string, string]> = [
+          ['好聽', '素敵'], ['歌聲', '歌声'], ['辛苦了', 'お疲れさまでした'],
+          ['排程', 'スケジュール'], ['了解', '了解です'], ['直播', '配信'],
+          ['沒辦法', 'できません'], ['不能待到結束', '最後までいられません'],
+          ['不一定能來', '来られるとは限りません'], ['補精神', '元気をチャージ'],
+        ]
+        const glossary = terms.filter(([source]) => text.includes(source) && !translateContext?.glossary?.some(entry => entry.source === source)).map(([source, target]) => `${source} 翻译成 ${target}`).join('\n')
+        return `${contextSection}时态参考：未来无法参加用「明日は参加できません」，昨天未能参加用「昨日は参加できませんでした」。不要输出这些参考句。\n${glossary ? '参考下面的翻译：\n' + glossary + '\n\n' : ''}将以下文本翻译为日语，这是观众写给主播的留言，使用自然亲切、有礼貌的语气。保持留言者视角，不把个人计划改为邀请或命令。完整保留原意、时态、否定、称呼和表情。只输出译文，不要额外解释：\n\n${text}`
+      }
       const terms = to === 'zh' && /配信|クリア/.test(text) ? '在直播或游戏语境中，配信译为直播，クリア译为通关。' : ''
-      const style = from === 'zh' && to === 'ja' ? '完整保留每个分句、否定、数量、说话者和时间关系；尚未发生的计划或做不到的事情不可改成过去式。每个完整句子必须用日语敬体です／ます或ません，禁止以だ、だよ、ないよ等普通体结句。自然亲切、温柔但不过分亲密；省略不必要的あなた，不添加爱意、承诺或原文没有的信息。' : '用自然流畅的台湾繁体中文口语，按中文语序表达；完整保留每个分句、否定、数字、时态和说话者。未说完的内容不要补完，不要添加问候、赞美、总结或原文没有的信息。'
-      return `${contextSection}${tenseGuide}将以下文本翻译为${targetZh}，${style}${terms}注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
+      return `${contextSection}将以下文本翻译为${targetZh}，用自然流畅的台湾繁体中文口语；完整保留原意、否定、数字、时态和说话者。未说完的内容不要补完，不添加原文没有的信息。${terms}只输出译文，不要额外解释：\n\n${text}`
     }
     return `${contextSection}Translate the following segment into ${toLang}, without additional explanation.\n\n${text}`
   }
@@ -330,6 +339,7 @@ async function ensurePrefixCacheSession(systemPrompt?: string): Promise<{
     contextSequence: prefixCacheSequence,
     ...(systemPrompt && { systemPrompt })
   })
+  resetTranslationHistory(prefixCacheSession, activeModelType)
   prefixCacheSystemPrompt = systemPrompt
   log.info('Prefix cache session created' + (systemPrompt ? ' (with system prompt)' : ''))
 
@@ -355,7 +365,7 @@ async function warmPrefixCache(): Promise<void> {
     // This forces the chat template + system prompt tokens into the context
     await session.preloadPrompt('warmup')
     // Reset so the warmup prompt doesn't affect actual translations
-    session.resetChatHistory()
+    resetTranslationHistory(session, activeModelType)
 
     const warmMs = performance.now() - t0
     log.info(`Prefix cache warmed in ${warmMs.toFixed(0)}ms`)
@@ -384,7 +394,7 @@ async function runInference(
     // Reset chat history before each translation to clear previous conversation
     // while preserving the system prompt prefix in the KV cache
     if (!created) {
-      session.resetChatHistory()
+      resetTranslationHistory(session, activeModelType)
     }
 
     const contextMs = performance.now() - t0
@@ -583,6 +593,7 @@ async function handleTranslateSSBD(
       ...(systemPrompt && { systemPrompt })
     })
 
+    resetTranslationHistory(ssbdSession, activeModelType)
     try {
       const inferenceParams = getInferenceParams()
       const t1 = performance.now()
@@ -1012,10 +1023,7 @@ process.parentPort!.on('message', (e: { data: WorkerInboundMessage }) => {
     }
   }
 
-  if (msg.type === 'translate' || msg.type === 'translate-incremental' || msg.type === 'translate-ssbd' || msg.type === 'translate-simulmt' || msg.type === 'summarize' || msg.type === 'ger-correct') {
-    // Queue to serialize context access
-    requestQueue = requestQueue.then(handleMessage, handleMessage)
-  } else {
-    handleMessage()
-  }
+  // Lifecycle operations touch the same context as inference. Serialize them
+  // too, so dispose/reset cannot invalidate an in-flight translation or warm-up.
+  requestQueue = requestQueue.then(handleMessage, handleMessage)
 })

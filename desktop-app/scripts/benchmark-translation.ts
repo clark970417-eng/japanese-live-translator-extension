@@ -27,17 +27,25 @@ const cases = [
   ['zh','ja','等一下要出門，今天不能待到結束。'],
   ['zh','ja','昨天太忙，沒能看完直播。'],
   ['zh','ja','明天也不一定能來，請不要等我。'],
-  ['ja','zh','今日はもう遊べませんが、昨日は最後まで遊べました。']
+  ['ja','zh','今日はもう遊べませんが、昨日は最後まで遊べました。'],
+  ['zh','ja','我明天晚上還會來看，今天先去睡了。'],
+  ['zh','ja','我昨天沒能來，今天終於趕上了！'],
+  ['zh','ja','謝謝你整理下週的時間表，我知道了。'],
+  ['zh','ja','希望你今晚能睡飽，明天精神好一點。'],
+  ['zh','ja','剛才那首歌真好聽，不用再唱一次也沒關係喔。'],
+  ['ja','zh','明日も来られるかはまだ分かりません。待たなくて大丈夫です。'],
+  ['ja','zh','昨日じゃなくて、来週の金曜日に変更になりました。'],
+  ['ja','zh','あと三回と言いましたが、今日はもう一回だけにします。']
 ] as const
 app.whenReady().then(async()=>{
- const engine = new HunyuanMT15Translator()
+ const engine = new HunyuanMT15Translator({ variant: process.env.COMPARE_VARIANT || 'Q4_K_M' })
  const results: unknown[]=[]
  try {
   await engine.initialize()
   for(const [from,to,text] of cases){
    const start=performance.now()
    const translated=await engine.translate(text,from,to)
-   const result={from,to,source:text,translated,ms:Math.round(performance.now()-start)}
+   const result={variant:process.env.COMPARE_VARIANT || 'Q4_K_M',from,to,source:text,translated,ms:Math.round(performance.now()-start)}
    results.push(result);console.log(JSON.stringify(result))
    if(!translated.trim())throw new Error('Empty translation')
   }

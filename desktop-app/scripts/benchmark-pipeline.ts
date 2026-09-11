@@ -21,7 +21,7 @@ app.whenReady().then(async () => {
     let run = 'init';
     const record = (type: string, data: any) => { const e = { type, run, seconds: (Date.now() - start) / 1000, sessionSeconds: (Date.now() - sessionStart) / 1000, ...data }; events.push(e); console.log('MEASURE ' + JSON.stringify(e)); };
     const stt = new MlxWhisperEngine();
-    const translator = new HunyuanMT15Translator();
+    const translator = new HunyuanMT15Translator({ kvCacheQuant: process.env.COMPARE_KV_QUANT !== 'false' });
     // Engine durations include time waiting for the shared translation worker.
     let phase = 'initialization';
     const originalStt = stt.processAudio.bind(stt);

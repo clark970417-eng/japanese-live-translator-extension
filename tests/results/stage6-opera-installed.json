@@ -1,0 +1,45 @@
+{
+  "kind": "Summary transcribed from the installed Opera fixture's visible results; not a raw event export",
+  "desktopVersion": "3.7.4",
+  "extensionVersion": "3.7.4",
+  "typed": {
+    "elapsedMs": 9493,
+    "voiceRunningAfter": false,
+    "draft": "今日は最後を見ることができません。明日また見に来ます！"
+  },
+  "record": {
+    "fixtureCycles": 1,
+    "firstJapaneseSeconds": 3.09,
+    "firstChineseSeconds": 5.82,
+    "finalJapaneseSeconds": 15.28,
+    "finalChineseSeconds": 22.17,
+    "retainedGroups": 1,
+    "captureStopped": true,
+    "decodeMedianMs": 3044,
+    "decodeP95Ms": 3803
+  },
+  "realtime": {
+    "fixtureCycles": 1,
+    "firstJapaneseSeconds": 3.28,
+    "firstChineseSeconds": 3.58,
+    "finalJapaneseSeconds": 19.47,
+    "finalChineseSeconds": 21.88,
+    "captionUpdates": 11,
+    "captionsCleared": true,
+    "hideDeadlineDriftMs": 121,
+    "captureStopped": true,
+    "decodeMedianMs": 2516,
+    "decodeP95Ms": 4165,
+    "knownInterimError": {
+      "source": "みなさんこんにちは。今日は石井",
+      "translation": "各位，大家好。今天是由石井來主持的節目。",
+      "issue": "Recognition was incorrect and the provisional translation expanded the fragment; later updates corrected it."
+    }
+  },
+  "limitations": [
+    "Synthetic Japanese fixture rather than a real live broadcast",
+    "Runs are sequential and reuse the same audio; cache and host workload affect timing",
+    "No claim of a latency improvement from these two installed runs",
+    "No four-group rotation check in these one-cycle runs"
+  ]
+}

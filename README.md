@@ -10,6 +10,8 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
+Current validation: [desktop 3.7.4 follow-up and known limitations](RETEST-3.7.4.md).
+
 ## Project overview
 
 The project explores a practical accessibility problem: live Japanese media often has no captions, while conventional translation tools either require a separate desktop application or wait for a complete sentence before showing output. This extension captures audio from the active browser tab, detects speech locally, displays Japanese as recognition progresses, and adds a Traditional Chinese translation when it becomes available.
