@@ -2,6 +2,10 @@
 
 Strictly follow the rules in [AGENTS.md](./AGENTS.md).
 
+## Current fork task — read first
+
+Before planning or editing this fork, read [../CLAUDE-HANDOFF.md](../CLAUDE-HANDOFF.md). It defines the active HY-MT-only extension/desktop task, installed artifacts, verified state, non-goals, and next latency problem. When the handoff conflicts with upstream-oriented product statements below (including JA↔EN-only and no-extension statements), the handoff controls the current task. Do not expand work to cloud APIs or unrelated upstream feature gaps unless the user explicitly changes scope.
+
 ## Core Values
 
 1. **ローカルファースト翻訳** — オフラインで完結する翻訳をデフォルト、API鍵入力時のみクラウド品質ブースト。プライバシーとネット非依存を維持しつつ、ユーザーが望む場合のみ商用APIの品質を活用
