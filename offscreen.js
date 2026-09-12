@@ -2,12 +2,42 @@ import {SpeechResultFilter,cleanText} from './stream-core.mjs';
 import {Agreement,DecodeQueue,Measurements} from './streaming.mjs';
 import {DesktopWorker} from './desktop-worker.js';
 let active=null;
-const send=(s,type,extra={})=>{if(active===s)chrome.runtime.sendMessage({type,session:s.session,...extra}).catch(()=>{});};
+const send=(s,type,extra={})=>{if(type==='speech-error')s.stopFailure=extra.error;return active===s?chrome.runtime.sendMessage({type,session:s.session,...extra}).catch(error=>{if(type==='speech-result'&&extra.final){s.stopFailure='最後字幕傳送失敗：'+error.message;send(s,'speech-error',{error:s.stopFailure});stop();}}):Promise.resolve();};
 function stop(){
  const s=active;active=null;if(!s)return;
- clearInterval(s.monitor);clearTimeout(s.timeout);clearTimeout(s.vadTimeout);
+ clearInterval(s.monitor);clearTimeout(s.timeout);clearTimeout(s.vadTimeout);clearTimeout(s.flushTimeout);
  s.worker?.terminate();s.vad?.terminate();s.node?.disconnect();s.source?.disconnect();
- s.stream?.getTracks().forEach(t=>t.stop());s.context?.close().catch(()=>{});
+ s.stream?.getTracks().forEach(t=>{t.onended=null;t.stop();});s.context?.close().catch(()=>{});
+ s.stopResolve?.({ok:!s.stopFailure,error:s.stopFailure});
+}
+function finishDrain(s){
+ if(active!==s||!s.stopping||!s.vadFlushed||s.busy||s.queue.jobs.length)return;
+ stop();
+}
+function flushVad(s){
+ if(!s.stopping||!s.inputFlushed||!s.vadReady||s.vadBusy||s.vadQueue.length||s.flushSent)return;
+ s.flushSent=true;
+ s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'最後一段人聲處理逾時，字幕未全部完成'});stop();}},5000);
+ s.vad.postMessage({type:'flush',epoch:s.epoch});
+}
+function finishInput(s){
+ if(active!==s||s.inputFlushed)return;
+ s.inputFlushed=true;clearTimeout(s.flushTimeout);
+ s.node?.disconnect();s.context?.close().catch(()=>{});
+ drainVad(s);flushVad(s);
+}
+function stopCapture(drain){
+ const s=active;
+ if(!s||!drain||!s.recording||(!s.receiving&&!s.busy&&!s.queue.jobs.length)){stop();return Promise.resolve({ok:true});}
+ if(s.stopPromise)return s.stopPromise;
+ s.stopping=true;
+ s.stopPromise=new Promise(resolve=>{s.stopResolve=resolve;});
+ // Stop acquiring sound immediately; keep decoders alive until accepted audio drains.
+ s.source?.disconnect();s.stream?.getTracks().forEach(t=>{t.onended=null;t.stop();});
+ send(s,'model-status',{text:'已停止收音，正在完成剩餘字幕…'});
+ s.flushTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'收音收尾逾時，字幕未全部完成'});stop();}},5000);
+ s.node.port.postMessage({type:'flush'});
+ return s.stopPromise;
 }
 function resetAudio(s){
  s.epoch++;s.queue.clear();s.filter.reset();s.agreement.reset();s.vadQueue=[];s.lastId=null;s.previewId=null;s.origin=Date.now();
@@ -24,12 +54,12 @@ function decode(s,job){
 }
 function drainVad(s){
  if(s.vadBusy||!s.vadReady)return;
- const audio=s.vadQueue.shift();if(!audio)return;
+ const audio=s.vadQueue.shift();if(!audio){flushVad(s);return;}
  s.vadBusy=true;s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'人聲偵測無回應，請重新開始'});stop();}},5000);
  s.vad.postMessage({type:'audio',audio,epoch:s.epoch,interval:Math.max(.55,Math.min(1.2,s.decodeMs/1000))},[audio.buffer]);
 }
 function sample(s,data){
- if(active!==s)return;
+ if(active!==s||s.inputFlushed)return;
  s.frames++;let energy=0;for(const v of data)energy+=v*v;s.level=Math.sqrt(energy/data.length);
  if(!s.vadReady||(!s.ready&&!(s.recording&&s.receiving)))return;
  if(s.nativeUntil){if(Date.now()<s.nativeUntil)return;s.nativeUntil=0;resetAudio(s);}
@@ -47,7 +77,7 @@ function initializeWorker(s){
  const worker=s.worker=s.desktop?new DesktopWorker():new Worker('speech-worker.js?v=3.4.8',{type:'module'});
  worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
- worker.onmessage=({data})=>{
+ worker.onmessage=async({data})=>{
   if(active!==s||s.worker!==worker)return;
   if(data.type==='progress'){clearTimeout(s.timeout);s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);if(Date.now()-(s.lastProgress||0)>1000){s.lastProgress=Date.now();send(s,'model-status',{text:'下載辨識模型 '+data.progress+'%…'});}return;}
   if(data.type==='ready'){clearTimeout(s.timeout);s.ready=true;s.model=data.model;s.dtype=data.dtype;send(s,'model-status',{text:data.model+' 已就緒，等待人聲'});const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);return;}
@@ -65,7 +95,7 @@ function initializeWorker(s){
   }
   if(data.type!=='result')return;
   clearTimeout(s.timeout);s.decodeMs=performance.now()-s.started;s.metrics.add('decodeMs',s.decodeMs);
-  const job=s.busy;s.busy=null;
+  const job=s.busy;
   if(job&&job.epoch===s.epoch&&!s.nativeUntil&&(s.recording||Date.now()-job.audioEndAt<5000)){
    if(s.desktop&&data.text&&s.lastId!==job.id){s.lastId=job.id;s.metrics.add('firstJapaneseMs',Date.now()-job.speechAt);s.metrics.add('audioLagMs',Date.now()-job.audioEndAt);}
    const text=s.desktop?null:s.filter.accept(data.text,job);
@@ -73,10 +103,11 @@ function initializeWorker(s){
    if(result){
     if(s.lastId!==job.id){s.metrics.add('firstJapaneseMs',Date.now()-job.speechAt);s.lastId=job.id;}
     s.metrics.add('audioLagMs',Date.now()-job.audioEndAt);
-    send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,final:job.final,utteranceId:s.epoch*1000000+job.utteranceId,utteranceEnd:job.utteranceEnd,decodeMs:Math.round(s.decodeMs),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
+    await send(s,'speech-result',{...result,id:s.epoch*1000000+job.id,final:job.final,utteranceId:s.epoch*1000000+job.utteranceId,utteranceEnd:job.utteranceEnd,decodeMs:Math.round(s.decodeMs),speechAt:job.speechAt,audioEndAt:job.audioEndAt});
    }else if(!s.desktop)s.rejected++;
   }
-  const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);
+  if(active!==s||s.worker!==worker)return;
+  s.busy=null;const next=s.queue.takeFresh(Date.now(),s.epoch);if(next)decode(s,next);else finishDrain(s);
  };
  worker.postMessage({type:'init'});
 }
@@ -86,7 +117,8 @@ function initializeVad(s){
  s.vad.onerror=()=>{if(active===s){send(s,'speech-error',{error:'人聲模型載入失敗'});stop();}};
  s.vad.onmessage=({data:m})=>{
   if(active!==s)return;
-  if(m.type==='ready'){clearTimeout(s.vadTimeout);s.vadReady=true;send(s,'model-status',{text:'人聲偵測已就緒'});return;}
+  if(m.type==='ready'){clearTimeout(s.vadTimeout);s.vadReady=true;send(s,'model-status',{text:'人聲偵測已就緒'});drainVad(s);return;}
+  if(m.type==='flushed'&&m.epoch===s.epoch){clearTimeout(s.vadTimeout);s.vadFlushed=true;s.queue.jobs=s.queue.jobs.filter(job=>job.final);finishDrain(s);return;}
   if(m.type==='error'){send(s,'speech-error',{error:'人聲偵測失敗：'+m.error});stop();return;}
   if(m.type==='processed'){clearTimeout(s.vadTimeout);s.vadBusy=false;s.probability=m.probability;s.metrics.add('vadMs',m.vadMs);drainVad(s);}
   if(m.type==='segment'&&m.job.epoch===s.epoch&&!s.nativeUntil)decode(s,m.job);
@@ -101,7 +133,7 @@ async function start(m){
   if(active!==s){s.stream.getTracks().forEach(t=>t.stop());return;}
   s.context=new AudioContext();await s.context.resume();s.source=s.context.createMediaStreamSource(s.stream);s.source.connect(s.context.destination);
   await s.context.audioWorklet.addModule('audio-worklet.js');if(active!==s)return;
-  s.node=new AudioWorkletNode(s.context,'subtitle-capture');s.node.port.onmessage=e=>sample(s,e.data);s.source.connect(s.node);s.node.connect(s.context.destination);
+  s.node=new AudioWorkletNode(s.context,'subtitle-capture');s.node.port.onmessage=e=>{if(e.data?.type==='flushed')finishInput(s);else sample(s,e.data);};s.source.connect(s.node);s.node.connect(s.context.destination);
   s.stream.getAudioTracks()[0].onended=()=>{if(active===s){send(s,'speech-error',{error:'分頁音訊已中斷，請重新開始'});stop();}};
   initializeVad(s);initializeWorker(s);
   s.monitor=setInterval(()=>send(s,'audio-health',{frames:s.frames,level:s.level,ready:s.ready&&s.vadReady,model:s.model,dtype:s.dtype,probability:s.probability||0,busy:Boolean(s.busy),decodeMs:Math.round(s.decodeMs),metrics:s.metrics.summary(),dropped:s.queue.dropped,expired:s.expired,rejected:s.rejected,overruns:s.overruns,queueDepth:s.queue.jobs.length}),1000);
@@ -115,5 +147,5 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
  }
  if(m.type==='offscreen-start'){start(m).then(()=>reply({ok:true}),e=>reply({ok:false,error:e.message}));return true;}
  if(m.type==='offscreen-reset'){if(active){active.session=m.session;active.nativeUntil=0;resetAudio(active);}reply({ok:Boolean(active)});return;}
- if(m.type==='offscreen-stop'){stop();reply({ok:true});}
+ if(m.type==='offscreen-stop'){stopCapture(m.drain).then(reply,e=>reply({ok:false,error:e.message}));return true;}
 });

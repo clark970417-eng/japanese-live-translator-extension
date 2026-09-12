@@ -2,6 +2,7 @@
 export function captureStatus(d,now=Date.now()){
  const x=d.diagnostics||{};
  if(d.lastError)return `提示：${d.lastError}`;
+ if(d.draining)return `● 已停止收音，正在完成剩餘字幕 · 待處理 ${x.queueDepth||0} 段`;
  if(d.controlBusy)return d.controlAction==='stop'?'● 正在停止語音…':'● '+(d.modelStatus && !d.modelStatus.startsWith('已') ? d.modelStatus : '正在啟動語音…');
  if(!d.running)return '● 已就緒';
  if(x.ready&&x.lastHeartbeat&&now-x.lastHeartbeat>6000)return '● 收音連線沒有回應，請停止後重新開始';

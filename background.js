@@ -13,7 +13,7 @@ let captionMode='record',captionHold=3;
 const setHold=value=>{captionHold=Math.max(1,Math.min(6,Number(value)||3));};
 chrome.storage.onChanged?.addListener((changes,area)=>{if(area==='local'&&changes.subtitleSettings)setHold(changes.subtitleSettings.newValue?.holdSeconds);});
 const fresh=item=>item&&!item.expired&&Date.now()/1000<(item.expiresAt??item.updatedAt+3);
-const items=[];let running=false,lastError="",captureTabId=null;
+const items=[];let running=false,lastError="",captureTabId=null,drainingSession=null,stopPromise=null;
 const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode","subtitleSettings"]);
 const deadline=(signal,ms)=>signal?AbortSignal.any([signal,AbortSignal.timeout(ms)]):AbortSignal.timeout(ms);
 async function request(url,key,body,signal){const r=await fetch(url,{signal:deadline(signal,10000),method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok){const error=new Error(`API ${r.status}`);error.status=r.status;throw error;}return d}
@@ -162,16 +162,23 @@ function addTranscript(m){
  translateItem({session:m.session,item,started:Date.now()});
 }
 async function ensureOffscreen(){if(await chrome.offscreen.hasDocument())return;await chrome.offscreen.createDocument({url:'offscreen.html',reasons:['USER_MEDIA'],justification:'擷取目前分頁音訊以產生字幕'});}
-async function stopCapture(){
- if(captionMode==='record'&&nativeText){const text=nativeText;nativeText='';recordTranscript({text,source:'native'});}
- cueCursor.reset();
- cancelTranslations();
- nativeUntil=0;nativeText='';lastSpeechId=-1;
- running=false;gate.reset();items.length=0;translationPending=null;pushSubtitle(null);
- await chrome.storage.local.set({captionsHidden:true});
- await chrome.runtime.sendMessage({type:'offscreen-stop'}).catch(()=>{});
- if(desktopClient)await desktop.request('stop',{},60000).catch(()=>{});
- modelStatus='已停止';return{running};
+function stopCapture(){
+ if(stopPromise)return stopPromise;
+ stopPromise=(async()=>{
+  if(captionMode==='record'&&nativeText){const text=nativeText;nativeText='';recordTranscript({text,source:'native'});}
+  cueCursor.reset();cancelTranslations();nativeUntil=0;nativeText='';lastSpeechId=-1;
+  drainingSession=running&&captionMode==='record'?gate.session:null;
+  running=false;items.length=0;translationPending=null;pushSubtitle(null);
+  try{
+   await chrome.storage.local.set({captionsHidden:true});
+   const response=await chrome.runtime.sendMessage({type:'offscreen-stop',drain:!!drainingSession});
+   if(response?.ok===false)lastError=response.error||'部分字幕未完成，請檢查記錄';
+   if(desktopClient)await desktop.request('stop',{},60000);
+  }catch(error){lastError='停止收音後的字幕未全部完成：'+error.message;}
+  finally{drainingSession=null;gate.reset();modelStatus='已停止';}
+  return{running};
+ })().finally(()=>{stopPromise=null;});
+ return stopPromise;
 }
 async function resetCapture(){
  cueCursor.reset();
@@ -208,7 +215,7 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
   desktop.request('settings',{},30000).then(text=>send({ok:true,text}),e=>send({ok:false,error:e.message}));return true;
  }
  if(m.type==='desktop-request'){
-  if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||engineMode!=='desktop'||!['init','decode'].includes(m.op))return;
+  if(s.url!==chrome.runtime.getURL('offscreen.html')||(!running&&!drainingSession)||engineMode!=='desktop'||!['init','decode'].includes(m.op))return;
   const segment=gate.session+':'+m.segment;
   if(m.op==='decode'){
    diagnostics.captionPhase='recognizing';diagnostics.captionPhaseAt=m.speechAt;
@@ -221,12 +228,12 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
   },e=>send({ok:false,error:e.message}));return true;
  }
  if(['speech-result','model-status','speech-error','audio-health'].includes(m.type)){
-  if(s.url!==chrome.runtime.getURL('offscreen.html')||!running||m.session!==gate.session)return;
+  if(s.url!==chrome.runtime.getURL('offscreen.html')||(!running&&m.session!==drainingSession)||m.session!==gate.session)return;
   if(m.type==='speech-result')addTranscript(m);
   if(m.type==='model-status')modelStatus=m.text;
   if(m.type==='audio-health')diagnostics={...diagnostics,...m,lastHeartbeat:Date.now()};
   if(m.type==='speech-error'){lastError=m.error;stopCapture();}
-  return;
+  send({ok:true});return;
  }
  let task;
  if(m.type==='native-caption'){
@@ -246,12 +253,12 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
  else if(m.type==='make-draft')task=makeDraft(m.text);
  else if(m.type==='translate')task=translate(m.text,m.direction,Boolean(m.priority));
  else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?(captionMode==='record'?[recordingItem()]:items.filter(fresh)):[]});
- else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,controlBusy,controlAction,diagnostics,captureTabId,captionMode,recordingPending:recording.pending,recordingFailed:recording.failed});
+ else if(m.type==='health')task=Promise.resolve({running,draining:!!drainingSession,lastError,modelStatus,controlBusy,controlAction,diagnostics,captureTabId,captionMode,recordingPending:recording.pending,recordingFailed:recording.failed});
  else if(m.type==='subtitle-reset'){
   if(s.tab?.id!==captureTabId)return;
   task=resetCapture();
  } else if(m.type==='subtitle-control'){
-  if(controlBusy){send({ok:false,error:'正在切換，請稍候'});return;}
+  if(controlBusy||drainingSession){send({ok:false,error:'正在切換，請稍候'});return;}
   controlBusy=true;controlAction=m.action==='stop'?'stop':'start';task=(m.action==='stop'?stopCapture():startCapture(m.tabId||s.tab?.id)).finally(()=>{controlBusy=false;controlAction='';});
  } else return;
  Promise.resolve(task).then(text=>send({ok:true,text}),e=>send({ok:false,error:e.message}));return true;

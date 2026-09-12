@@ -8,16 +8,12 @@ function reset(m){
  context=new Float32Array(64);epoch=m.epoch;origin=m.origin;pending=[];resampler=new Resampler(m.rate);windows=new SpeechWindows();windows.maxSamples=m.desktop?320000:80000;windows.overlapFrames=m.desktop?0:32;gain=new SpeechGain();
  state?.dispose();state=new ort.Tensor('float32',new Float32Array(256),[2,1,128]);
 }
-let chain=Promise.resolve();
-self.onmessage=({data:m})=>{
- chain=chain.then(async()=>{
-  if(m.type==='init'){
-   session=await ort.InferenceSession.create(new URL('./vendor/silero/silero_vad_v5.onnx',import.meta.url).href,{executionProviders:['wasm']});
-   sr=new ort.Tensor('int64',BigInt64Array.from([16000n]),[]);reset(m);postMessage({type:'ready',epoch});return;
-  }
-  if(m.type==='reset'){reset(m);return;}
-  if(m.type!=='audio'||m.epoch!==epoch){if(m.type==='audio')postMessage({type:'processed',epoch,probability:0,vadMs:0});return;}
-  const began=performance.now();pending.push(...resampler.push(m.audio));
+function publish(job){
+ if(!job)return;
+ job.epoch=epoch;job.speechAt=origin+job.speechStartSample/16;job.audioEndAt=origin+job.endSample/16;
+ postMessage({type:'segment',job},[job.audio.buffer]);
+}
+async function processFrames(interval){
   let probability=0;
   while(pending.length>=512){
    const audio=gain.push(Float32Array.from(pending.splice(0,512)));
@@ -26,9 +22,26 @@ self.onmessage=({data:m})=>{
    const out=await session.run({input,state,sr});
    input.dispose();state.dispose();state=out.stateN;
    probability=Number(out.output.data[0]);out.output.dispose();
-   const job=windows.push(audio,probability,m.interval);
-   if(job){job.epoch=epoch;job.speechAt=origin+job.speechStartSample/16;job.audioEndAt=origin+job.endSample/16;postMessage({type:'segment',job},[job.audio.buffer]);}
+   const job=windows.push(audio,probability,interval);
+   publish(job);
   }
+ return probability;
+}
+let chain=Promise.resolve();
+self.onmessage=({data:m})=>{
+ chain=chain.then(async()=>{
+  if(m.type==='init'){
+   session=await ort.InferenceSession.create(new URL('./vendor/silero/silero_vad_v5.onnx',import.meta.url).href,{executionProviders:['wasm']});
+   sr=new ort.Tensor('int64',BigInt64Array.from([16000n]),[]);reset(m);postMessage({type:'ready',epoch});return;
+  }
+  if(m.type==='reset'){reset(m);return;}
+  if(m.type==='flush'&&m.epoch===epoch){
+   if(pending.length){while(pending.length<512)pending.push(0);await processFrames(.65);}
+   publish(windows.finish());postMessage({type:'flushed',epoch});return;
+  }
+  if(m.type!=='audio'||m.epoch!==epoch){if(m.type==='audio')postMessage({type:'processed',epoch,probability:0,vadMs:0});return;}
+  const began=performance.now();pending.push(...resampler.push(m.audio));
+  const probability=await processFrames(m.interval);
   postMessage({type:'processed',epoch,probability,vadMs:performance.now()-began});
  }).catch(error=>postMessage({type:'error',error:error.message,epoch}));
 };

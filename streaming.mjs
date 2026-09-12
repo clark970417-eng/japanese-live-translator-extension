@@ -28,6 +28,15 @@ export class SpeechGain {
 export class SpeechWindows {
  constructor(){this.reset();}
  reset(){this.pre=[];this.parts=[];this.samples=0;this.clock=0;this.onset=0;this.silent=0;this.voiced=0;this.active=false;this.id=0;this.lastEmission=0;this.overlap=false;this.utterance=0;}
+ finish(){
+  if(!this.active)return null;
+  this.active=false;
+  if(this.voiced<3584){this.parts=[];this.samples=0;return null;}
+  const audio=new Float32Array(this.samples);let offset=0;
+  for(const part of this.parts){audio.set(part,offset);offset+=part.length;}
+  const job={id:this.id,utteranceId:this.utterance,utteranceEnd:true,audio,final:true,overlap:this.overlap,voicedSeconds:this.voiced/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
+  this.parts=[];this.samples=0;return job;
+ }
  push(frame,probability,interval=.65){
   const n=frame.length;this.clock+=n;
   const speech=probability>=(this.active?.15:.30);

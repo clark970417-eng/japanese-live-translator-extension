@@ -21,3 +21,7 @@ test('model initialization stays visible before capture is running',()=>{
  assert.match(captureStatus({running:true,controlBusy:true,controlAction:'stop'}),/正在停止語音/);
  assert.match(captureStatus({running:false,controlBusy:false,lastError:'無法擷取聲音'}),/無法擷取聲音/);
 });
+
+test('stopped capture remains visibly draining until accepted audio completes',()=>{
+ assert.match(captureStatus({running:false,draining:true,controlBusy:true,controlAction:'stop',diagnostics:{queueDepth:3}}),/已停止收音.*剩餘字幕.*3/);
+});
