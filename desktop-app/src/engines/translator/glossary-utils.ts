@@ -32,3 +32,20 @@ export function formatGlossaryPrompt(glossary: GlossaryEntry[] | undefined): str
 
   return `Use these fixed translations for specific terms:\n${entries}`
 }
+
+/**
+ * Keep only the glossary entries whose source term actually occurs in the text.
+ *
+ * Listing unused terminology invites the model to insert it: a sentence about
+ * `配信の切り抜き` came back mentioning `直播存檔` because an unrelated entry
+ * was in the prompt. Filtering by occurrence keeps the instruction relevant to
+ * the sentence being translated.
+ */
+export function selectApplicableGlossary(
+  text: string,
+  glossary: GlossaryEntry[] | undefined
+): GlossaryEntry[] | undefined {
+  if (!glossary?.length) return glossary
+  const applicable = glossary.filter(entry => entry.source?.trim() && text.includes(entry.source))
+  return applicable.length ? applicable : undefined
+}

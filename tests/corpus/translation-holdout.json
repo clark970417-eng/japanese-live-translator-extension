@@ -1,0 +1,306 @@
+[
+  {
+    "id": "neg-invite",
+    "category": "negation",
+    "ja": "そのボスにはまだ一度も勝てていません。",
+    "zh": "那個首領我到現在一次都還沒贏過。",
+    "mustContain": ["沒", "還"],
+    "mustNotContain": ["贏了", "已經贏"],
+    "intent": "The speaker has never won; the failure is ongoing."
+  },
+  {
+    "id": "neg-double",
+    "category": "negation",
+    "ja": "誰も来ないとは言っていませんよ。",
+    "zh": "我沒有說沒有人會來喔。",
+    "mustContain": ["沒"],
+    "mustNotContain": ["沒有人會來。"],
+    "intent": "Denies having said nobody would come; it is not a claim that nobody comes."
+  },
+  {
+    "id": "neg-permission",
+    "category": "negation",
+    "ja": "配信の切り抜きは、許可なしでは出さないでください。",
+    "zh": "直播的剪輯片段，沒有得到許可請不要放出來。",
+    "mustContain": ["不要", "許可"],
+    "mustNotContain": ["請放出來"],
+    "intent": "A prohibition conditional on permission."
+  },
+  {
+    "id": "tense-past-done",
+    "category": "tense",
+    "ja": "さっきのステージはもうクリアしました。",
+    "zh": "剛剛那一關我已經通關了。",
+    "mustContain": ["已經"],
+    "mustNotContain": ["還沒", "將要"],
+    "intent": "Completed in the past."
+  },
+  {
+    "id": "tense-future-plan",
+    "category": "tense",
+    "ja": "来週の土曜に、続きをやる予定です。",
+    "zh": "我打算下週六繼續玩。",
+    "mustContain": ["下週", "打算"],
+    "mustNotContain": ["上週", "已經"],
+    "intent": "A future plan, not an accomplished fact."
+  },
+  {
+    "id": "tense-progressive",
+    "category": "tense",
+    "ja": "今ちょうど装備を整えているところです。",
+    "zh": "我現在正好在整理裝備。",
+    "mustContain": ["正", "現在"],
+    "mustNotContain": ["整理好了", "已經整理完"],
+    "intent": "In progress, not finished."
+  },
+  {
+    "id": "unc-maybe",
+    "category": "uncertainty",
+    "ja": "明日の配信は、もしかしたら遅れるかもしれません。",
+    "zh": "明天的直播，說不定會晚一點開始。",
+    "mustContain": ["說不定"],
+    "mustNotContain": ["一定", "確定會"],
+    "intent": "Possibility, not a commitment."
+  },
+  {
+    "id": "unc-undecided",
+    "category": "uncertainty",
+    "ja": "次に何をやるかは、まだ決めていません。",
+    "zh": "接下來要做什麼，我還沒決定。",
+    "mustContain": ["還沒", "決定"],
+    "mustNotContain": ["已經決定"],
+    "intent": "Undecided."
+  },
+  {
+    "id": "unc-hearsay",
+    "category": "uncertainty",
+    "ja": "この裏技、効くらしいですよ。",
+    "zh": "這個小技巧，聽說是有效的喔。",
+    "mustContain": ["聽說"],
+    "mustNotContain": ["一定有效"],
+    "intent": "Reported information, not the speaker's own assertion."
+  },
+  {
+    "id": "casual-contraction",
+    "category": "casual",
+    "ja": "それ、めっちゃむずいんだけど、やっちゃお。",
+    "zh": "那個超難的耶，不過還是做吧。",
+    "mustContain": ["難"],
+    "mustNotContain": ["簡單"],
+    "intent": "Casual: very hard, but let's do it anyway."
+  },
+  {
+    "id": "casual-shortened",
+    "category": "casual",
+    "ja": "ちょっと待ってて、今行くってば。",
+    "zh": "你等我一下，我就說我現在要過去了嘛。",
+    "mustContain": ["等", "現在"],
+    "mustNotContain": ["不要等"],
+    "intent": "Mildly exasperated reassurance that the speaker is coming."
+  },
+  {
+    "id": "casual-gonna",
+    "category": "casual",
+    "ja": "こっちのルート行ってみっか。",
+    "zh": "要不要走這條路線看看。",
+    "mustContain": ["這"],
+    "mustNotContain": ["不要走"],
+    "intent": "Casual suggestion to try this route."
+  },
+  {
+    "id": "incomplete-cut",
+    "category": "incomplete",
+    "ja": "えっと、その、さっきのやつって",
+    "zh": "呃，那個，剛剛那個東西是不是",
+    "mustNotContain": ["。謝謝", "感謝"],
+    "intent": "An unfinished clause. The translation must not invent an ending or a closing phrase."
+  },
+  {
+    "id": "incomplete-trail",
+    "category": "incomplete",
+    "ja": "もしこれで倒せなかったら、たぶん",
+    "zh": "如果這樣還是打不倒的話，大概",
+    "mustContain": ["如果"],
+    "mustNotContain": ["就贏了"],
+    "intent": "Trails off after a condition; no invented resolution."
+  },
+  {
+    "id": "game-revive",
+    "category": "game",
+    "ja": "リスポーン地点まで戻ってから、装備を拾い直します。",
+    "zh": "先回到重生點，再把裝備撿回來。",
+    "mustContain": ["重生"],
+    "mustNotContain": ["重新出生的地方的點"],
+    "intent": "Game vocabulary: respawn point."
+  },
+  {
+    "id": "game-cooldown",
+    "category": "game",
+    "ja": "スキルのクールタイムが明けたら、もう一回撃ちます。",
+    "zh": "技能冷卻結束之後，我再打一次。",
+    "mustContain": ["冷卻"],
+    "mustNotContain": ["涼快"],
+    "intent": "Game vocabulary: skill cooldown."
+  },
+  {
+    "id": "game-archive",
+    "category": "game",
+    "ja": "この場面はアーカイブで見返してください。",
+    "zh": "這個場面請到直播存檔裡回看。",
+    "mustContain": ["存檔"],
+    "mustNotContain": ["檔案館", "資料庫"],
+    "intent": "Archive means the stream's recorded playback."
+  },
+  {
+    "id": "name-person",
+    "category": "names",
+    "ja": "さくらさんが、コメントで教えてくれました。",
+    "zh": "さくら在留言裡告訴我的。",
+    "mustNotContain": ["櫻花在留言"],
+    "intent": "A viewer's handle. It must not be translated into a common noun."
+  },
+  {
+    "id": "name-place",
+    "category": "names",
+    "ja": "秋葉原の店で、そのコントローラーを買いました。",
+    "zh": "我在秋葉原的店裡買了那個控制器。",
+    "mustContain": ["秋葉原"],
+    "mustNotContain": ["秋天的葉子"],
+    "intent": "A place name stays a place name."
+  },
+  {
+    "id": "name-title",
+    "category": "names",
+    "ja": "「星のかけら」という曲を流しますね。",
+    "zh": "我要播一首叫「星之碎片」的曲子喔。",
+    "mustContain": ["曲"],
+    "mustNotContain": ["星星的一部分零件"],
+    "intent": "A song title in quotes."
+  },
+  {
+    "id": "pronoun-omitted-you",
+    "category": "pronoun",
+    "ja": "まだ見てる？眠かったら寝ていいからね。",
+    "zh": "還在看嗎？如果困了就去睡沒關係喔。",
+    "mustContain": ["睡"],
+    "mustNotContain": ["我還在看嗎"],
+    "intent": "The omitted subject is the viewer, not the speaker."
+  },
+  {
+    "id": "pronoun-omitted-i",
+    "category": "pronoun",
+    "ja": "そろそろ限界なので、今日はここまでにします。",
+    "zh": "我差不多到極限了，今天就到這裡吧。",
+    "mustContain": ["今天"],
+    "mustNotContain": ["你差不多到極限"],
+    "intent": "The omitted subject is the speaker."
+  },
+  {
+    "id": "pronoun-omitted-they",
+    "category": "pronoun",
+    "ja": "さっきのコメント、たぶん冗談で言ってると思う。",
+    "zh": "剛剛那則留言，我想他應該是在開玩笑。",
+    "mustContain": ["開玩笑"],
+    "mustNotContain": ["我在開玩笑吧"],
+    "intent": "The joking party is the commenter; the judgment is the speaker's."
+  },
+  {
+    "id": "reaction-startled",
+    "category": "reaction",
+    "ja": "うわっ、今の見た？あぶなっ。",
+    "zh": "哇，剛剛那個你看到了嗎？好險。",
+    "mustContain": ["險"],
+    "mustNotContain": ["很安全"],
+    "intent": "Startled, then relieved."
+  },
+  {
+    "id": "reaction-frustrated",
+    "category": "reaction",
+    "ja": "あー、もうだめだ。またやられた。",
+    "zh": "啊，不行了啦。又被打敗了。",
+    "mustContain": ["又"],
+    "mustNotContain": ["我又贏了"],
+    "intent": "Frustration at being defeated again."
+  },
+  {
+    "id": "reaction-delight",
+    "category": "reaction",
+    "ja": "やった、ついに取れた！うれしい！",
+    "zh": "太好了，終於拿到了！好開心！",
+    "mustContain": ["終於"],
+    "mustNotContain": ["還沒拿到"],
+    "intent": "Delight at finally obtaining something."
+  },
+  {
+    "id": "context-two-turn",
+    "category": "context",
+    "ja": "さっきの話の続きですが、あの装備はやっぱり売らないことにしました。",
+    "zh": "接著剛才的話題，那件裝備我還是決定不賣了。",
+    "mustContain": ["不賣"],
+    "mustNotContain": ["決定賣"],
+    "intent": "Continues a prior topic and reverses toward not selling."
+  },
+  {
+    "id": "context-three-sentence",
+    "category": "context",
+    "ja": "今日は三つやることがあります。まず素材を集めて、次に強化します。最後に少しだけ雑談します。",
+    "zh": "今天有三件事要做。先收集素材，接著強化，最後聊一點天。",
+    "mustContain": ["三", "最後"],
+    "mustNotContain": ["兩件事"],
+    "intent": "Three ordered items must all survive."
+  },
+  {
+    "id": "context-reference",
+    "category": "context",
+    "ja": "その件は、昨日の配信でもう説明したので省略します。",
+    "zh": "那件事我昨天的直播已經說明過了，所以就跳過。",
+    "mustContain": ["昨天", "已經"],
+    "mustNotContain": ["明天"],
+    "intent": "Refers back to yesterday and skips the explanation."
+  },
+  {
+    "id": "neg-request-soft",
+    "category": "negation",
+    "ja": "無理に課金しないでくださいね。",
+    "zh": "請不要勉強自己課金喔。",
+    "mustContain": ["不要"],
+    "mustNotContain": ["請課金"],
+    "intent": "A gentle prohibition."
+  },
+  {
+    "id": "tense-just-now",
+    "category": "tense",
+    "ja": "たった今、設定を直したところです。",
+    "zh": "我剛剛才把設定修好。",
+    "mustContain": ["剛"],
+    "mustNotContain": ["還沒修"],
+    "intent": "Completed a moment ago."
+  },
+  {
+    "id": "unc-conditional",
+    "category": "uncertainty",
+    "ja": "人が集まれば、コラボもやるかもしれません。",
+    "zh": "如果人湊得夠，說不定也會辦聯動。",
+    "mustContain": ["如果"],
+    "mustNotContain": ["一定會辦"],
+    "intent": "Conditional possibility."
+  },
+  {
+    "id": "game-lag",
+    "category": "game",
+    "ja": "回線が重いので、少しラグがあります。",
+    "zh": "網路有點卡，所以會有一點延遲。",
+    "mustContain": ["延遲"],
+    "mustNotContain": ["很重的線"],
+    "intent": "Network lag."
+  },
+  {
+    "id": "reaction-apology",
+    "category": "reaction",
+    "ja": "あ、ごめん、今の聞こえてなかった。",
+    "zh": "啊，抱歉，剛剛那個我沒聽到。",
+    "mustContain": ["沒聽到"],
+    "mustNotContain": ["我聽到了"],
+    "intent": "Apologizes for not having heard."
+  }
+]

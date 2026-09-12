@@ -20,7 +20,7 @@ import { boundedTranslation, TranslationCancelledError } from './bounded-transla
 
 import type { Llama, LlamaModel, LlamaContext, LlamaContextSequence, Token } from 'node-llama-cpp'
 import { LANG_NAMES_EN, LANG_NAMES_ZH } from '../engines/language-names'
-import { formatGlossaryPrompt } from '../engines/translator/glossary-utils'
+import { formatGlossaryPrompt, selectApplicableGlossary } from '../engines/translator/glossary-utils'
 import { createLogger } from './logger'
 import { resetTranslationHistory, translationContextForModel } from './translation-session'
 
@@ -190,7 +190,7 @@ async function handleInit(
 }
 
 /** Build context sections for the translation prompt */
-function buildContextPrompt(ctx?: {
+function buildContextPrompt(text: string, ctx?: {
   previousSegments?: Array<{ source: string; translated: string }>
   glossary?: Array<{ source: string; target: string }>
 }): string {
@@ -198,8 +198,8 @@ function buildContextPrompt(ctx?: {
 
   const parts: string[] = []
 
-  // Glossary terms
-  const glossaryPrompt = formatGlossaryPrompt(ctx.glossary)
+  // Glossary terms that the sentence can actually use
+  const glossaryPrompt = formatGlossaryPrompt(selectApplicableGlossary(text, ctx.glossary))
   if (glossaryPrompt) {
     parts.push(glossaryPrompt)
   }
@@ -224,7 +224,7 @@ function buildTranslationPrompt(
 ): string {
   const fromLang = LANG_NAMES_EN[from] ?? from
   const toLang = LANG_NAMES_EN[to] ?? to
-  const contextSection = buildContextPrompt(translationContextForModel(translateContext, activeModelType))
+  const contextSection = buildContextPrompt(text, translationContextForModel(translateContext, activeModelType))
 
   if (activeModelType === 'plamo') {
     // PLaMo-2-Translate uses structured tags for translation.
@@ -809,7 +809,7 @@ async function handleTranslateSimulMt(
       log.info(`SimulMT session created for ${langPair}`)
     }
 
-    const contextSection = buildContextPrompt(translationContextForModel(translateContext, activeModelType))
+    const contextSection = buildContextPrompt(text, translationContextForModel(translateContext, activeModelType))
     const prompt = contextSection + buildSimulMtPrompt(text, from, to, isRevision)
     const inferenceParams = getInferenceParams()
 
