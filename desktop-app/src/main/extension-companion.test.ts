@@ -14,7 +14,8 @@ vi.mock('./ipc/pipeline-ipc', () => ({ startPipeline: vi.fn(async () => ({ succe
 const textInference = vi.hoisted(() => vi.fn(async () => 'こんにちは'))
 
 vi.mock('../engines/translator/HunyuanMT15Translator', () => ({ HunyuanMT15Translator: class {
-  async initialize() {} async dispose() {} async translate() { return textInference() }
+  async initialize() {} async dispose() {}
+  async translate(...args: unknown[]) { return textInference(...(args as [])) }
 } }))
 
 vi.mock('../engines/translator/HunyuanMT2Translator', () => ({ HunyuanMT2Translator: class {
@@ -175,3 +176,68 @@ it('acknowledges recognized speech before translation, routes late Chinese to it
     rmSync(directory,{recursive:true,force:true})
   }
 })
+
+it('releases optional draft repair for arriving audio, keeps the draft, and drains on stop', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'jtl-preempt-'))
+  const order: string[] = []
+  const pipeline = Object.assign(new EventEmitter(), {
+    active: false, running: true, stop: vi.fn(async () => {}),
+    canOverlapFinalTranslation: false, prepareFinalStreaming: vi.fn(),
+    processStreaming: vi.fn(async () => { order.push('audio'); return { sourceText: '声', translatedText: '聲音' } }),
+    finalizeStreaming: vi.fn(async () => ({ sourceText: '声', translatedText: '聲音', timestamp: 9 }))
+  })
+  const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
+  const socket = connect(join(directory, 'desktop.sock'))
+  const messages: Array<Record<string, unknown>> = []
+  let buffer = ''
+  socket.setEncoding('utf8')
+  socket.on('data', data => {
+    buffer += data
+    let newline: number
+    while ((newline = buffer.indexOf('\n')) >= 0) {
+      messages.push(JSON.parse(buffer.slice(0, newline))); buffer = buffer.slice(newline + 1)
+    }
+  })
+  const send = (message: object): void => { socket.write(JSON.stringify(message) + '\n') }
+  const audio = Buffer.from(new Float32Array([.1]).buffer).toString('base64')
+  let repairStarted!: () => void
+  try {
+    send({ id: 0, op: 'init' })
+    await vi.waitFor(() => expect(messages.some(m => m.id === 0 && m.ok)).toBe(true))
+
+    // The complete draft loses the uncertainty marker, so optional repair begins.
+    textInference.mockImplementationOnce(async () => { order.push('draft'); return '明日はできませんが、配信の保存映像を観るつもりです。' })
+    // The repair call behaves like the worker pool: it rejects when cancelled.
+    const started = new Promise<void>(resolve => { repairStarted = resolve })
+    textInference.mockImplementationOnce((...args: unknown[]) => {
+      order.push('repair')
+      repairStarted()
+      const context = args[3] as { signal?: AbortSignal } | undefined
+      return new Promise<string>((_, reject) => {
+        context?.signal?.addEventListener('abort', () => reject(new Error('Translation cancelled')), { once: true })
+      })
+    })
+
+    send({ id: 1, op: 'translate', direction: 'zh-ja', text: '明天可能沒辦法來看，但我會看直播存檔，不要勉強自己喔' })
+    await started
+    send({ id: 2, op: 'decode', audio, segment: 's1' })
+
+    // Audio runs without waiting for the repair, and the draft is not destroyed.
+    await vi.waitFor(() => expect(messages.some(m => m.id === 2 && m.ok)).toBe(true))
+    expect(order).toEqual(['draft', 'repair', 'audio'])
+    const draft = messages.find(m => m.id === 1)?.result as { text: string, reviewWarning?: string, repaired?: boolean }
+    expect(draft.text).toBe('明日はできませんが、配信の保存映像を観るつもりです。')
+    expect(draft.reviewWarning).toBeTruthy()
+    expect(draft.repaired).toBeFalsy()
+
+    send({ id: 3, op: 'stop' })
+    await vi.waitFor(() => expect(messages.some(m => m.id === 3 && m.ok)).toBe(true))
+    expect(messages.filter(m => m.id !== undefined && m.ok !== true)).toEqual([])
+  } finally {
+    socket.destroy()
+    await new Promise<void>(resolve => server.close(() => resolve()))
+    textInference.mockReset().mockResolvedValue('こんにちは')
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+

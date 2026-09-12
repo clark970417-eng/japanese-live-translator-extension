@@ -82,7 +82,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
           send({ id: m.id, ok: false, error: 'Desktop queue is full; please retry' }); continue
         }
         pending++
-        void queue.run(audioPriority, async () => {
+        void queue.run(audioPriority, async preempt => {
           try {
             if (closed) return
             const pipeline = ctx.pipeline
@@ -150,7 +150,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               await translator.initialize()
               const activeTranslator = translator
               result = from === 'zh' && to === 'ja'
-                ? await translateWrittenDraft(m.text, (text, signal) => activeTranslator.translate(text, from, to, {signal, previousSegments: []}))
+                ? await translateWrittenDraft(m.text, (text, signal) => activeTranslator.translate(text, from, to, {signal, previousSegments: []}), preempt)
                 : { text: await activeTranslator.translate(m.text, from, to) }
             } else throw new Error('Unsupported operation')
             send({ id: m.id, ok: true, result })

@@ -11,19 +11,28 @@ export interface DraftFidelityResult {
   repaired?: boolean
 }
 
+/** `preempt` aborts only the optional repair, never the first translation, so a
+ * requested draft is always produced. A preempted repair returns the completed
+ * draft with the review warning. */
 export async function translateWrittenDraft(
   source: string,
-  translate: (text: string, signal?: AbortSignal) => Promise<string>
+  translate: (text: string, signal?: AbortSignal) => Promise<string>,
+  preempt?: AbortSignal
 ): Promise<DraftFidelityResult> {
   const text = await translate(source)
   if (!sourceUncertainty.test(source) || targetUncertainty.test(text)) return { text }
   const unresolved = { text, reviewWarning: '不確定語氣可能遺失，請對照原文' }
+  // Live captions are already waiting for the shared worker; do not begin
+  // several more model calls for optional repair.
+  if (preempt?.aborted) return unresolved
   // Restrict fallback to two or three short clauses; never split conditions or
   // quoted text. This is only for complete drafts, never streaming speech.
   const parts = source.split(/[，。]/).map(part => part.trim()).filter(Boolean)
   if (parts.length < 2 || parts.length > 3 || parts.some(part => part.length < 5 || part.length > 60) || unsafeSplit.test(source) || !sourceUncertainty.test(parts[0])) return unresolved
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error('Draft repair deadline')), 1800)
+  const release = (): void => controller.abort(new Error('Preempted by live audio'))
+  preempt?.addEventListener('abort', release, { once: true })
   try {
     const first = await translate(parts[0], controller.signal)
     if (!first.trim() || !targetUncertainty.test(first)) return unresolved
@@ -41,5 +50,6 @@ export async function translateWrittenDraft(
     return unresolved
   } finally {
     clearTimeout(timer)
+    preempt?.removeEventListener('abort', release)
   }
 }
