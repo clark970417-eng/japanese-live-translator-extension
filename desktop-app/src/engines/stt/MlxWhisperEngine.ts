@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { isImplausibleTranscript } from './transcript-guard'
+import { isImplausibleTranscript, isOutroArtifact } from './transcript-guard'
 import { execFileSync } from 'child_process'
 import { join } from 'path'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
@@ -138,6 +138,13 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
 
       if (isImplausibleTranscript(result.text as string, audioChunk.length / sampleRate)) {
         this.log.warn('Rejected implausible short-window transcript; waiting for more audio')
+        return null
+      }
+
+      // Music and silence decode to a stock outro with high confidence, so this
+      // cannot be filtered by no_speech_prob or amplitude. See transcript-guard.
+      if (isOutroArtifact(result.text as string)) {
+        this.log.warn('Rejected stock outro transcript from audio without speech')
         return null
       }
       return {

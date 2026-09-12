@@ -1,0 +1,74 @@
+[
+  {
+    "id": "normal-baseline",
+    "condition": "normal",
+    "text": "今日は一緒にゲームを楽しみましょう。準備はできていますか。",
+    "rate": 180,
+    "expect": "speech"
+  },
+  {
+    "id": "fast-speech",
+    "condition": "fast",
+    "text": "ちょっと待って待って、今すぐ行くから、そこで止まっていてください。",
+    "rate": 280,
+    "expect": "speech"
+  },
+  {
+    "id": "quiet-speech",
+    "condition": "quiet",
+    "text": "すみません、少し声が小さいかもしれません。聞こえていますか。",
+    "rate": 180,
+    "filter": "volume=0.06",
+    "expect": "speech"
+  },
+  {
+    "id": "music-bed",
+    "condition": "music",
+    "text": "この曲を聞きながら、次のステージに進みましょう。",
+    "rate": 180,
+    "music": 0.35,
+    "expect": "speech"
+  },
+  {
+    "id": "pauses",
+    "condition": "pauses",
+    "text": "えーと、そうですね。",
+    "tailText": "やっぱり次の話をします。",
+    "gapSeconds": 2.5,
+    "rate": 180,
+    "expect": "speech"
+  },
+  {
+    "id": "exclamation",
+    "condition": "exclamation",
+    "text": "あー！",
+    "rate": 180,
+    "expect": "speech"
+  },
+  {
+    "id": "short-reply",
+    "condition": "short",
+    "text": "はい！",
+    "rate": 180,
+    "expect": "speech"
+  },
+  {
+    "id": "repetition",
+    "condition": "repetition",
+    "text": "やば、やば、やばい。",
+    "rate": 200,
+    "expect": "speech"
+  },
+  {
+    "id": "silence-control",
+    "condition": "silence",
+    "silenceSeconds": 3.0,
+    "expect": "silence"
+  },
+  {
+    "id": "music-only-control",
+    "condition": "silence",
+    "musicOnlySeconds": 3.0,
+    "expect": "silence"
+  }
+]

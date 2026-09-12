@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { isImplausibleTranscript } from './transcript-guard'
+import { isImplausibleTranscript, isOutroArtifact } from './transcript-guard'
 it('rejects the short-audio repetition that blocked translation for a minute', () => {
  expect(isImplausibleTranscript('北朝鮮の中での'+ '国民の'.repeat(70), .8)).toBe(true)
  expect(isImplausibleTranscript('北朝鮮の挑発行為に対する日本政府や他国の反応が注目されます', 5.47)).toBe(false)
@@ -7,4 +7,15 @@ it('rejects the short-audio repetition that blocked translation for a minute', (
 it('keeps brief repeated reactions and normal fast speech', () => {
  for(const text of ['ああああ！','やばいやばいやばい！','待って待って！']) expect(isImplausibleTranscript(text, .8)).toBe(false)
  expect(isImplausibleTranscript('ご視聴ありがとうございました', 2)).toBe(false)
+})
+
+it('rejects a whole-transcript outro artifact but keeps genuine speech', () => {
+  expect(isOutroArtifact('ご視聴ありがとうございました')).toBe(true)
+  expect(isOutroArtifact('ご視聴ありがとうございました。')).toBe(true)
+  expect(isOutroArtifact(' Thanks for watching! ')).toBe(true)
+  // A phrase inside a longer utterance is real speech and must survive.
+  expect(isOutroArtifact('今日もご視聴ありがとうございました、また明日ね')).toBe(false)
+  expect(isOutroArtifact('ありがとうございます')).toBe(false)
+  expect(isOutroArtifact('よろしくお願いします')).toBe(false)
+  expect(isOutroArtifact('はい。')).toBe(false)
 })
