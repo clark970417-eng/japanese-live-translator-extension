@@ -25,6 +25,7 @@ it('emits Japanese before translation, rejects invalid audio, and continues afte
   const directory = mkdtempSync(join(tmpdir(), 'jtl-'))
   const pipeline = Object.assign(new EventEmitter(), {
     active: false, running: true, stop: vi.fn(async () => {}),
+    canOverlapFinalTranslation: false, prepareFinalStreaming: vi.fn(),
     processStreaming: vi.fn(async () => { pipeline.emit('interim-result', {sourceText:'こんにちは',translatedText:'',isInterim:true,timestamp:1}); return {sourceText:'こんにちは',translatedText:''} }),
     finalizeStreaming: vi.fn(async () => ({sourceText:'こんにちは',translatedText:'你好',timestamp:2})),
     process: vi.fn(async () => { pipeline.emit('source-result', '魚'); return { sourceText: '魚', translatedText: '魚' } })
@@ -64,6 +65,7 @@ it('emits Japanese before translation, rejects invalid audio, and continues afte
     await vi.waitFor(()=>expect(messages).toHaveLength(7))
     expect(pipeline.processStreaming).toHaveBeenCalledTimes(1)
     expect(pipeline.finalizeStreaming).toHaveBeenCalledTimes(1)
+    expect(pipeline.prepareFinalStreaming).not.toHaveBeenCalled()
     pipeline.emit('ger-corrected',{sourceText:'こんにちは！',translatedText:'你好！',timestamp:2})
     await vi.waitFor(()=>expect(messages).toHaveLength(8))
     expect(messages[7]).toMatchObject({segment:'first',result:{correction:true}})
@@ -126,5 +128,50 @@ it('rejects excess page translations without disconnecting audio and gives queue
     await new Promise<void>(resolve => server.close(() => resolve()))
     textInference.mockReset().mockResolvedValue('こんにちは')
     rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+it('acknowledges recognized speech before translation, routes late Chinese to its own segment and drains on stop', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'jtl-overlap-'))
+  const releases: Array<(r: unknown) => void> = []
+  const pipeline = Object.assign(new EventEmitter(), {
+    active: false, running: true, stop: vi.fn(async () => {}),
+    canOverlapFinalTranslation: true,
+    prepareFinalStreaming: vi.fn(async () => {
+      const sourceText = '文' + (releases.length + 1)
+      pipeline.emit('source-result', sourceText)
+      return { sourceText, completion: new Promise(resolve => releases.push(resolve)) }
+    })
+  })
+  const server = await startExtensionCompanion({pipeline} as unknown as AppContext, directory)
+  const socket = connect(join(directory, 'desktop.sock'))
+  const messages: any[] = []
+  let buffer = ''
+  socket.setEncoding('utf8')
+  socket.on('data', data => { buffer += data; let n: number; while ((n = buffer.indexOf('\n')) >= 0) { messages.push(JSON.parse(buffer.slice(0,n))); buffer = buffer.slice(n+1) } })
+  const send = (m: object) => socket.write(JSON.stringify(m) + '\n')
+  try {
+    send({id:0,op:'init'})
+    await vi.waitFor(() => expect(messages.some(m => m.id === 0 && m.ok)).toBe(true))
+    const audio = Buffer.from(new Float32Array([.1]).buffer).toString('base64')
+    send({id:1,op:'decode',segment:'first',audio,final:true})
+    await vi.waitFor(() => expect(messages.some(m => m.id === 1 && m.result?.pending)).toBe(true))
+    send({id:2,op:'decode',segment:'second',audio,final:true})
+    await vi.waitFor(() => expect(messages.some(m => m.id === 2 && m.result?.pending)).toBe(true))
+    send({id:3,op:'stop'})
+    await new Promise(resolve => setTimeout(resolve,20))
+    expect(pipeline.stop).not.toHaveBeenCalled()
+    releases[0]({sourceText:'文1',translatedText:'第一句',timestamp:1})
+    releases[1]({sourceText:'文2',translatedText:'第二句',timestamp:2})
+    await vi.waitFor(() => expect(messages.some(m => m.id === 3 && m.ok)).toBe(true))
+    expect(messages.filter(m => m.event === 'caption').map(m => [m.segment,m.result.translated])).toEqual([
+      ['first','第一句'],['second','第二句']
+    ])
+    expect(pipeline.stop).toHaveBeenCalledOnce()
+  } finally {
+    for (const release of releases) release(null)
+    socket.destroy()
+    await new Promise<void>(resolve => server.close(() => resolve()))
+    rmSync(directory,{recursive:true,force:true})
   }
 })

@@ -33,11 +33,31 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     let current: { segment?: string; id?: number } = {}
     let lastAudio: Float32Array | null = null
     const revisions = new Map<number, string>()
-    const caption = (r: TranslationResult): void => {
-      if (!current.segment) return
-      revisions.set(r.timestamp, current.segment)
+    const captionFor = (segment: string | undefined, r: TranslationResult): void => {
+      if (!segment) return
+      revisions.set(r.timestamp, segment)
       if (revisions.size > 100) revisions.delete(revisions.keys().next().value!)
-      send({ event: 'caption', segment: current.segment, result: { text: r.sourceText, translated: r.translatedText, targetLanguage: r.targetLanguage, speakerLabel: r.speakerLabel, interim: !!r.isInterim, final: !r.isInterim, timestamp: r.timestamp } })
+      send({ event: 'caption', segment, result: { text: r.sourceText, translated: r.translatedText, targetLanguage: r.targetLanguage, speakerLabel: r.speakerLabel, interim: !!r.isInterim, final: !r.isInterim, timestamp: r.timestamp } })
+    }
+    const caption = (r: TranslationResult): void => captionFor(current.segment, r)
+    // Bound accepted translation work. Backpressure keeps audio in the browser queue.
+    const finals = new Set<Promise<void>>()
+    const drainFinals = async (): Promise<void> => { await Promise.all(finals) }
+    const prepareFinal = async (audio: Float32Array, segment: string): Promise<unknown> => {
+      const pipeline = ctx.pipeline!
+      if (finals.size >= 4) await Promise.race(finals)
+      const prepared = await pipeline.prepareFinalStreaming(audio, 16000)
+      if (!prepared) return { text: '', translated: '' }
+      const sourceText = prepared.sourceText
+      let completion: Promise<void>
+      completion = prepared.completion.then(result => {
+        if (result) captionFor(segment, result)
+        else send({ event: 'caption', segment, result: { text: sourceText, translated: '', final: true, error: 'Translation did not complete' } })
+      }).catch(error => {
+        send({ event: 'caption', segment, result: { text: sourceText, translated: '', final: true, error: String(error) } })
+      }).finally(() => { finals.delete(completion) })
+      finals.add(completion)
+      return { text: sourceText, translated: '', pending: true }
     }
     const correction = (r: TranslationResult): void => {
       const segment = revisions.get(r.timestamp)
@@ -72,7 +92,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               result = { opened: true }
             } else if (m.op === 'stop') {
               if (ownsSession && lastAudio) { const result = await pipeline.finalizeStreaming(lastAudio, 16000); if (result) caption(result); lastAudio = null }
-              if (ownsSession) { await pipeline.stop(); ctx.logger?.endSession(); ctx.logger = null }
+              if (ownsSession) { await drainFinals(); await pipeline.stop(); ctx.logger?.endSession(); ctx.logger = null }
               ownsSession = false; ctx.extensionConnected = false; current = {}; revisions.clear()
               result = { stopped: true }
             } else if (m.op === 'init') {
@@ -97,8 +117,8 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               for (let i = 0; i < audio.length; i++) audio[i] = bytes.readFloatLE(i * 4)
               if (!audio.every(Number.isFinite)) throw new Error('Invalid audio samples')
               if (lastAudio && current.segment && current.segment !== m.segment) {
-                const prior = await pipeline.finalizeStreaming(lastAudio, 16000)
-                if (prior) caption(prior)
+                if (pipeline.canOverlapFinalTranslation && typeof pipeline.prepareFinalStreaming === 'function') await prepareFinal(lastAudio, current.segment)
+                else { const prior = await pipeline.finalizeStreaming(lastAudio, 16000); if (prior) caption(prior) }
               }
               current = { id: m.id, segment: m.segment }
               lastAudio = m.final ? null : audio
@@ -106,9 +126,13 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               const source = (text: string): void => { original = text; send({ id: m.id, segment: m.segment, event: 'source', text }) }
               pipeline.on('source-result', source)
               try {
+                if (m.final && m.segment && pipeline.canOverlapFinalTranslation && typeof pipeline.prepareFinalStreaming === 'function') {
+                  result = await prepareFinal(audio, m.segment)
+                } else {
                 const translated = m.segment ? (m.final ? await pipeline.finalizeStreaming(audio, 16000) : await pipeline.processStreaming(audio, 16000)) : await pipeline.process(audio, 16000)
                 if (translated && m.final && m.segment) revisions.set(translated.timestamp, m.segment)
                 result = { text: translated?.sourceText || original, translated: translated?.translatedText || '', targetLanguage: translated?.targetLanguage }
+                }
               } finally { pipeline.off('source-result', source) }
             } else if (m.op === 'translate') {
               if (typeof m.text !== 'string' || !m.text.trim() || m.text.length > 3000) throw new Error('Invalid text')
@@ -139,7 +163,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       closed = true
       ctx.pipeline?.off('draft-stt-result', caption)
       ctx.pipeline?.off('interim-result', caption); ctx.pipeline?.off('ger-corrected', correction)
-      void queue.idle().then(async () => { try { if (ownsSession) { await ctx.pipeline?.stop(); ctx.logger?.endSession(); ctx.logger = null }; await translator?.dispose() } finally { owned = false; ctx.extensionConnected = false } })
+      void queue.idle().then(async () => { try { if (ownsSession) { await ctx.pipeline?.stop(); ctx.logger?.endSession(); ctx.logger = null }; await drainFinals(); await translator?.dispose() } finally { owned = false; ctx.extensionConnected = false } })
     })
   })
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(path, () => { chmodSync(path, 0o600); resolve() }) })

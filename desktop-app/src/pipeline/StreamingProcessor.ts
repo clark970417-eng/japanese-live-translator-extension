@@ -21,6 +21,11 @@ const STREAMING_LOCK_TIMEOUT_MS = 10_000
 /** Debounce delay before translating interim text (ms) */
 const TRANSLATE_DEBOUNCE_MS = 250
 
+export interface PreparedStreamingFinal {
+  sourceText: string
+  completion: Promise<TranslationResult | null>
+}
+
 export interface StreamingDeps {
   readonly emitter: EventEmitter
   readonly agreement: LocalAgreement
@@ -51,6 +56,10 @@ export interface StreamingDeps {
  * Extracted from TranslationPipeline to isolate streaming-specific logic.
  */
 export class StreamingProcessor {
+  private finalTail: Promise<unknown> = Promise.resolve()
+  private finalGeneration = 0
+  private lastFinalTimestamp = 0
+  private pendingFinals = 0
   private streamingLock = false
   private streamingLockResolvers: Array<() => void> = []
 
@@ -111,6 +120,11 @@ export class StreamingProcessor {
 
   /** Reset all streaming state */
   reset(): void {
+    this.finalGeneration++
+    this.resetUtterance()
+  }
+
+  private resetUtterance(): void {
     this.interimAbort.abort()
     this.interimAbort = new AbortController()
     this.utteranceGeneration++
@@ -142,7 +156,7 @@ export class StreamingProcessor {
 
   /** Resume only the latest ready revision when the worker finishes. No polling. */
   private drainPendingTranslation(): void {
-    if (this.clauseTranslationInFlight || this.debouncedTranslationInFlight) return
+    if (this.pendingFinals || this.clauseTranslationInFlight || this.debouncedTranslationInFlight) return
     const pending = this.pendingTranslation
     this.pendingTranslation = null
     pending?.()
@@ -184,7 +198,7 @@ export class StreamingProcessor {
         log.info(`STT: ${sttMs}ms → (no result, ${(audioBuffer.length / sampleRate).toFixed(1)}s audio)`)
         // Reset agreement on silence to prevent stale state accumulation (#75)
         this.deps.agreement.reset()
-        this.reset()
+        this.resetUtterance()
         return null
       }
       this.primaryRevision = revision
@@ -232,7 +246,7 @@ export class StreamingProcessor {
           const translateWhenIdle = (): void => {
             this.translateDebounceTimer = null
             if (!this.isCurrentGeneration(gen, utterance)) return
-            if (this.clauseTranslationInFlight || this.debouncedTranslationInFlight) {
+            if (this.pendingFinals || this.clauseTranslationInFlight || this.debouncedTranslationInFlight) {
               this.pendingTranslation = translateWhenIdle
               return
             }
@@ -319,7 +333,100 @@ export class StreamingProcessor {
     }
   }
 
-  async finalizeStreaming(
+  /** Recognize now, then translate accepted sentences in order without holding STT. */
+  async prepareFinalStreaming(audioChunk: Float32Array, sampleRate: number): Promise<PreparedStreamingFinal | null> {
+    // Persistent SimulMT sessions share mutable KV state; retain their serial boundary.
+    if (this.deps.getSimulMtConfig().enabled && this.deps.getTranslator()?.translateSimulMt) {
+      const result = await this.finalizeStreamingSerial(audioChunk, sampleRate)
+      return result ? { sourceText: result.sourceText, completion: Promise.resolve(result) } : null
+    }
+    const stt = this.deps.getSTTEngine()
+    if (!stt) return null
+    if (this.streamingLock) {
+      await this.waitForStreamingLock()
+      if (this.streamingLock) return null
+    }
+    this.streamingLock = true
+    this.deps.incrementProcessing()
+    const gen = this.deps.getGeneration?.()
+    const finalGeneration = this.finalGeneration
+    this.interimAbort.abort()
+    this.interimAbort = new AbortController()
+    const utterance = ++this.utteranceGeneration
+    this.pendingTranslation = null
+    if (this.translateDebounceTimer) { clearTimeout(this.translateDebounceTimer); this.translateDebounceTimer = null }
+    let handedOff = false
+    try {
+      const sttResult = await stt.processAudio(audioChunk, sampleRate)
+      if (!this.isCurrentGeneration(gen, utterance) || finalGeneration !== this.finalGeneration) return null
+      if (!sttResult?.text.trim()) {
+        this.deps.agreement.reset()
+        this.resetUtterance()
+        return null
+      }
+      const sourceText = this.deps.agreement.finalize(sttResult.text).confirmedText
+      const targetLanguage = this.deps.resolveTargetLanguage(sttResult.language)
+      const translator = this.deps.getTranslator()
+      const glossary = this.deps.getGlossary().map(entry => ({ ...entry }))
+      const speaker = this.lastDiarizationResult
+      const reused = this.deps.canReuseInterimTranslation?.() !== false && this.lastTranslatedSource === sourceText
+        ? this.lastTranslatedConfirmed : ''
+      const valid = (): boolean => finalGeneration === this.finalGeneration &&
+        (gen === undefined || gen === this.deps.getGeneration?.())
+      this.deps.emitter.emit('source-result', sourceText)
+      this.resetUtterance()
+      this.pendingFinals++
+      handedOff = true
+      const completion = this.finalTail.then(async (): Promise<TranslationResult | null> => {
+        if (!valid()) return null
+        try {
+          const translatedText = reused || (translator ? this.deps.translateFinal
+            ? await this.deps.translateFinal(sourceText, sttResult.language, targetLanguage)
+            : await translator.translate(sourceText, sttResult.language, targetLanguage,
+              this.deps.contextBuffer.getContext(glossary.length ? glossary : undefined)) : '')
+          if (!valid()) return null
+          this.deps.contextBuffer.add(sourceText, translatedText)
+          const result: TranslationResult = {
+            sourceText, translatedText, sourceLanguage: sttResult.language, targetLanguage,
+            timestamp: this.lastFinalTimestamp = Math.max(Date.now(), this.lastFinalTimestamp + 1), isInterim: false, confidence: sttResult.confidence,
+            ...(speaker && { speakerLabel: speaker.speakerLabel, speakerIndex: speaker.speakerIndex })
+          }
+          this.deps.emitter.emit('result', result)
+          this.deps.getGER?.()?.maybeCorrect(sourceText, sttResult.confidence, sttResult.language,
+            targetLanguage, result.timestamp, translatedText || undefined)
+          return result
+        } catch (error) {
+          if (valid()) this.deps.emitter.emit('error', error instanceof Error ? error : new Error(String(error)))
+          return null
+        }
+      }).finally(() => {
+        this.pendingFinals--
+        this.deps.decrementProcessing()
+        this.drainPendingTranslation()
+      })
+      this.finalTail = completion.catch(() => null)
+      return { sourceText, completion }
+    } catch (error) {
+      if (finalGeneration === this.finalGeneration) {
+        this.deps.agreement.reset()
+        this.resetUtterance()
+        this.deps.emitter.emit('error', error instanceof Error ? error : new Error(String(error)))
+      }
+      return null
+    } finally {
+      this.streamingLock = false
+      if (!handedOff) this.deps.decrementProcessing()
+      for (const resolve of this.streamingLockResolvers) resolve()
+      this.streamingLockResolvers = []
+    }
+  }
+
+  async finalizeStreaming(audioChunk: Float32Array, sampleRate: number): Promise<TranslationResult | null> {
+    const prepared = await this.prepareFinalStreaming(audioChunk, sampleRate)
+    return prepared ? prepared.completion : null
+  }
+
+  private async finalizeStreamingSerial(
     audioChunk: Float32Array,
     sampleRate: number
   ): Promise<TranslationResult | null> {
@@ -345,7 +452,7 @@ export class StreamingProcessor {
       if (!this.isCurrentGeneration(gen, utterance)) return null
       if (!sttResult || !sttResult.text.trim()) {
         this.deps.agreement.reset()
-        this.reset()
+        this.resetUtterance()
         return null
       }
 
@@ -607,7 +714,7 @@ export class StreamingProcessor {
     if (!translator || !confirmedText.trim()) return
 
     // Skip if already translating a clause or nothing new to translate
-    if (this.clauseTranslationInFlight || this.debouncedTranslationInFlight) return
+    if (this.pendingFinals || this.clauseTranslationInFlight || this.debouncedTranslationInFlight) return
     if (confirmedText === this.clauseTranslatedPrefix) return
 
     // Detect clause boundary in confirmed text

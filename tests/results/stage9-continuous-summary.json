@@ -1,0 +1,29 @@
+{
+  "trials": 45,
+  "missing": 0,
+  "errors": [],
+  "restarts": 4,
+  "silence": 4,
+  "complete": [
+    {
+      "type": "complete",
+      "trials": 45,
+      "seconds": 305.139776542
+    }
+  ],
+  "firstJaMs": {
+    "p50": 1250,
+    "p95": 2037,
+    "max": 2073
+  },
+  "firstZhMs": {
+    "p50": 1342,
+    "p95": 2247,
+    "max": 2455
+  },
+  "finalDelayMs": {
+    "p50": 1156,
+    "p95": 1771,
+    "max": 2246
+  }
+}

@@ -1,5 +1,6 @@
 import {captureStatus} from "./capture-status.mjs";
 const $=s=>document.querySelector(s);
+$('#extensionVersion').textContent='v'+chrome.runtime.getManifest().version;
 chrome.storage.local.get('speechMode').then(s=>$('#engineMode').value=s.speechMode==='desktop'?'desktop':'browser');
 $('#engineMode').onchange=()=>chrome.storage.local.set({speechMode:$('#engineMode').value});
 const defaults={japaneseColor:"#ffffff",chineseColor:"#ffffff",fontSize:22,outlineWidth:1,captionOpacity:100,backgroundColor:"#000000",backgroundOpacity:60,position:6,holdSeconds:3,captionMode:'record'};

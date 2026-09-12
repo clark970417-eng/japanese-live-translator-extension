@@ -216,7 +216,7 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
    if(desktopSegments.size>100)desktopSegments.delete(desktopSegments.keys().next().value);
   }
   desktop.request(m.op,m.op==='decode'?{audio:m.audio,segment,final:!!m.final}:{},m.op==='init'?600000:60000).then(text=>{
-   if(m.op==='decode'&&m.final)desktopEvent({event:'caption',segment,result:{...text,final:true}});
+   if(m.op==='decode'&&m.final&&!text?.pending)desktopEvent({event:'caption',segment,result:{...text,final:true}});
    send({ok:true,text});
   },e=>send({ok:false,error:e.message}));return true;
  }

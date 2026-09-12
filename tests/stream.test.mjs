@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import {DecodeQueue} from '../streaming.mjs';
 import assert from 'node:assert/strict';
 import {ResultGate,cleanText} from '../stream-core.mjs';
 test('old translation cannot overwrite revised Japanese',()=>{const g=new ResultGate(),s=g.session;const a=g.accept(s,1,'こんにちは');const b=g.accept(s,1,'こんにちは皆さん');assert.equal(g.finish(s,a,'你好'),false);assert.equal(g.finish(s,b,'大家好'),true);});
@@ -20,4 +21,27 @@ test('silence hallucination needs independent evidence; genuine speech is retain
  f.reset();assert.equal(f.accept('ご視聴ありがとうございました',{...j,id:2}),'');
  assert.equal(f.accept('こんにちは',{...j,voicedSeconds:.1}),'');
  assert.equal(f.accept('こんにちは',j),'こんにちは');
+});
+
+test('desktop recording retains the latest preview without displacing accepted finals',()=>{
+ const q=new DecodeQueue({retainFinals:true,retainInterim:true});
+ q.push({id:1,final:true,sampleCount:100});
+ q.push({id:2,final:false,sampleCount:120});
+ q.push({id:2,final:false,sampleCount:140});
+ q.push({id:2,final:false,sampleCount:130});
+ assert.deepEqual(q.jobs.map(x=>[x.id,x.sampleCount]),[[1,100],[2,140]]);
+ q.push({id:2,final:true,sampleCount:160});
+ q.push({id:2,final:false,sampleCount:180});
+ q.push({id:3,final:false,sampleCount:200});
+ assert.deepEqual(q.jobs.map(x=>[x.id,x.final]),[[1,true],[2,true],[3,false]]);
+ assert.equal(q.shift().id,1);
+ assert.equal(q.shift().id,2);
+ assert.equal(q.shift().id,3);
+});
+
+test('desktop recording can start a waiting preview immediately when busy work finishes',()=>{
+ const q=new DecodeQueue({retainFinals:true,retainInterim:true});
+ q.push({id:2,epoch:3,final:false,sampleCount:100,audioEndAt:1000});
+ assert.equal(q.takeFresh(1300,3)?.id,2);
+ assert.equal(q.jobs.length,0);
 });

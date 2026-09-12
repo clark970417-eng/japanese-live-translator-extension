@@ -104,11 +104,20 @@ export class Agreement {
  }
 }
 export class DecodeQueue {
- constructor({retainFinals=false}={}){this.jobs=[];this.dropped=0;this.retainFinals=retainFinals;}
+ constructor({retainFinals=false,retainInterim=false}={}){this.jobs=[];this.dropped=0;this.retainFinals=retainFinals;this.retainInterim=retainInterim;}
  clear(){this.jobs=[];}
  push(job){
-  if(this.retainFinals&&!job.final)return;
-  if(this.retainFinals&&this.jobs.length>=60)throw new Error('辨識積壓超過上限，已停止收音以保護已記錄內容');
+  if(this.retainFinals){
+   if(!job.final){
+    if(!this.retainInterim||this.jobs.some(x=>x.id>=job.id&&(x.final||x.sampleCount>=job.sampleCount)))return;
+    this.jobs=this.jobs.filter(x=>x.final);
+    this.jobs.push(job);return;
+   }
+   const finals=this.jobs.filter(x=>x.final&&x.id!==job.id);
+   if(finals.length>=60)throw new Error('辨識積壓超過上限，已停止收音以保護已記錄內容');
+   const preview=this.jobs.find(x=>!x.final&&x.id>job.id);
+   this.jobs=[...finals,job,...(preview?[preview]:[])];return;
+  }
   this.jobs=this.jobs.filter(x=>x.id!==job.id);
   this.jobs.push(job);
   // Keep one final and the newest revision. Never accumulate an unbounded delay.

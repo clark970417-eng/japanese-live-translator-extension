@@ -1,3 +1,5 @@
+> Latest incremental validation: [3.8.1 retest](RETEST-3.8.1.md). The broader latency and translation-quality overhaul remains in progress.
+
 # Japanese Live Caption Translator
 
 ![Extension icon](./icon-preview.png)
@@ -10,7 +12,7 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
-Current validation: [3.8.0 measurements and remaining checks](RETEST-3.8.0.md).
+Current validation: [3.8.1 measurements and remaining checks](RETEST-3.8.1.md).
 
 ## Project overview
 
@@ -81,7 +83,7 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The current revision passes 60 extension tests and 526 desktop tests. An isolated
+The current revision passes 63 extension tests and 530 desktop tests. An isolated
 desktop interface run passed 13 checks; its audio-start check was not run. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See

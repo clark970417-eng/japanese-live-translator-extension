@@ -592,6 +592,18 @@ export class TranslationPipeline extends EventEmitter {
     return this.streaming.processStreaming(audioBuffer, sampleRate)
   }
 
+  /** GPU-local translation and recognition competed in matched load tests.
+   * Only network translators can overlap without increasing local GPU pressure. */
+  get canOverlapFinalTranslation(): boolean {
+    return ['google-translate', 'deepl-translate', 'microsoft-translate', 'gemini-translate']
+      .includes(this.engineManager.config?.translatorEngineId || '') && !this.simulMtEnabled
+  }
+
+  async prepareFinalStreaming(audioChunk: Float32Array, sampleRate: number) {
+    if (!this.running || this.engineManager.config?.mode !== 'cascade') return null
+    return this.streaming.prepareFinalStreaming(audioChunk, sampleRate)
+  }
+
   async finalizeStreaming(audioChunk: Float32Array, sampleRate: number): Promise<TranslationResult | null> {
     if (!this.running || !this.engineManager.config) return null
     if (this.engineManager.config.mode !== 'cascade') return null

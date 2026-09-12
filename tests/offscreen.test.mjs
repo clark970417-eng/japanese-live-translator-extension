@@ -58,5 +58,12 @@ for(const mode of ['browser','desktop']) test(`recording retries retained audio 
  capture.port.onmessage({data:new Float32Array(1024).fill(.1)});
  replacement.onmessage({data:{type:'result',id:1,text:'こんにちは皆さん'}});
  assert.equal(replacement.sent.id,2);assert.equal(messages.some(m=>m.type==='speech-error'),false);
+ if(mode==='desktop'){
+  vad.onmessage({data:{type:'segment',job:{...job,id:3,utteranceId:3,final:false,sampleCount:20000}}});
+  assert.equal(replacement.sent.id,2);
+  replacement.onmessage({data:{type:'result',id:2,text:'次の文です'}});
+  // No new VAD tick is required: the waiting preview starts on decoder completion.
+  assert.equal(replacement.sent.id,3);
+ }
  await call({type:'offscreen-stop'});
 });

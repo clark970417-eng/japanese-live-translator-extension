@@ -1,0 +1,36 @@
+{
+  "observedAt": "2026-09-12T18:11:44.611075+08:00",
+  "version": "3.8.1",
+  "kind": "installed Opera smoke, early diagnostic snapshot and subsequent visual updates",
+  "video": "BNybJ5Kttzs",
+  "requestedStartSeconds": 5125,
+  "nativeCaptionsAvailable": false,
+  "framesAtSnapshot": 327,
+  "processingMs": {
+    "p50": 611,
+    "p95": 948,
+    "latest": 948
+  },
+  "queueMs": {
+    "p50": 0,
+    "p95": 2
+  },
+  "firstCompletedRequestMs": {
+    "p50": 1337,
+    "p95": 1337
+  },
+  "latestAudioEndToChineseMs": 949,
+  "queueDepth": 0,
+  "expiredAudio": 0,
+  "unreliableResults": 0,
+  "resynchronizations": 0,
+  "sourceBeforeChineseObserved": true,
+  "followingSentencesObserved": true,
+  "tabCloseReturnedDesktopToIdle": true,
+  "limitations": [
+    "Early snapshot only, not a complete session percentile or onset-to-Chinese measurement.",
+    "No concurrent inference benchmark; ordinary user applications remained open.",
+    "Test window closed during inspection before a final diagnostic snapshot or Stop-button check.",
+    "Semantic quality and universal superiority not established."
+  ]
+}

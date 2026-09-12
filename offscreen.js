@@ -94,7 +94,7 @@ function initializeVad(s){
  s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate,desktop:s.desktop});
 }
 async function start(m){
- stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording)}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
+ stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
  try{
   s.desktop=m.mode==='desktop';
   s.stream=await navigator.mediaDevices.getUserMedia({audio:{mandatory:{chromeMediaSource:'tab',chromeMediaSourceId:m.streamId}},video:false});

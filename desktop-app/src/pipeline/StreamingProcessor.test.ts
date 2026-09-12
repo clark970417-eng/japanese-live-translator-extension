@@ -244,3 +244,80 @@ it('reuses an exact completed translation at speech end but re-translates a chan
   expect(final).toHaveBeenCalledTimes(1)
  }finally{processor.reset();vi.useRealTimers()}
 })
+
+it('recognizes subsequent speech while final Chinese is pending, then publishes finals in source order', async () => {
+  const emitter = new EventEmitter()
+  emitter.on('error', () => {})
+  const published: string[] = [], sources: string[] = [], calls: string[] = []
+  emitter.on('result', r => published.push(r.sourceText + ':' + r.translatedText))
+  emitter.on('source-result', text => sources.push(text))
+  let release!: (s: string) => void
+  let source = '最初の文'
+  const translate = vi.fn((text: string) => { calls.push(text); return text === '最初の文' ? new Promise<string>(r => {release = r}) : Promise.resolve('第二句') })
+  const processor = new StreamingProcessor({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text: source, language: 'ja'})}),
+    getTranslator: () => ({translate}), getGlossary: () => [],
+    getSimulMtConfig: () => ({enabled: false, waitK: 3}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  try {
+    const first = await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+    expect(processor.isLocked).toBe(false)
+    source = '次の文'
+    const second = await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+    expect(sources).toEqual(['最初の文', '次の文'])
+    expect(calls).toEqual(['最初の文'])
+    expect(published).toEqual([])
+    source = ''
+    await processor.processStreaming(new Float32Array(16000), 16000)
+    release('第一句')
+    await Promise.all([first?.completion, second?.completion])
+    expect(published).toEqual(['最初の文:第一句', '次の文:第二句'])
+  } finally { release?.('cleanup'); processor.reset() }
+})
+
+it('cancels accepted finals on reset without cancelling them on the next utterance', async () => {
+  const emitter = new EventEmitter()
+  const published = vi.fn()
+  emitter.on('result', published)
+  let release!: (s: string) => void
+  const translate = vi.fn(() => new Promise<string>(r => {release = r}))
+  const processor = new StreamingProcessor({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text: '古い文', language: 'ja'})}),
+    getTranslator: () => ({translate}), getGlossary: () => [],
+    getSimulMtConfig: () => ({enabled: false, waitK: 3}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  const first = await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+  const second = await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+  processor.reset()
+  release('舊翻譯')
+  expect(await first?.completion).toBeNull()
+  expect(await second?.completion).toBeNull()
+  expect(translate).toHaveBeenCalledOnce()
+  expect(published).not.toHaveBeenCalled()
+})
+
+it('continues final translation after a failed sentence and balances processing counts', async () => {
+  const emitter = new EventEmitter()
+  const errors = vi.fn()
+  emitter.on('error', errors)
+  let active = 0, source = '失敗'
+  const processor = new StreamingProcessor({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text: source, language: 'ja'})}),
+    getTranslator: () => ({translate: async (text: string) => { if (text === '失敗') throw new Error('timeout'); return '成功' }}),
+    getGlossary: () => [], getSimulMtConfig: () => ({enabled: false, waitK: 3}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {active++}, decrementProcessing() {active--}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  const first = await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+  source = '成功'
+  const second = await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+  expect(await first?.completion).toBeNull()
+  expect((await second?.completion)?.translatedText).toBe('成功')
+  expect(errors).toHaveBeenCalledOnce()
+  expect(active).toBe(0)
+  processor.reset()
+})
