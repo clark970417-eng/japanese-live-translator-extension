@@ -85,8 +85,7 @@ lost. That is a harness defect, now fixed.
    reconnected after its own deliberate restarts, which is why it spent the last
    seven minutes talking to a dead socket.
 
-A conclusive Stage 7 result needs a rerun with these in place. The rerun was not
-started in this round.
+Both fixes were in place for the rerun below.
 
 ## Second run, with the harness fixed
 
@@ -152,7 +151,8 @@ and extension reload.
 - No browser capture, no VAD, no tab navigation, no extension reload. The
   handoff asks for those; they need Opera.
 - Authored synthetic speech, one voice, no real livestream audio.
-- The cause of the host death is unknown, so it is not classified as a product
-  defect or an environment event.
-- The final seven minutes of run 1 produced no measurements at all.
-- The cause of run 1's host death remains unknown after a clean rerun.
+- Run 1's host death is unknown after a clean rerun, so it is classified as
+  neither a product defect nor an environment event. Its final seven minutes
+  produced no measurements at all.
+- Two runs is not a stability sample; a failure seen once in two hours could
+  recur outside them.
