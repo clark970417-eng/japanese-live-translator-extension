@@ -9,7 +9,7 @@
  */
 import { spawn } from 'child_process'
 import { connect } from 'net'
-import { readFileSync, writeFileSync, appendFileSync, existsSync, rmSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, appendFileSync, existsSync, rmSync, mkdirSync, createWriteStream } from 'fs'
 import { join, resolve } from 'path'
 import { execFileSync } from 'child_process'
 
@@ -76,8 +76,14 @@ function startHost() {
     env: { ...process.env, COMPARE_PROFILE: profile, COMPANION_DIR: companionDir }
   })
   hostLog = ''
-  host.stdout.on('data', d => { hostLog += d })
-  host.stderr.on('data', d => { hostLog += d })
+  const sink = createWriteStream(reportPath.replace(/\.jsonl$/, '') + '-host.log', { flags: 'a' })
+  sink.write(`\n=== host started ${new Date().toISOString()} ===\n`)
+  host.stdout.on('data', d => { hostLog += d; sink.write(d) })
+  host.stderr.on('data', d => { hostLog += d; sink.write(d) })
+  host.on('exit', (code, signal) => {
+    sink.write(`=== host exited code=${code} signal=${signal} ===\n`)
+    emit({ type: 'host-exited', code, signal })
+  })
   return host
 }
 let hostLog = ''
@@ -137,8 +143,28 @@ try {
 
   const until = began + minutes * 60000
   let cycle = 0
+  /** Reconnect, and restart the host first if it is gone. */
+  const ensureConnected = async () => {
+    if (socket && !socket.destroyed) return true
+    emit({ type: 'reconnecting', hostAlive: host?.exitCode === null })
+    if (host?.exitCode !== null) { startHost(); if (!await waitForSocket()) return false }
+    else if (!existsSync(socketPath)) { if (!await waitForSocket(20000)) return false }
+    try {
+      await openSocket()
+      const again = await request('init')
+      stats.reconnects++
+      emit({ type: 'reconnected', ok: !!again.ok, error: again.error })
+      return !!again.ok
+    } catch (error) { emit({ type: 'reconnect-failed', error: String(error) }); return false }
+  }
   while (Date.now() < until) {
     cycle++
+    if (!(socket && !socket.destroyed)) {
+      if (!await ensureConnected()) {
+        emit({ type: 'fatal', error: 'could not recover the companion', log: hostLog.slice(-1200) })
+        break
+      }
+    }
     const id = speech[cycle % speech.length]
     const pcm = wav(speechDir, id)
     captions = []
