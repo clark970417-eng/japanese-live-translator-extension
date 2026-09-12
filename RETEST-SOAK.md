@@ -1,8 +1,9 @@
 # Stage 7 evidence: long session and recovery
 
-The run reached 53 of 60 minutes in good health and then the companion host
-process died without a crash report. The gate is **not met**: an unrecoverable
-native connection is exactly what it forbids, and the cause is not yet known.
+A first run reached 53 of 60 minutes in good health and then the companion host
+process died without a crash report. A rerun with the harness fixed completed
+all 60 minutes cleanly and did not reproduce the death. Both runs are recorded
+below; the unexplained death is not written off.
 
 ## What was exercised
 
@@ -87,13 +88,64 @@ lost. That is a harness defect, now fixed.
 A conclusive Stage 7 result needs a rerun with these in place. The rerun was not
 started in this round.
 
+## Second run, with the harness fixed
+
+The rerun completed all 60 minutes. The host's output was streamed to
+`tests/results/soak-60m-rerun-host.log`, and an unexpected close would have
+triggered reconnection; neither was needed.
+
+| Measurement | Run 1, first 53 min | Run 2, full 60 min |
+| --- | ---: | ---: |
+| Utterances replayed | 537 | 477 |
+| Typed drafts during captions | 141 | 159 |
+| Stop then Start cycles | 84 | 95 |
+| Queue age, median | 731 ms | 727 ms |
+| Queue age, p95 | 1947 ms | 2467 ms |
+| Queue age, max | 5275 ms | 4284 ms |
+| Final delay, median | 1931 ms | 2356 ms |
+| Final delay, p95 | 4078 ms | 4847 ms |
+| Final delay, max | 7998 ms | 7330 ms |
+| Blank captions | 0 | 0 |
+| Missing final captions | 0 | 0 |
+| Stale captions after Stop | 0 | 0 |
+| Request errors | none before the death | 0 |
+| Unexpected disconnects | 1, unrecoverable | 0 |
+
+Memory oscillated without a trend: 1717 MB at the start, then 1939, 1556, 1807
+and 1513 MB at the quarter points. Both deliberate restarts recovered, at cycles
+175 and 339. Every host exit in the log is a SIGKILL this harness sent: two
+restarts and the final cleanup. The only error text in an hour of host output is
+`ggml_metal_library_init_from_source: error compiling source`, printed once per
+host start in both runs, including the runs where every translation succeeded.
+
+45 of 477 cycles had a queue age above 3 seconds, and unlike run 1 they do not
+escalate toward the end: the last 20 cycles peaked at 2723 ms queue age and
+4617 ms final delay.
+
+**The 53-minute death did not reproduce.** One occurrence in two runs, with the
+logging that would have named it now in place and nothing to catch. It is
+recorded as unexplained and unreproduced, not as a fixed defect and not as an
+environment event.
+
+One observation the fixed metric surfaced: 1010 emissions across 477 utterances
+repeated a caption that already had the same Japanese *and* the same Chinese.
+The caption window updates in place, so a viewer sees no duplicate, but that is
+redundant work and traffic. Characterizing it needs a targeted run, not this
+soak.
+
 ## Gate status
 
-**Not met.** The gate forbids an unrecoverable native connection, and one
-occurred. Blank captions, stale captions after Stop, lost accepted sentences and
-unbounded memory growth were all clean for the 53 minutes that were measured,
-and both deliberate restarts recovered, so the failure is specifically an
-unexplained process death plus the harness's inability to notice it.
+**Met for the path this harness covers, with one recorded unknown.** Across the
+full 60-minute rerun there was no blank caption, no lost accepted sentence, no
+stale caption after Stop, no unbounded queue or memory growth, and no
+unrecoverable native connection; both process restarts recovered and the p95 and
+maximum values are reported above rather than hidden behind medians.
+
+Two things keep this from being the whole gate. The unexplained death in run 1
+is still unexplained. And a stuck "listening" state is a capture and VAD
+symptom that cannot occur on this path at all, because the harness feeds PCM
+directly; that half needs an installed Opera session, along with tab navigation
+and extension reload.
 
 ## What is not established
 
@@ -102,4 +154,5 @@ unexplained process death plus the harness's inability to notice it.
 - Authored synthetic speech, one voice, no real livestream audio.
 - The cause of the host death is unknown, so it is not classified as a product
   defect or an environment event.
-- The final seven minutes produced no measurements at all.
+- The final seven minutes of run 1 produced no measurements at all.
+- The cause of run 1's host death remains unknown after a clean rerun.
