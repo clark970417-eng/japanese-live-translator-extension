@@ -1,4 +1,4 @@
-> Latest incremental validation: [3.8.3 provisional-output retest](RETEST-3.8.3.md). The broader latency and translation-quality overhaul remains in progress.
+> Latest incremental validation: [3.8.4 cancellation and recovery retest](RETEST-3.8.4.md). The broader latency and translation-quality overhaul remains in progress.
 
 # Japanese Live Caption Translator
 
@@ -12,7 +12,7 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
-Current validation: [3.8.3 verification and remaining checks](RETEST-3.8.3.md).
+Current validation: [3.8.4 verification and remaining checks](RETEST-3.8.4.md).
 
 ## Project overview
 

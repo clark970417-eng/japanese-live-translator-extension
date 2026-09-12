@@ -18,3 +18,12 @@ it('responds to caller cancellation rather than waiting for the deadline', async
  controller.abort()
  await expect(result).rejects.toThrow('cancelled')
 })
+
+it('keeps caller cancellation distinct even if inference returns partial output on abort', async () => {
+ const controller=new AbortController()
+ const session={promptWithMeta:vi.fn(async()=>{
+  controller.abort()
+  return {responseText:'unfinished',stopReason:'abort'}
+ })}
+ await expect(boundedTranslation(session,'x',{},10,15000,controller.signal)).rejects.toMatchObject({name:'TranslationCancelledError'})
+})

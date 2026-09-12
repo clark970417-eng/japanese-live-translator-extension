@@ -1,4 +1,4 @@
-import { boundedTranslation } from './bounded-translation'
+import { boundedTranslation, TranslationCancelledError } from './bounded-translation'
 /**
  * UtilityProcess worker for SLM inference via node-llama-cpp.
  * Supports TranslateGemma, Hunyuan-MT, LFM2, and PLaMo-2 models.
@@ -430,6 +430,19 @@ async function runInference(
 
     return { response: response.trim(), inferenceMs, contextMs }
   } catch (err) {
+    // A completed cooperative cancellation does not invalidate the model sequence.
+    // Clear conversation history, but retain the allocation/KV prefix for the next
+    // utterance. Timeout, token exhaustion and native failures still discard it.
+    if (err instanceof TranslationCancelledError && prefixCacheSession) {
+      let reset = false
+      try {
+        resetTranslationHistory(prefixCacheSession, activeModelType)
+        reset = true
+      } catch (resetError) {
+        log.warn('Cancelled session could not be reset; discarding it', resetError)
+      }
+      if (reset) throw err
+    }
     // Unexpected inference errors still invalidate potentially corrupted state.
     log.error('Inference failed, invalidating prefix cache:', err)
     prefixCacheSequence?.dispose?.()

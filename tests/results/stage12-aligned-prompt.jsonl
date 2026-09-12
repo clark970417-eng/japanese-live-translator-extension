@@ -1,0 +1,26 @@
+{"type":"metadata","purpose":"Prompt development, not a blind quality score; current target label matches production zh mapping (繁體中文)","concurrentLoad":true,"date":"2026-09-12T11:48:24.098Z"}
+{"type":"trial","id":"negative","text":"まだ終わっていません。先に始めないでください。","set":"development","variant":"current","ms":257.528334,"translated":"還沒有結束呢。請先不要開始吧。","stopReason":"eogToken"}
+{"type":"trial","id":"negative","text":"まだ終わっていません。先に始めないでください。","set":"development","variant":"official","ms":175.7856670000001,"translated":"還沒有結束呢。請先不要開始吧。","stopReason":"eogToken"}
+{"type":"trial","id":"past","text":"昨日は買えませんでしたが、今日は買えました。","set":"development","variant":"official","ms":215.02804100000003,"translated":"昨天是買不到的，但今天就可以購買了。","stopReason":"eogToken"}
+{"type":"trial","id":"past","text":"昨日は買えませんでしたが、今日は買えました。","set":"development","variant":"current","ms":272.900083,"translated":"昨天是買不到的，但今天可以購買到。","stopReason":"eogToken"}
+{"type":"trial","id":"intent","text":"明日は見に来ますが、今日は先に寝ます。","set":"development","variant":"current","ms":215.04904199999987,"translated":"明天會去參觀，但今天要先睡一覺。","stopReason":"eogToken"}
+{"type":"trial","id":"intent","text":"明日は見に来ますが、今日は先に寝ます。","set":"development","variant":"official","ms":228.59595800000034,"translated":"明天我會去參觀的，但今天則先睡一下吧。","stopReason":"eogToken"}
+{"type":"trial","id":"correction","text":"右ではなく、左から二番目の箱です。","set":"development","variant":"official","ms":193.39245900000014,"translated":"不是右邊的，而是左邊第二個箱子。","stopReason":"eogToken"}
+{"type":"trial","id":"correction","text":"右ではなく、左から二番目の箱です。","set":"development","variant":"current","ms":224.3795,"translated":"不是右邊的，而是左邊第二個箱子。","stopReason":"eogToken"}
+{"type":"trial","id":"uncertain","text":"壊れたとは限りません。電池が切れただけかもしれません。","set":"development","variant":"current","ms":204.20962499999996,"translated":"不一定就是壞掉了。也許只是電池用完了而已。","stopReason":"eogToken"}
+{"type":"trial","id":"uncertain","text":"壊れたとは限りません。電池が切れただけかもしれません。","set":"development","variant":"official","ms":243.4645840000003,"translated":"不一定就是壞掉了。也許只是電池用完了而已吧。","stopReason":"eogToken"}
+{"type":"trial","id":"subject","text":"私が渡すのではなく、彼女から受け取ります。","set":"development","variant":"official","ms":271.4330409999998,"translated":"我並不是要將它交給她，而是希望她能從我手中接過它。","stopReason":"eogToken"}
+{"type":"trial","id":"subject","text":"私が渡すのではなく、彼女から受け取ります。","set":"development","variant":"current","ms":304.2284169999998,"translated":"我並不是要將它交給她，而是從她那裡接收它。","stopReason":"eogToken"}
+{"type":"trial","id":"quantity","text":"残りは十五個ではなく、五個です。","set":"development","variant":"current","ms":150.18279200000006,"translated":"剩下的不是十五個，而是五個而已。","stopReason":"eogToken"}
+{"type":"trial","id":"quantity","text":"残りは十五個ではなく、五個です。","set":"development","variant":"official","ms":171.98050000000012,"translated":"剩下的數量不再是十五個，而是五個而已。","stopReason":"eogToken"}
+{"type":"trial","id":"incomplete","text":"それを買おうと思ったんだけど、","set":"development","variant":"official","ms":171.00083300000006,"translated":"我原本想要購買它呢，但是……","stopReason":"eogToken"}
+{"type":"trial","id":"incomplete","text":"それを買おうと思ったんだけど、","set":"development","variant":"current","ms":211.63495899999998,"translated":"我原本想要購買那個的，但是……","stopReason":"eogToken"}
+{"type":"trial","id":"game","text":"この武器は強いけど、味方にも当たるので気をつけて。","set":"development","variant":"current","ms":290.764083,"translated":"這種武器雖然很強大，但也可能傷害到同伴。所以請小心使用吧。","stopReason":"eogToken"}
+{"type":"trial","id":"game","text":"この武器は強いけど、味方にも当たるので気をつけて。","set":"development","variant":"official","ms":317.67933300000004,"translated":"這種武器雖然很強大，但也可能傷害到同伴。因此請小心使用吧。","stopReason":"eogToken"}
+{"type":"trial","id":"plan","text":"もう一回だけ試して、だめだったら今日はやめます。","set":"development","variant":"official","ms":246.0268329999999,"translated":"再試一次吧，如果還是不成功，那麼今天就放棄吧。","stopReason":"eogToken"}
+{"type":"trial","id":"plan","text":"もう一回だけ試して、だめだったら今日はやめます。","set":"development","variant":"current","ms":306.1952079999992,"translated":"再試一次吧，如果還是不成功，那麼今天就放棄吧。","stopReason":"eogToken"}
+{"type":"trial","id":"permission","text":"無理して来なくても大丈夫です。","set":"development","variant":"current","ms":192.296875,"translated":"就算您無理地過來，也沒關係的。","stopReason":"eogToken"}
+{"type":"trial","id":"permission","text":"無理して来なくても大丈夫です。","set":"development","variant":"official","ms":205.5160420000002,"translated":"不需要強迫自己過來，這樣做是沒關系的。","stopReason":"eogToken"}
+{"type":"trial","id":"heard","text":"来週に延期されたそうです。まだ決定ではありません。","set":"development","variant":"official","ms":353.7985410000001,"translated":"據說，這個活動將被延遲到下週。不過，目前還沒有最終的決定出來。","stopReason":"eogToken"}
+{"type":"trial","id":"heard","text":"来週に延期されたそうです。まだ決定ではありません。","set":"development","variant":"current","ms":360.3025829999997,"translated":"據說，這個活動將被延遲到下週。目前還沒有最終的決定。","stopReason":"eogToken"}
+{"type":"complete","date":"2026-09-12T11:48:30.744Z"}

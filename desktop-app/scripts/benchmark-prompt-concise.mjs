@@ -9,12 +9,12 @@ const entries = Array.isArray(manifest) ? manifest : manifest.samples
 if (!Array.isArray(entries)) throw new Error('Unsupported corpus manifest')
 const cases = entries.map(item => ({ id: item.id, text: item.reference ?? item.text, set: 'development' }))
 const prompts = {
-  current: text => `将以下文本翻译为繁体中文，用自然流畅的台湾繁体中文口语；完整保留原意、否定、数字、时态和说话者。未说完的内容不要补完，不添加原文没有的信息。${/配信|クリア/.test(text) ? '在直播或游戏语境中，配信译为直播，クリア译为通关。' : ''}只输出译文，不要额外解释：\n\n${text}`,
+  current: text => `将以下文本翻译为繁體中文，用自然流畅的台湾繁体中文口语；完整保留原意、否定、数字、时态和说话者。未说完的内容不要补完，不添加原文没有的信息。${/配信|クリア/.test(text) ? '在直播或游戏语境中，配信译为直播，クリア译为通关。' : ''}只输出译文，不要额外解释：\n\n${text}`,
   neutral: text => `将以下文本翻译为繁体中文；完整保留原意、否定、数字、时态和说话者。未说完的内容不要补完，不添加原文没有的信息。只输出译文，不要额外解释：\n\n${text}`,
   concise: text => `忠实翻译成台湾繁体中文，保留否定、时态、人物和未完成的句子。只输出译文：\n\n${text}`,
   official: text => `将以下文本翻译为繁体中文，注意只需要输出翻译后的结果，不要额外解释：\n\n${text}`
 }
-writeFileSync(COMPARE_REPORT, JSON.stringify({ type: 'metadata', purpose: 'Prompt development, not a blind quality score', concurrentLoad: true, date: new Date().toISOString() }) + '\n')
+writeFileSync(COMPARE_REPORT, JSON.stringify({ type: 'metadata', purpose: 'Prompt development, not a blind quality score; current target label matches production zh mapping (繁體中文)', concurrentLoad: true, date: new Date().toISOString() }) + '\n')
 const llama = await getLlama({ gpu: 'metal' })
 const model = await llama.loadModel({ modelPath: COMPARE_MODEL })
 const context = await model.createContext({ contextSize: 2048 })

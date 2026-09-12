@@ -1,0 +1,29 @@
+{
+  "purpose": "Frozen evaluation inputs. Do not tune prompts or phrase replacements on these cases. Developer review is not an independent blind human assessment.",
+  "samples": [
+    {"id":"neg-past","direction":"ja-zh","text":"昨日は一度もログインしていません。","mustPreserve":"Yesterday; did not log in even once."},
+    {"id":"ability-past","direction":"ja-zh","text":"去年は泳げなかったけど、今は少し泳げます。","mustPreserve":"Could not swim last year; can swim a little now."},
+    {"id":"plan-not-invite","direction":"ja-zh","text":"私はこのあと一人で買い物に行くつもりです。","mustPreserve":"Speaker's own plan to shop alone; not an invitation."},
+    {"id":"receive","direction":"ja-zh","text":"その写真は姉にもらったんです。","mustPreserve":"Speaker received the photo from elder sister; not gave it to her."},
+    {"id":"uncertainty","direction":"ja-zh","text":"まだ故障だと決まったわけではありません。","mustPreserve":"A fault has not been established; not future certainty."},
+    {"id":"quantity","direction":"ja-zh","text":"三十個じゃなくて十三個、残っています。","mustPreserve":"Thirteen remain, explicitly correcting thirty."},
+    {"id":"permission","direction":"ja-zh","text":"眠かったら最後まで見なくてもいいですよ。","mustPreserve":"Permission not to watch until the end if sleepy; not permission to watch."},
+    {"id":"incomplete","direction":"ja-zh","text":"その方法も試してみたんですけど、","mustPreserve":"Tried that method too; unfinished contrast must remain unfinished."},
+    {"id":"hearsay","direction":"ja-zh","text":"来月から値上がりするらしいけど、まだ確認していません。","mustPreserve":"Reported increase next month, not yet confirmed by speaker."},
+    {"id":"conditional","direction":"ja-zh","text":"雨がやんだら出かけます。やまなかったら家にいます。","mustPreserve":"Go out only if rain stops; otherwise stay home."},
+    {"id":"prohibition","direction":"ja-zh","text":"保存が終わるまでは電源を切らないで。","mustPreserve":"Do not turn off power until saving finishes."},
+    {"id":"short-reaction","direction":"ja-zh","text":"あっ、危なかった！","mustPreserve":"A startled close call; do not add injury or an event not stated."},
+    {"id":"zh-praise","direction":"zh-ja","text":"今天的歌聲也很好聽，謝謝你的直播。","mustPreserve":"Warm, respectful praise and thanks; no invented love confession."},
+    {"id":"zh-leave","direction":"zh-ja","text":"我明天要早起，今天先去睡了，晚安。","mustPreserve":"Speaker leaves to sleep due to early start; not instructing recipient to sleep."},
+    {"id":"zh-photo","direction":"zh-ja","text":"這張照片的光線好漂亮，服裝也很適合你。","mustPreserve":"Compliment lighting and clothing; respectful, no sexual additions."},
+    {"id":"zh-no-pressure","direction":"zh-ja","text":"如果累了就好好休息，不用勉強自己回覆。","mustPreserve":"Reassurance that a reply is not required; no demand for a reply."},
+    {"id":"zh-uncertain","direction":"zh-ja","text":"我可能會晚一點到，現在還不能確定。","mustPreserve":"Possible late arrival, explicitly uncertain."},
+    {"id":"zh-not-invite","direction":"zh-ja","text":"我週末打算自己去看展覽。","mustPreserve":"Speaker plans to visit exhibition alone; not invitation."},
+    {"id":"zh-correction","direction":"zh-ja","text":"不好意思，我剛剛說錯了，是星期四，不是星期三。","mustPreserve":"Apology and correction from Wednesday to Thursday."},
+    {"id":"zh-game","direction":"zh-ja","text":"剛剛那一關真的很難，你辛苦了！","mustPreserve":"Acknowledge difficult game stage and effort without inventing success."},
+    {"id":"zh-past","direction":"zh-ja","text":"昨天沒趕上直播，但我已經看完存檔了。","mustPreserve":"Missed yesterday's live stream; already finished archive."},
+    {"id":"zh-request","direction":"zh-ja","text":"方便的話，可以告訴我這首歌的名字嗎？","mustPreserve":"Gentle optional request for song title, not command."},
+    {"id":"zh-short","direction":"zh-ja","text":"差一點點，好可惜！","mustPreserve":"Sympathetic near miss, not blaming recipient."},
+    {"id":"zh-boundary","direction":"zh-ja","text":"謝謝你的建議，我想再考慮一下。","mustPreserve":"Thanks and desire to think further; not acceptance or promise."}
+  ]
+}

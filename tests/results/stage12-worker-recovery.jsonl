@@ -1,0 +1,15 @@
+{"type":"metadata","scope":"Real local translation worker; excludes audio and recognition","source":"今日は先に寝ます。","reference":"今天我會先睡一下。"}
+{"type":"recovery","cycle":0,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":554.0363749999999}
+{"type":"recovery","cycle":1,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":958.935958}
+{"type":"recovery","cycle":2,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":3990.4077500000003}
+{"type":"recovery","cycle":3,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":693.2782500000003}
+{"type":"recovery","cycle":4,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":547.0163339999999}
+{"type":"recovery","cycle":5,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":432.54754200000025}
+{"type":"recovery","cycle":6,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":431.05370799999946}
+{"type":"recovery","cycle":7,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":526.0070419999993}
+{"type":"recovery","cycle":8,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":751.2163340000006}
+{"type":"recovery","cycle":9,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":1324.2719580000012}
+{"type":"recovery","cycle":10,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":823.1618749999998}
+{"type":"recovery","cycle":11,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":665.1008339999989}
+{"type":"hard-recovery","failure":"Error: Translation cancelled","cancellationMs":1165.778042,"totalMs":2391.044750000001,"restored":"今天我會先睡一下。","same":true}
+{"type":"complete"}

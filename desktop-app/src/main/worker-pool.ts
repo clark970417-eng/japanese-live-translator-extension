@@ -19,6 +19,7 @@ import {
   WORKER_SUMMARIZE_TIMEOUT_MS
 } from '../engines/constants'
 import { createLogger } from './logger'
+import { SerialTaskQueue } from './serial-task-queue'
 
 const log = createLogger('worker-pool')
 
@@ -70,14 +71,12 @@ export class WorkerPool {
   private onProgress?: (message: string) => void
   /** Mutex to serialize initModel/disposeModel operations */
   private opLock: Promise<void> = Promise.resolve()
-  private requestLock: Promise<unknown> = Promise.resolve()
+  private requestQueue = new SerialTaskQueue()
   private queuedRequests = 0
   private currentOptionsKey: string | null = null
 
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
-    const task = this.requestLock.then(operation)
-    this.requestLock = task.catch(() => {})
-    return task
+    return this.requestQueue.run(operation)
   }
 
   private async ensureModel(options: WorkerInitOptions): Promise<void> {
@@ -125,13 +124,13 @@ export class WorkerPool {
       return Promise.reject(new Error('Translation queue is full; please retry'))
     }
     this.queuedRequests++
-    return this.exclusive(async () => {
+    return this.requestQueue.run(async () => {
       if (signal?.aborted) throw new Error('Translation cancelled')
       if (this.refCount === 0) throw new Error('Translation engine was released')
       if (options) await this.ensureModel(options)
       if (signal?.aborted) throw new Error('Translation cancelled')
       return this.dispatchRequest(message, type, signal, onPartial)
-    }).finally(() => { this.queuedRequests-- })
+    }, signal).finally(() => { this.queuedRequests-- })
   }
 
   private dispatchRequest(message: Record<string, unknown>, type: RequestType, signal?: AbortSignal, onPartial?: (text: string) => void): Promise<string> {
@@ -143,30 +142,73 @@ export class WorkerPool {
     const timeout = TIMEOUT_BY_TYPE[type]
     const sendTime = performance.now()
 
-    const cancel = (): void => { this.worker?.postMessage({type:'cancel',id}) }
-    signal?.addEventListener('abort', cancel, {once:true})
+    const worker = this.worker
+    let cancellation: Error | undefined
+    let recoveryTimer: ReturnType<typeof setTimeout> | undefined
+    let cancel: () => void = () => {}
     return new Promise<string>((resolve, reject) => {
-      this.evictOldestPending()
-
-      const timer = setTimeout(() => {
+      const fail = (error: Error): void => {
+        clearTimeout(timer)
+        clearTimeout(recoveryTimer)
         this.pending.delete(id)
-        reject(new Error(`Worker request timed out (${type})`))
-      }, timeout)
-
+        reject(cancellation ?? error)
+      }
+      const stop = (error: Error): void => {
+        if (cancellation) return
+        cancellation = error
+        clearTimeout(timer)
+        // Keep ownership until the worker acknowledges cancellation. If native
+        // inference is stuck, retire that process before admitting the next job.
+        recoveryTimer = setTimeout(() => {
+          this.retireWorker(worker)
+          fail(error)
+        }, WORKER_DISPOSE_GRACE_MS)
+        try { worker.postMessage({ type: 'cancel', id }) }
+        catch { this.retireWorker(worker); fail(error) }
+      }
+      cancel = () => stop(new Error('Translation cancelled'))
+      const timer = setTimeout(() => stop(new Error(`Worker request timed out (${type})`)), timeout)
       this.pending.set(id, {
-        onPartial: text => { if (!signal?.aborted) onPartial?.(text) },
+        onPartial: text => { if (!cancellation && !signal?.aborted) onPartial?.(text) },
         resolve: (value: string) => {
+          clearTimeout(timer)
+          clearTimeout(recoveryTimer)
+          if (cancellation) { reject(cancellation); return }
           const roundTripMs = performance.now() - sendTime
-          if (roundTripMs > 2000) {
-            log.info(`Request ${id} round-trip: ${roundTripMs.toFixed(0)}ms (${type})`)
-          }
+          if (roundTripMs > 2000) log.info(`Request ${id} round-trip: ${roundTripMs.toFixed(0)}ms (${type})`)
           resolve(value)
         },
-        reject,
+        reject: fail,
         timer
       })
-      this.worker!.postMessage({ ...message, id, ...(onPartial && {streamOutput: true}) })
+      signal?.addEventListener('abort', cancel, { once: true })
+      try {
+        worker.postMessage({ ...message, id, ...(onPartial && { streamOutput: true }) })
+        if (signal?.aborted) cancel()
+      } catch (error) {
+        this.retireWorker(worker)
+        fail(error instanceof Error ? error : new Error(String(error)))
+      }
     }).finally(() => signal?.removeEventListener('abort', cancel))
+  }
+
+  /** References survive a failed process so each queued caller can restore its model. */
+  private retireWorker(worker: Electron.UtilityProcess): void {
+    worker.removeAllListeners()
+    // UtilityProcess.kill uses SIGTERM on POSIX; a frozen native process cannot
+    // handle it. The cooperative grace already expired, so kill only this owned
+    // child forcibly and let Chromium reap it.
+    const pid = worker.pid
+    if (pid) {
+      try { process.kill(pid, 'SIGKILL') } catch { /* Already exited. */ }
+    }
+    try { worker.kill() } catch { /* Already exited. */ }
+    if (this.worker === worker) {
+      this.worker = null
+      this.currentOptionsKey = null
+      this.currentModelPath = null
+      this.initPromise = null
+    }
   }
 
   /**
@@ -396,23 +438,6 @@ export class WorkerPool {
       req.reject(new Error('Worker pool disposed'))
     }
     this.pending.clear()
-  }
-
-  private evictOldestPending(): void {
-    if (this.pending.size >= WORKER_MAX_PENDING_REQUESTS) {
-      const oldestKey = this.pending.keys().next().value!
-      const oldest = this.pending.get(oldestKey)!
-      this.pending.delete(oldestKey)
-      clearTimeout(oldest.timer)
-      log.warn(
-        `Evicting oldest pending request ${oldestKey} — queue full (${WORKER_MAX_PENDING_REQUESTS})`
-      )
-      oldest.reject(
-        new Error(
-          `Evicted: pending request limit exceeded (max ${WORKER_MAX_PENDING_REQUESTS})`
-        )
-      )
-    }
   }
 }
 

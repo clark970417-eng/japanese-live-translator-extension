@@ -1,0 +1,27 @@
+{"type":"metadata","scope":"Real local translation worker; excludes audio and recognition","source":"今日は先に寝ます。","reference":"今天我會先睡一下。"}
+{"type":"recovery","cycle":0,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":261.08500000000004}
+{"type":"recovery","cycle":1,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":349.1121249999999}
+{"type":"recovery","cycle":2,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":2507.0177080000003}
+{"type":"recovery","cycle":3,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":1029.0575}
+{"type":"recovery","cycle":4,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":455.3557500000006}
+{"type":"recovery","cycle":5,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":370.179083}
+{"type":"recovery","cycle":6,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":363.9442079999999}
+{"type":"recovery","cycle":7,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":408.3289169999998}
+{"type":"recovery","cycle":8,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":411.89766600000075}
+{"type":"recovery","cycle":9,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":398.3921249999994}
+{"type":"recovery","cycle":10,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":429.6116659999998}
+{"type":"recovery","cycle":11,"partials":1,"result":{"error":"Error: Translation cancelled"},"recovered":"今天我會先睡一下。","same":true,"ms":414.088541000001}
+{"type":"content-check","id":"negative","source":"まだ終わっていません。先に始めないでください。","expected":"還沒有結束呢。請先不要開始吧。","translated":"還沒有結束呢。請先不要開始吧。","same":true}
+{"type":"content-check","id":"past","source":"昨日は買えませんでしたが、今日は買えました。","expected":"昨天是買不到的，但今天可以購買到。","translated":"昨天是買不到的，但今天可以購買到。","same":true}
+{"type":"content-check","id":"intent","source":"明日は見に来ますが、今日は先に寝ます。","expected":"明天會去參觀，但今天要先睡一覺。","translated":"明天會去參觀，但今天要先睡一覺。","same":true}
+{"type":"content-check","id":"correction","source":"右ではなく、左から二番目の箱です。","expected":"不是右邊的，而是左邊第二個箱子。","translated":"不是右邊的，而是左邊第二個箱子。","same":true}
+{"type":"content-check","id":"uncertain","source":"壊れたとは限りません。電池が切れただけかもしれません。","expected":"不一定就是壞掉了。也許只是電池用完了而已。","translated":"不一定就是壞掉了。也許只是電池用完了而已。","same":true}
+{"type":"content-check","id":"subject","source":"私が渡すのではなく、彼女から受け取ります。","expected":"我並不是要將它交給她，而是從她那裡接收它。","translated":"我並不是要將它交給她，而是從她那裡接收它。","same":true}
+{"type":"content-check","id":"quantity","source":"残りは十五個ではなく、五個です。","expected":"剩下的不是十五個，而是五個而已。","translated":"剩下的不是十五個，而是五個而已。","same":true}
+{"type":"content-check","id":"incomplete","source":"それを買おうと思ったんだけど、","expected":"我原本想要購買那個的，但是……","translated":"我原本想要購買那個的，但是……","same":true}
+{"type":"content-check","id":"game","source":"この武器は強いけど、味方にも当たるので気をつけて。","expected":"這種武器雖然很強大，但也可能傷害到同伴。所以請小心使用吧。","translated":"這種武器雖然很強大，但也可能傷害到同伴。所以請小心使用吧。","same":true}
+{"type":"content-check","id":"plan","source":"もう一回だけ試して、だめだったら今日はやめます。","expected":"再試一次吧，如果還是不成功，那麼今天就放棄吧。","translated":"再試一次吧，如果還是不成功，那麼今天就放棄吧。","same":true}
+{"type":"content-check","id":"permission","source":"無理して来なくても大丈夫です。","expected":"就算您無理地過來，也沒關係的。","translated":"就算您無理地過來，也沒關係的。","same":true}
+{"type":"content-check","id":"heard","source":"来週に延期されたそうです。まだ決定ではありません。","expected":"據說，這個活動將被延遲到下週。目前還沒有最終的決定。","translated":"據說，這個活動將被延遲到下週。目前還沒有最終的決定。","same":true}
+{"type":"hard-recovery","failure":"Error: Translation cancelled","cancellationMs":1101.0417500000003,"totalMs":2790.4730420000014,"restored":"今天我會先睡一下。","same":true}
+{"type":"complete"}

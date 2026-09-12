@@ -96,6 +96,7 @@ it('routes provisional text only to its active request and ignores it after abor
  const pool=new WorkerPool(),controller=new AbortController(),partial=vi.fn()
  await pool.acquire({modelPath:'a'});worker.hold=true
  const result=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'},controller.signal,partial)
+ const cancelled=expect(result).rejects.toThrow('cancelled')
  await vi.waitFor(()=>expect(worker.messages.some(m=>m.type==='translate')).toBe(true))
  const message=worker.messages.find(m=>m.type==='translate')!
  expect(message.streamOutput).toBe(true)
@@ -105,8 +106,76 @@ it('routes provisional text only to its active request and ignores it after abor
  controller.abort()
  worker.emit('message',{type:'partial',id:message.id,text:'cancelled'})
  worker.emit('message',{type:'result',id:message.id,text:'final'})
- await result
+ await cancelled
  worker.emit('message',{type:'partial',id:message.id,text:'late'})
  expect(partial).toHaveBeenCalledTimes(1)
+ await pool.release()
+})
+
+it('cancels a timed out inference and keeps the next request blocked until acknowledgement', async () => {
+ vi.useFakeTimers()
+ try {
+  const pool=new WorkerPool()
+  await pool.acquire({modelPath:'a'}); worker.hold=true
+  const first=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'})
+  const failure=expect(first).rejects.toThrow('timed out')
+  await vi.advanceTimersByTimeAsync(0)
+  const id=worker.messages.find(m=>m.type==='translate')!.id
+  const second=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'})
+  await vi.advanceTimersByTimeAsync(30_000)
+  expect(worker.messages.some(m=>m.type==='cancel' && m.id===id)).toBe(true)
+  expect(worker.messages.filter(m=>m.type==='translate')).toHaveLength(1)
+  worker.hold=false
+  worker.emit('message',{type:'result',id,text:'late result'})
+  await failure
+  expect(await second).toBe('a')
+  await pool.release()
+ } finally {vi.useRealTimers()}
+})
+
+it('replaces an unresponsive process after cancellation grace and restores the queued model', async () => {
+ vi.useFakeTimers()
+ try {
+  const pool=new WorkerPool(), controller=new AbortController()
+  await pool.acquire({modelPath:'a'})
+  const old=worker; old.hold=true
+  const kill=vi.spyOn(old,'kill')
+  const first=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'},controller.signal)
+  const failure=expect(first).rejects.toThrow('cancelled')
+  await vi.advanceTimersByTimeAsync(0)
+  const oldId=old.messages.find(m=>m.type==='translate')!.id
+  const next=pool.sendRequest({type:'translate'},'translate',{modelPath:'b'})
+  worker=new FakeWorker();mocks.fork.mockReturnValue(worker)
+  controller.abort()
+  await vi.advanceTimersByTimeAsync(999)
+  expect(mocks.fork).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(1)
+  await failure
+  expect(await next).toBe('b')
+  expect(kill).toHaveBeenCalledTimes(1)
+  expect(pool.references).toBe(1)
+  old.emit('exit',1)
+  old.emit('message',{type:'result',id:oldId,text:'obsolete'})
+  expect(await pool.sendRequest({type:'translate'},'translate',{modelPath:'b'})).toBe('b')
+  await pool.release()
+ } finally {vi.useRealTimers()}
+})
+
+it('frees queue capacity when obsolete waiting translations are cancelled', async () => {
+ const pool=new WorkerPool()
+ await pool.acquire({modelPath:'a'});worker.hold=true
+ const active=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'})
+ await vi.waitFor(()=>expect(worker.messages.some(m=>m.type==='translate')).toBe(true))
+ const controllers=Array.from({length:49},()=>new AbortController())
+ const obsolete=controllers.map(controller=>pool.sendRequest({type:'translate'},'translate',{modelPath:'a'},controller.signal).catch(error=>error.message))
+ await expect(pool.sendRequest({type:'translate'},'translate',{modelPath:'a'})).rejects.toThrow('queue is full')
+ controllers.forEach(controller=>controller.abort())
+ expect(await Promise.all(obsolete)).toEqual(Array(49).fill('Translation cancelled'))
+ const next=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'})
+ worker.hold=false
+ worker.emit('message',{type:'result',id:worker.messages.find(m=>m.type==='translate')!.id,text:'a'})
+ await active
+ expect(await next).toBe('a')
+ expect(worker.messages.filter(m=>m.type==='translate')).toHaveLength(2)
  await pool.release()
 })
