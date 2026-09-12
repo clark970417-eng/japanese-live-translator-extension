@@ -21,6 +21,23 @@ The installed artifacts are separate copies:
 
 Source changes belong in this repository first. Installed copies are updated only after the relevant tests and build pass.
 
+## Directory map: what is what
+
+The parent directory `/Users/clark/Documents/ChatGPT/日文` contains two unrelated products and one reference checkout. Do not choose a project by filename similarity.
+
+| Path or item shown in Finder | What it is | Role in this task |
+| --- | --- | --- |
+| `japanese-live-translator-extension/` | The Japanese live translation extension and desktop companion fork | **This is the only working source repository for the current task.** Make source, test, report, and version changes here. |
+| `live-translate-upstream/` | A clean checkout of the original LiveTranslate project | Read-only reference for source inspection and matched benchmarks. Never implement or commit the user's changes here. |
+| `app.js`, `index.html`, `styles.css`, `sw.js` | Source for a separate JLPT N5 learning PWA named `nihongo-line-n5` | Unrelated. Do not edit for translation-extension work. |
+| `cloud-config.js`, `firebase.json`, `firestore.rules`, `.firebase/`, `.firebaserc` | Firebase configuration and deployment files for that JLPT N5 PWA | Unrelated. Do not edit or deploy for this task. |
+| `supabase/` | Supabase material belonging to the parent learning-app workspace | Unrelated. Do not edit for this task. |
+| `manifest.webmanifest`, `icon.svg` | Install metadata and icon for the JLPT N5 PWA | Unrelated. These are not the Opera extension manifest or icon. |
+| parent `package.json`, `package-lock.json`, `node_modules/` | Firebase tooling dependencies for `nihongo-line-n5` | Unrelated. Do not install, remove, or update these for this task. The live translator has its own dependencies under `japanese-live-translator-extension/desktop-app/`. |
+| parent `README.md` | Documentation for the JLPT N5 learning PWA | Unrelated. Do not use it as the translator specification. |
+
+Within the working repository, `manifest.json`, `background.js`, `offscreen.js`, `content.js`, `x-content.js`, the caption-window files, and their tests are the Opera extension. `desktop-app/` is the desktop companion source. The many `RETEST-*.md` files are historical evidence, not separate applications. `CLAUDE-HANDOFF.md` is the current scope and continuation guide.
+
 ## Current objective
 
 The active work is a focused local HY-MT translation and latency investigation for the Opera extension plus desktop companion. The current target is:
@@ -69,7 +86,7 @@ Primary files for the current work:
 
 ## Current verified state
 
-Current published commit at the time of this handoff: `d57fdc3` (`3.8.5`). The repository was clean and synchronized with `origin/main` after that commit.
+Current product commit at the time of this handoff: `d57fdc3` (`3.8.5`). Commit `014f9fd` added the first version of this handoff without changing product code. Both were published to `origin/main`; confirm the current head before beginning work.
 
 Version 3.8.4 rebuilt cancellation and queue recovery. Its cooperative-cancellation development benchmark reduced the median cancelled-generation plus following translation from 679 ms to 424 ms while retaining the context. It also passed a 46-segment repeated-audio run without empty final captions.
 
@@ -119,6 +136,79 @@ Success for the next change requires all of the following:
 5. The uncertainty-preserving written-draft behavior is retained, or the original completed draft returns with a clear review warning.
 6. Before/after median, P95, maximum, queue age, memory, and error counts are reported with measurement boundaries.
 7. Tests, production build, installed bundle verification, and an independent Opera window smoke test pass before GitHub publication.
+
+## Sequential continuation plan
+
+Work through these stages in order. Finish, measure, and document one stage before starting the next. A passing unit suite alone does not complete a stage that requires an installed Opera check. Keep the production path on local HY-MT throughout these stages; do not widen the work to every API or model.
+
+### Stage 1 — Eliminate live-caption starvation
+
+Reproduce the shared-worker contention described above, then change scheduling or cancellation so a typed comment cannot block live audio for several seconds. Compare the same audio, model, thermal state, and concurrent draft workload before and after. Record first Japanese text, first Chinese text, final Chinese text, queue age, P50/P95/max, memory, cancellations, dropped segments, and recovery after Stop.
+
+Completion gate: the 8.4-second class of contention spike is no longer reproduced across repeated trials, live captions keep priority, the draft either completes or reports a reviewable interruption, and no caption is blank, duplicated, reordered, or restored after Stop.
+
+### Stage 2 — Improve streaming recognition continuity
+
+Test real speech rather than only repeated fixtures: quiet speech, fast speech, background music, pauses, startled exclamations such as `あー！`, and repeated speech such as `やば...`. Tune VAD, partial/final boundaries, deduplication, and silence handling only from measured failures. Japanese source text must appear as soon as recognition produces a useful partial; it must not wait for Chinese translation.
+
+Completion gate: speech does not remain stuck at “listening,” short utterances are detected reliably, silence does not create stock hallucinations such as closing/thanks phrases, and repetition or exclamation is represented without flooding duplicate captions.
+
+### Stage 3 — Improve Japanese-to-Traditional-Chinese accuracy
+
+Create a fresh, frozen evaluation set before changing prompts or repair rules. Include negation, tense, uncertainty, casual contractions, incomplete speech, game terms, names, pronoun omission, emotional reactions, and multi-sentence context. Separate recognition errors from translation errors. Prefer model/prompt/context improvements over sentence-specific substitutions.
+
+Completion gate: bilingual review shows a measurable improvement on the unseen set with no material regression in negation, speaker intent, or invented content. Report failures that remain; do not call the stage complete from test count alone.
+
+### Stage 4 — Improve written Traditional-Chinese-to-Japanese drafts
+
+Validate ordinary YouTube comments, Shorts comments, replies, livestream chat drafts, and X replies. The target voice is cute, warm, and respectful without becoming childish or overly intimate. Preserve negation, possibility, tense, names, emojis, line breaks, and the user's actual intent. Replace unnatural wording such as `配信の記録` with contextual Japanese such as `アーカイブ` through general terminology/context handling, not a whole-sentence hard-code.
+
+Completion gate: a fresh review set passes both semantic fidelity and tone review, including the known possibility/negation case. The extension inserts a draft for review and never submits it automatically.
+
+### Stage 5 — Verify caption behavior and controls
+
+Retain both user-selectable modes: the original single-caption realtime mode and the four-caption queued mode. In four-caption mode, entries read from oldest at the top to newest at the bottom; a fifth entry removes the oldest and the remaining entries move upward. Show Japanese first, then attach Chinese below it. Both modes share font size, colors, outline, transparent black background, and movable/resizable positioning. Keep natural wrapping only when space runs out, half-line spacing between caption groups, adjustable background opacity, and YouTube-like expiry. Starting audio shows/enables the caption overlay; stopping audio closes it. Do not reintroduce a separate always-visible overlay toggle.
+
+Completion gate: verify each behavior through the installed Opera extension on normal YouTube, livestream, Shorts, and picture-in-picture/fullscreen where applicable. Confirm the overlay can be moved beyond the video element without losing controls or position persistence.
+
+### Stage 6 — Verify website translation and composer coverage
+
+Check Japanese titles, livestream chat, comments, and visible page text to Traditional Chinese, plus Chinese-to-Japanese drafting in YouTube comments, Shorts comments, livestream chat, and X reply composers. Use resilient selectors and mutation handling so dynamic panels and virtualized comment lists continue working after navigation.
+
+Completion gate: every supported surface works after in-page navigation and panel reopen, with no duplicate buttons, missing drafts, accidental post, or translation loop.
+
+### Stage 7 — Long-session and recovery validation
+
+Run short cold-start tests and at least one 60-minute mixed workload with unseen speech, pauses, music, rapid utterances, typed drafts, Stop/Start cycles, tab navigation, extension reload, and desktop companion restart. Measure memory growth, queue backlog, latency distribution, missing captions, duplicates, stale captions, model reloads, and process recovery. Keep the user's other Opera windows untouched.
+
+Completion gate: no stuck-listening state, blank final caption, unbounded queue/memory growth, lost accepted sentence, or unrecoverable native connection appears. Averages must not hide P95/max latency spikes.
+
+### Stage 8 — Matched LiveTranslate comparison
+
+Compare this fork with the pinned `live-translate-upstream` revision using the same Mac, source clips, model, warm/cold conditions, output-language task, and measurement boundaries. Compare feature behavior separately from latency, recognition, translation quality, memory, and recovery. Do not use the fork's cached phrases against uncached upstream runs.
+
+Completion gate: update `COMPARISON-LIVETRANSLATE.md` with reproducible commands, raw result locations, failures, and an honest category-by-category verdict. Claim superiority only for categories supported by matched evidence; never convert a partial win into a universal claim.
+
+### Stage 9 — Package, install, and publish
+
+After the active stage passes, run the full desktop and extension suites, TypeScript checks, production build, archive/runtime-byte checks, renderer-asset checks, signature/native-addon checks, and installed-file comparison. Replace the desktop app only after terminating the old process. Copy the exact tested extension files to `/Users/clark/Downloads/youtube-translator-extension`, reload that unpacked extension in a dedicated Opera test window, and repeat the relevant smoke test.
+
+Completion gate: source, packaged app, installed app, and installed extension all identify the same version and bytes; `git diff --check` and `git status` are clean after an English commit; `main` is pushed to GitHub. Do not create a GitHub Release.
+
+## Known unfinished work and how to classify it
+
+| Item | Current status | Priority and owner guidance |
+| --- | --- | --- |
+| Shared HY-MT worker can block live captions during written-draft repair | Reproduced with an 8.4-second latest end-to-Chinese value | Highest priority; Stage 1. |
+| Occasional stuck “listening” or missing new utterance | Previously reported by the user; short smoke tests have passed but broad reproduction is incomplete | Stage 2, then long-session confirmation in Stage 7. |
+| General Japanese-to-Chinese mistranslation | Some semantic failures remain; no broad independent proof of superiority | Stage 3. Do not patch benchmark sentences individually. |
+| Cute/respectful Chinese-to-Japanese style and fidelity | Narrow uncertainty repair works, but `配信の記録` remains unnatural and broad validation is incomplete | Stage 4. |
+| One-line/four-line overlay behavior and controls | Implemented across several releases, but every surface and long-session interaction has not been re-accepted under the current build | Stage 5. Preserve existing features while fixing defects. |
+| YouTube/Shorts/X dynamic composer coverage | Implemented, with earlier reports of missing controls on comments/replies | Stage 6; test drafts only. |
+| High-load and long-duration stability | Prior long runs exist, but contention and tail latency remain unresolved | Stage 7 after the earlier pipeline changes. |
+| “Fully better than LiveTranslate” | Not established | Stage 8 must produce matched evidence; treat this as an evaluation target, not a preset conclusion. |
+
+If Claude finds a new defect, first place it into one of these stages, capture a reproducible case and baseline, and then decide whether it blocks the active stage. Do not abandon the active latency/accuracy work to fix an unrelated feature merely because it is easy to notice.
 
 ## Explicit non-goals for the current task
 
