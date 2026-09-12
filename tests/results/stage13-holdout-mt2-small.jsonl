@@ -1,0 +1,26 @@
+{"type":"metadata","model":"hunyuan-mt-2","variant":"mt2-small","manifestHash":"1043ee7504578731ecb0330c207668fec96bee6ad0524d97acdecc9d8ba03f49","scope":"Actual desktop worker text translation; no audio, browser capture, or blind human quality score"}
+{"type":"trial","id":"neg-past","text":"昨日は一度もログインしていません。","from":"ja","to":"zh","translated":"昨天一次都沒有登入。","ms":187.80412500000057}
+{"type":"trial","id":"ability-past","text":"去年は泳げなかったけど、今は少し泳げます。","from":"ja","to":"zh","translated":"去年是游不動的，但現在可以稍微游一下。","ms":329.1543750000001}
+{"type":"trial","id":"plan-not-invite","text":"私はこのあと一人で買い物に行くつもりです。","from":"ja","to":"zh","translated":"我之後打算一個人去購物。","ms":253.2286670000003}
+{"type":"trial","id":"receive","text":"その写真は姉にもらったんです。","from":"ja","to":"zh","translated":"那張照片是從姐姐那裡得到的。","ms":260.24666700000034}
+{"type":"trial","id":"uncertainty","text":"まだ故障だと決まったわけではありません。","from":"ja","to":"zh","translated":"還不是確定已經出故障了。","ms":237.13066700000036}
+{"type":"trial","id":"quantity","text":"三十個じゃなくて十三個、残っています。","from":"ja","to":"zh","translated":"不是三十個，而是十三個，還剩下。","ms":270.4908749999995}
+{"type":"trial","id":"permission","text":"眠かったら最後まで見なくてもいいですよ。","from":"ja","to":"zh","translated":"如果睡不著的話，不用看到最後也沒關係。","ms":389.9098330000015}
+{"type":"trial","id":"incomplete","text":"その方法も試してみたんですけど、","from":"ja","to":"zh","translated":"我也試過那種方法了，","ms":216.71608300000116}
+{"type":"trial","id":"hearsay","text":"来月から値上がりするらしいけど、まだ確認していません。","from":"ja","to":"zh","translated":"看來下個月會漲價，但還沒有確認。","ms":388.6909160000014}
+{"type":"trial","id":"conditional","text":"雨がやんだら出かけます。やまなかったら家にいます。","from":"ja","to":"zh","translated":"雨停了就出門。不下雨就在家。","ms":286.7038339999999}
+{"type":"trial","id":"prohibition","text":"保存が終わるまでは電源を切らないで。","from":"ja","to":"zh","translated":"保存完成前不要切斷電源。","ms":253.16079200000058}
+{"type":"trial","id":"short-reaction","text":"あっ、危なかった！","from":"ja","to":"zh","translated":"啊，好險！","ms":157.16058299999895}
+{"type":"trial","id":"zh-praise","text":"今天的歌聲也很好聽，謝謝你的直播。","from":"zh","to":"ja","translated":"今日の歌声も素敵でした。配信をありがとうございます。","ms":636.7517919999991}
+{"type":"trial","id":"zh-leave","text":"我明天要早起，今天先去睡了，晚安。","from":"zh","to":"ja","translated":"明日は早く起きないと。今日はもう寝るね、おやすみ。","ms":534.6338749999995}
+{"type":"trial","id":"zh-photo","text":"這張照片的光線好漂亮，服裝也很適合你。","from":"zh","to":"ja","translated":"この写真の光がとても美しく、服装もあなたにぴったりです。","ms":532.2250829999994}
+{"type":"trial","id":"zh-no-pressure","text":"如果累了就好好休息，不用勉強自己回覆。","from":"zh","to":"ja","translated":"疲れたらゆっくり休んで、返事を急がなくても大丈夫です。","ms":494.5270410000012}
+{"type":"trial","id":"zh-uncertain","text":"我可能會晚一點到，現在還不能確定。","from":"zh","to":"ja","translated":"少し遅れて到着するかもしれませんが、今はまだ確定できません。","ms":519.6741660000007}
+{"type":"trial","id":"zh-not-invite","text":"我週末打算自己去看展覽。","from":"zh","to":"ja","translated":"週末には自分で展示会を見に行くつもりです。","ms":393.26479199999994}
+{"type":"trial","id":"zh-correction","text":"不好意思，我剛剛說錯了，是星期四，不是星期三。","from":"zh","to":"ja","translated":"ごめんね、ちょっと間違えました。木曜日なのに、水曜日だと言ってしまって。","ms":647.1167920000007}
+{"type":"trial","id":"zh-game","text":"剛剛那一關真的很難，你辛苦了！","from":"zh","to":"ja","translated":"先ほどの問題は本当に難しかったね、お疲れさまでした！","ms":544.6275000000005}
+{"type":"trial","id":"zh-past","text":"昨天沒趕上直播，但我已經看完存檔了。","from":"zh","to":"ja","translated":"昨日は配信に間に合いませんでしたが、記録はもう見ました。","ms":569.0278750000016}
+{"type":"trial","id":"zh-request","text":"方便的話，可以告訴我這首歌的名字嗎？","from":"zh","to":"ja","translated":"もし可能なら、この曲のタイトルを教えてもらえますか？","ms":516.8534999999993}
+{"type":"trial","id":"zh-short","text":"差一點點，好可惜！","from":"zh","to":"ja","translated":"ちょっと足りなかったね、残念だよ！","ms":263.71879199999967}
+{"type":"trial","id":"zh-boundary","text":"謝謝你的建議，我想再考慮一下。","from":"zh","to":"ja","translated":"アドバイスありがとうございます。もう少し考えさせてください。","ms":421.16362500000105}
+{"type":"complete"}

@@ -5,10 +5,10 @@ Status: in progress. These are targets, not achieved results.
 Latest completed subsystem work: [3.8.4](RETEST-3.8.4.md) replaces the shared
 translation request queue and adds bounded cancellation recovery. A 46-segment
 repeated-audio run passed missing-output/restart controls; it is not a diverse
-one-hour or end-to-end comparison. Opera reload remains pending while the Mac is
-locked. The frozen [24-case semantic set](tests/fixtures/fidelity-holdout-stage12.json)
-is reserved for evaluating a candidate selected on separate development data;
-it has not yet been scored.
+one-hour or end-to-end comparison. Opera 3.8.4 reload, audio-caption updates and Stop-to-Ready were subsequently
+verified in a separate test window; translation quality still has open issues. The frozen [24-case semantic set](tests/fixtures/fidelity-holdout-stage12.json)
+has now been run through all three production-model configurations. Developer review
+found regressions; no default replacement was accepted. See [stage 13](RETEST-STAGE13.md).
 
 ## Comparison protocol
 

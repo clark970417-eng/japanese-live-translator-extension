@@ -1,0 +1,77 @@
+{
+  "boundary": "Warmed complete-text translation through actual desktop worker. Sequential runs under uncontrolled concurrent user activity; not livestream latency or a speedup estimate. p95 is nearest rank.",
+  "runs": [
+    {
+      "file": "stage13-holdout-18b.jsonl",
+      "trials": 24,
+      "errors": 0,
+      "medianMs": 356,
+      "p95Ms": 521,
+      "maxMs": 592
+    },
+    {
+      "file": "stage13-holdout-7b.jsonl",
+      "trials": 24,
+      "errors": 0,
+      "medianMs": 1090,
+      "p95Ms": 2049,
+      "maxMs": 2073
+    },
+    {
+      "file": "stage13-holdout-mt2-small.jsonl",
+      "trials": 24,
+      "errors": 0,
+      "medianMs": 389,
+      "p95Ms": 637,
+      "maxMs": 647
+    },
+    {
+      "file": "stage13-polite-18b.jsonl",
+      "trials": 43,
+      "errors": 0,
+      "medianMs": 259,
+      "p95Ms": 407,
+      "maxMs": 502
+    },
+    {
+      "file": "stage13-polite-mt2-small.jsonl",
+      "trials": 43,
+      "errors": 0,
+      "medianMs": 236,
+      "p95Ms": 384,
+      "maxMs": 458
+    },
+    {
+      "file": "stage13-production-18b.jsonl",
+      "trials": 43,
+      "errors": 0,
+      "medianMs": 384,
+      "p95Ms": 609,
+      "maxMs": 1050
+    },
+    {
+      "file": "stage13-production-7b.jsonl",
+      "trials": 43,
+      "errors": 0,
+      "medianMs": 1123,
+      "p95Ms": 1971,
+      "maxMs": 2167
+    },
+    {
+      "file": "stage13-production-mt2-small.jsonl",
+      "trials": 43,
+      "errors": 0,
+      "medianMs": 228,
+      "p95Ms": 335,
+      "maxMs": 415
+    },
+    {
+      "file": "stage13-style-mt2-small.jsonl",
+      "trials": 43,
+      "errors": 0,
+      "medianMs": 257,
+      "p95Ms": 441,
+      "maxMs": 566
+    }
+  ]
+}

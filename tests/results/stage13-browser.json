@@ -1,0 +1,88 @@
+{
+  "version": "3.8.4",
+  "method": "Manual CUA observation of installed Opera GX extension in a dedicated window; no comments posted",
+  "video": "https://www.youtube.com/watch?v=BNybJ5Kttzs&t=5480s",
+  "nativeCaptions": "unavailable",
+  "engine": "mlx-whisper + hunyuan-mt-15 native",
+  "snapshots": [
+    {
+      "frames": 351,
+      "decodeP50Ms": 777,
+      "decodeP95Ms": 927,
+      "queueP50Ms": 0,
+      "queueP95Ms": 540,
+      "latestChineseLagMs": 1425,
+      "queueDepth": 0,
+      "dropped": 0,
+      "overruns": 0
+    },
+    {
+      "frames": 2343,
+      "decodeP50Ms": 787,
+      "decodeP95Ms": 1258,
+      "queueP50Ms": 31,
+      "queueP95Ms": 707,
+      "latestChineseLagMs": 1628,
+      "queueDepth": 0,
+      "dropped": 0,
+      "overruns": 0
+    }
+  ],
+  "boundary": "Rolling popup diagnostic snapshots, not full-session distributions or verified acoustic onset-to-render latency. Chinese lag is latest-value only. The UI translation=0 field does not mean instantaneous translation in shared desktop mode.",
+  "draftTestsWhileAudioRunning": [
+    {
+      "source": "来てくれてありがとうございます",
+      "translation": "謝謝你們來看直播！",
+      "ms": 1
+    },
+    {
+      "source": "まだクリアできていないけど、もう一回やってみます。",
+      "translation": "雖然還沒有通關，但我會再試一次。",
+      "ms": 449
+    },
+    {
+      "source": "今日は配信をお休みします。アーカイブで会いましょう。",
+      "translation": "今天我將暫停直播。我們可以在頁面回放中見面吧。",
+      "ms": 416
+    },
+    {
+      "source": "我先去睡覺了",
+      "translation": "そろそろ寝ますね。",
+      "mode": "校對短句",
+      "ms": 21
+    },
+    {
+      "source": "今天謝謝你的直播！我明天要早起，先去睡了",
+      "translation": "今日は配信に感謝します！明日は早起きで、先に寝ます。",
+      "mode": "本機翻譯草稿 · 請確認語氣",
+      "ms": 589
+    },
+    {
+      "source": "明天可能沒辦法來看，但我會看直播存檔，不要勉強自己喔",
+      "translation": "明日はできませんが、配信の保存映像を観るつもりです。無理にはしないでくださいね。",
+      "mode": "本機翻譯草稿 · 請確認語氣",
+      "ms": 653
+    }
+  ],
+  "semanticIssuesObserved": [
+    "いけんじゃない? -> 不是吧？ (context suggests can do it)",
+    "ヒル -> 山獵 (incorrect term in recognized-source translation)",
+    "Possible inability in Chinese draft is rendered as definite inability; viewing action omitted"
+  ],
+  "captionTurnover": true,
+  "restart": {
+    "captionsUpdated": true,
+    "frames": 1335,
+    "decodeP50Ms": 995,
+    "decodeP95Ms": 1361,
+    "queueP50Ms": 0,
+    "queueP95Ms": 534,
+    "latestChineseLagMs": 2331,
+    "queueDepth": 0,
+    "dropped": 0,
+    "overruns": 0
+  },
+  "stopReturnedReadyTwice": true,
+  "testWindowClosed": true,
+  "commentsPosted": false
+}
