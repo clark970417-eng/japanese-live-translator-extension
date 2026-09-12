@@ -173,3 +173,78 @@ GGUF weights), `COMPARE_REPORT`, and per-harness manifest and audio directories.
 The upstream side is built in `desktop-app/.test-out/upstream`, which is
 byte-identical to `live-translate-upstream` and has its own `node_modules` and
 FFmpeg. Its corpus replay is `out/main/benchmark-corpus.cjs`.
+
+## September 13: matched rerun at fork 3.8.6
+
+Both builds replayed JSUT BASIC5000_4501-4520 on the same Mac, in sequence,
+never overlapping, with the same MLX Whisper large-v3-turbo and the same
+HY-MT1.5 1.8B Q4_K_M weights from one shared test profile, the same growing
+window schedule, the same manifest hash
+`ba815629f913325b1e788e7e9b9f150d5980aac2c09a94c2f0090c9075d77219`, and the
+same measurement boundary. Upstream is the pinned `3d333e6` build in
+`desktop-app/.test-out/upstream`, with its own `node_modules` and its own
+FFmpeg on PATH. Capture, VAD, rendering and browser messaging are bypassed on
+both sides, so these are engine-and-pipeline numbers.
+
+| Engine-only measurement | Fork 3.8.6 | Upstream 3d333e6 |
+| --- | ---: | ---: |
+| First Japanese, median | 1161 ms | 1533 ms |
+| First Japanese, p95 | 1971 ms | 7492 ms |
+| First Japanese, max | 1988 ms | 9737 ms |
+| First Chinese, median | 1235 ms | 3480 ms |
+| First Chinese, p95 | 2072 ms | 8937 ms |
+| First Chinese, max | 2094 ms | 11771 ms |
+| Final delay after speech end, median | 835 ms | 1646 ms |
+| Final delay, p95 | 1157 ms | 7486 ms |
+| Final delay, max | 1518 ms | 10700 ms |
+| Missing final outputs | 0 / 20 | 0 / 20 |
+| Silence controls producing text | 0 / 2 | 2 / 2 |
+| Recognition character error, punctuation-insensitive | 8.17% | 8.17% |
+| Peak resident memory across processes | 1445 MB | 1476 MB |
+
+Raw rows: [fork](tests/results/stage8-fork-386.jsonl) and
+[upstream](tests/results/stage8-upstream-386match.jsonl). Recognition error was
+scored with `desktop-app/scripts/score-recognition.py`; both sides produced
+exactly 43 edits over 526 reference characters, which is what identical weights
+on identical audio should produce.
+
+### Verdict by category
+
+**Latency: fork, and the tail is where it matters.** The medians differ by a
+factor of under three, but the p95 differs by more than four times on first
+Chinese and more than six times on final delay. Upstream's slowest utterance
+waited 11.8 seconds for Chinese against the fork's 2.1 seconds. This is one
+read-speech corpus on one machine, so it is not a claim about every engine,
+every utterance length, or noisy livestream audio.
+
+**Recognition: tie, exactly.** Identical CER. Neither build has any recognition
+advantage on this corpus, and nothing in this round changed recognition quality.
+
+**Non-speech audio: fork.** Upstream produced text for both silent controls; the
+fork produced none. The reason is in the source, not in luck: the amplitude gate
+and the `no_speech_prob` check in `resources/mlx-whisper-bridge.py` are both
+fork additions, absent from upstream, and `isOutroArtifact` in
+`MlxWhisperEngine.ts` is a fork addition from this round. Upstream has no filter
+on the MLX path at all.
+
+**Memory: tie.** 1445 MB against 1476 MB peak is within run-to-run variation on
+a 16 GB machine, and neither grew across 20 trials.
+
+**Translation quality: not established.** Both sides load the same weights, but
+the fork changed the prompt and uses deterministic decoding, so outputs can
+differ. This corpus carries Japanese references for recognition and no Chinese
+references, so nothing here scores translation. The fork's own frozen holdout in
+`RETEST-ACCURACY.md` measures the fork's translator only, and it records six
+genuine failures that remain.
+
+**Recovery and long sessions: not comparable.** `RETEST-SOAK.md` soaked the fork
+for 60 minutes and found 53 healthy minutes followed by an unexplained host
+death. Upstream was not soaked, so no comparison exists.
+
+**Features: see the September 13 behavior table above.** Five capabilities exist
+only in the fork, five areas remain better upstream, and six of those are
+explicit non-goals in the handoff.
+
+No universal claim is made. The fork is faster on this corpus, equal on
+recognition, better on non-speech audio, and unproven on translation quality and
+long-session stability.
