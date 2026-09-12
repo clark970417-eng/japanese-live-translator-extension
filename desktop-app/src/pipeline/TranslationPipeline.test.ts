@@ -280,3 +280,26 @@ it('propagates selected source language to STT across changes and engine replace
     expect(second.setLanguage).toHaveBeenLastCalledWith('en')
   } finally { await pipeline.dispose() }
 })
+
+it('invalidates completed translations after a glossary update, including an older request still finishing', async () => {
+  const pipeline = new TranslationPipeline()
+  let finish!: (value: string) => void
+  let calls = 0
+  const translator = new MockTranslator('local')
+  translator.translate = async () => { calls++; return calls === 1 ? new Promise(r => finish = r) : '新詞彙譯法' }
+  pipeline.registerSTT('stt', () => new MockSTT('stt', {text:'同じ文章',language:'ja',isFinal:true} as STTResult))
+  pipeline.registerTranslator('local', () => translator)
+  await pipeline.switchEngine({mode:'cascade',sttEngineId:'stt',translatorEngineId:'local'})
+  pipeline.start()
+  try {
+    const first = pipeline.process(new Float32Array(16000),16000)
+    await vi.waitFor(() => expect(calls).toBe(1))
+    pipeline.setGlossary([{source:'文章',target:'句子'}])
+    finish('舊詞彙譯法');await first
+    expect((await pipeline.process(new Float32Array(16000),16000))?.translatedText).toBe('新詞彙譯法')
+    expect(calls).toBe(2)
+    await pipeline.process(new Float32Array(16000),16000);expect(calls).toBe(2)
+    pipeline.setGlossary([])
+    await pipeline.process(new Float32Array(16000),16000);expect(calls).toBe(3)
+  } finally {await pipeline.dispose()}
+})

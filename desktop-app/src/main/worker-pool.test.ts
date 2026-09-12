@@ -91,3 +91,22 @@ it('does not respawn a released engine for a stale queued request', async () => 
  expect(mocks.fork).toHaveBeenCalledTimes(1)
  expect(pool.isAlive).toBe(false)
 })
+
+it('routes provisional text only to its active request and ignores it after abort or completion', async () => {
+ const pool=new WorkerPool(),controller=new AbortController(),partial=vi.fn()
+ await pool.acquire({modelPath:'a'});worker.hold=true
+ const result=pool.sendRequest({type:'translate'},'translate',{modelPath:'a'},controller.signal,partial)
+ await vi.waitFor(()=>expect(worker.messages.some(m=>m.type==='translate')).toBe(true))
+ const message=worker.messages.find(m=>m.type==='translate')!
+ expect(message.streamOutput).toBe(true)
+ worker.emit('message',{type:'partial',id:'other',text:'wrong'})
+ worker.emit('message',{type:'partial',id:message.id,text:'今天先去'})
+ expect(partial).toHaveBeenCalledExactlyOnceWith('今天先去')
+ controller.abort()
+ worker.emit('message',{type:'partial',id:message.id,text:'cancelled'})
+ worker.emit('message',{type:'result',id:message.id,text:'final'})
+ await result
+ worker.emit('message',{type:'partial',id:message.id,text:'late'})
+ expect(partial).toHaveBeenCalledTimes(1)
+ await pool.release()
+})

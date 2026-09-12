@@ -29,7 +29,7 @@ const log = createLogger('slm-worker')
 type ModelType = 'translategemma' | 'hunyuan-mt' | 'hunyuan-mt-15' | 'hunyuan-mt-2' | 'lfm2' | 'plamo'
 
 /** Messages sent from main process to this worker */
-let activeRequest: {id:string,controller:AbortController} | null = null
+let activeRequest: {id:string,controller:AbortController,streamOutput?:boolean} | null = null
 
 type WorkerInboundMessage =
   | {type:'cancel';id:string}
@@ -406,7 +406,16 @@ async function runInference(
 
     const inferenceParams = getInferenceParams()
     const t1 = performance.now()
+    let partial = '', lastPartialAt = 0
+    const request = activeRequest
     const response = await boundedTranslation(session, prompt, {
+      ...(request?.streamOutput && {onTextChunk: (chunk: string) => {
+        partial += chunk
+        if (!request.controller.signal.aborted && partial.trim().length >= 4 && performance.now() - lastPartialAt >= 80) {
+          lastPartialAt = performance.now()
+          process.parentPort!.postMessage({type:'partial',id:request.id,text:partial.trim()})
+        }
+      }}),
       ...inferenceParams,
       ...(previousOutput?.trim() && { responsePrefix: previousOutput })
     }, sourceLength, 15_000, activeRequest?.controller.signal)
@@ -997,7 +1006,7 @@ process.parentPort!.on('message', (e: { data: WorkerInboundMessage }) => {
   }
 
   const handleMessage = async (): Promise<void> => {
-    activeRequest = 'id' in msg ? {id:msg.id,controller:new AbortController()} : null
+    activeRequest = 'id' in msg ? {id:msg.id,controller:new AbortController(),streamOutput:'streamOutput' in msg && Boolean(msg.streamOutput)} : null
     try {
       switch (msg.type) {
         case 'init':

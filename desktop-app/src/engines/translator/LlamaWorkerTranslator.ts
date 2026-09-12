@@ -102,9 +102,9 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     this.initialized = true
   }
 
-  private serialContext(context?: TranslateContext): Omit<TranslateContext, 'signal'> | undefined {
+  private serialContext(context?: TranslateContext): Omit<TranslateContext, 'signal' | 'onPartial'> | undefined {
     if (!context) return undefined
-    const {signal: _signal, ...value} = context
+    const {signal: _signal, onPartial: _onPartial, ...value} = context
     return value
   }
 
@@ -122,7 +122,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     const t0 = performance.now()
     const result = await workerPool.sendRequest(
       { type: 'translate', text, from, to, context: this.serialContext(context) },
-      'translate', this.workerOptions, context?.signal
+      'translate', this.workerOptions, context?.signal, context?.onPartial
     )
     const ms = performance.now() - t0
     this.log.info(`translate ${from}→${to} inputLen=${text.length} outputLen=${result.length} time=${ms.toFixed(0)}ms`)

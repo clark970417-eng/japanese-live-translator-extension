@@ -25,11 +25,13 @@ const log = createLogger('worker-pool')
 /** Messages received from the slm-worker UtilityProcess */
 export type WorkerMessage =
   | { type: 'ready' }
+  | { type: 'partial'; id: string; text: string }
   | { type: 'result'; id: string; text: string }
   | { type: 'error'; id?: string; message: string }
   | { type: 'disposed' }
 
 export interface PendingRequest {
+  onPartial?: (text: string) => void
   resolve: (text: string) => void
   reject: (err: Error) => void
   timer: ReturnType<typeof setTimeout>
@@ -118,7 +120,7 @@ export class WorkerPool {
   /**
    * Send a message to the worker and return a promise for the result.
    */
-  sendRequest(message: Record<string, unknown>, type: RequestType, options?: WorkerInitOptions, signal?: AbortSignal): Promise<string> {
+  sendRequest(message: Record<string, unknown>, type: RequestType, options?: WorkerInitOptions, signal?: AbortSignal, onPartial?: (text: string) => void): Promise<string> {
     if (this.queuedRequests >= WORKER_MAX_PENDING_REQUESTS) {
       return Promise.reject(new Error('Translation queue is full; please retry'))
     }
@@ -128,11 +130,11 @@ export class WorkerPool {
       if (this.refCount === 0) throw new Error('Translation engine was released')
       if (options) await this.ensureModel(options)
       if (signal?.aborted) throw new Error('Translation cancelled')
-      return this.dispatchRequest(message, type, signal)
+      return this.dispatchRequest(message, type, signal, onPartial)
     }).finally(() => { this.queuedRequests-- })
   }
 
-  private dispatchRequest(message: Record<string, unknown>, type: RequestType, signal?: AbortSignal): Promise<string> {
+  private dispatchRequest(message: Record<string, unknown>, type: RequestType, signal?: AbortSignal, onPartial?: (text: string) => void): Promise<string> {
     if (!this.worker) {
       return Promise.reject(new Error('[worker-pool] Worker not initialized'))
     }
@@ -152,6 +154,7 @@ export class WorkerPool {
       }, timeout)
 
       this.pending.set(id, {
+        onPartial: text => { if (!signal?.aborted) onPartial?.(text) },
         resolve: (value: string) => {
           const roundTripMs = performance.now() - sendTime
           if (roundTripMs > 2000) {
@@ -162,7 +165,7 @@ export class WorkerPool {
         reject,
         timer
       })
-      this.worker!.postMessage({ ...message, id })
+      this.worker!.postMessage({ ...message, id, ...(onPartial && {streamOutput: true}) })
     }).finally(() => signal?.removeEventListener('abort', cancel))
   }
 
@@ -328,6 +331,10 @@ export class WorkerPool {
     // Clear leftover listeners to prevent duplicates
     this.worker.removeAllListeners('message')
     this.worker.on('message', (msg: WorkerMessage) => {
+      if (msg.type === 'partial' && msg.id) {
+        this.pending.get(msg.id)?.onPartial?.(msg.text)
+        return
+      }
       if (msg.type === 'result' && msg.id) {
         const req = this.pending.get(msg.id)
         if (req) {

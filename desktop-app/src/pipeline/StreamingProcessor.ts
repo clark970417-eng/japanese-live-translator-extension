@@ -33,6 +33,7 @@ export interface StreamingDeps {
   getSTTEngine(): STTEngine | null
   getTranslator(): TranslatorEngine | null
   getGlossary(): GlossaryEntry[]
+  getCachedTranslation?(text: string, from: Language, to: Language): string | undefined
   canReuseInterimTranslation?(): boolean
   translateFinal?(text: string, from: Language, to: Language): Promise<string>
   getSimulMtConfig(): { enabled: boolean; waitK: number }
@@ -256,12 +257,22 @@ export class StreamingProcessor {
             const glossaryEntries = this.deps.getGlossary()
             const glossary = glossaryEntries.length > 0 ? glossaryEntries : undefined
             // Partial speech must not borrow words from earlier complete utterances.
-            const ctx = { glossary, previousSegments: [], signal: this.interimAbort.signal }
+            const ctx = { glossary, previousSegments: [], signal: this.interimAbort.signal,
+              onPartial: (translatedText: string): void => {
+                if (!this.isCurrentGeneration(gen, utterance) || fullSourceText !== this.lastSourceTextForTranslate) return
+                this.deps.emitter.emit('interim-result', {
+                  sourceText: this.lastSourceTextForTranslate, confirmedText: agreement.confirmedText,
+                  interimText: agreement.interimText, translatedText, sourceLanguage: sttResult.language,
+                  targetLanguage: targetLang, timestamp: Date.now(), isInterim: true
+                })
+              }
+            }
 
             // Use SSBD for re-translation when we have a previous translation,
             // since most of the output likely remains valid (#607)
             this.debouncedTranslationInFlight = true
-            const translatePromise = (dbTranslator.translateSSBD && this.lastTranslatedConfirmed)
+            const cached = this.deps.getCachedTranslation?.(fullSourceText, sttResult.language, targetLang)
+            const translatePromise = cached !== undefined ? Promise.resolve(cached) : (dbTranslator.translateSSBD && this.lastTranslatedConfirmed)
               ? dbTranslator.translateSSBD(
                   fullSourceText,
                   this.lastTranslatedConfirmed,

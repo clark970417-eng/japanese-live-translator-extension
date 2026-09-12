@@ -266,6 +266,8 @@ export interface GlossaryEntry {
 
 /** Context passed to translators that support context-aware translation */
 export interface TranslateContext {
+  /** Cumulative provisional output; never serialized to a provider. */
+  onPartial?: (text: string) => void
   /** Local inference cancellation; never serialized to a provider. */
   signal?: AbortSignal
   /** Previous confirmed translation segments for coherence */

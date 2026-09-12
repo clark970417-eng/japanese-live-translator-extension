@@ -321,3 +321,57 @@ it('continues final translation after a failed sentence and balances processing 
   expect(active).toBe(0)
   processor.reset()
 })
+
+it('reuses an exact completed translation for a repeated interim without running inference', async () => {
+  vi.useFakeTimers()
+  const emitter = new EventEmitter(), updates: any[] = []
+  emitter.on('interim-result', result => updates.push(result))
+  const translate = vi.fn(async () => '新譯文')
+  let source = 'まだ終わっていません。'
+  const processor = new StreamingProcessor({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text: source, language: 'ja'})}),
+    getTranslator: () => ({translate}),
+    getCachedTranslation: (text: string) => text === 'まだ終わっていません。' ? '還沒結束。' : undefined,
+    getGlossary: () => [], getSimulMtConfig: () => ({enabled:false,waitK:3}),
+    resolveTargetLanguage: () => 'zh', incrementProcessing() {}, decrementProcessing() {}
+  } as unknown as StreamingDeps)
+  try {
+    await processor.processStreaming(new Float32Array(16000),16000)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(translate).not.toHaveBeenCalled()
+    expect(updates.at(-1).translatedText).toBe('還沒結束。')
+    processor.reset()
+    source = 'もう終わりました。'
+    await processor.processStreaming(new Float32Array(16000),16000)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(translate).toHaveBeenCalledTimes(1)
+  } finally {processor.reset();vi.useRealTimers()}
+})
+
+it('publishes generated Chinese before completion and drops chunks after reset', async () => {
+ vi.useFakeTimers()
+ let source='今日は先に寝ます。'
+ let chunk!: (text: string) => void, finish!: (text: string) => void
+ const emitter=new EventEmitter(), updates:any[]=[]
+ emitter.on('interim-result',r=>updates.push(r))
+ const processor=new StreamingProcessor({
+  emitter,agreement:new LocalAgreement(),contextBuffer:new ContextBuffer(),
+  getSTTEngine:()=>({processAudio:async()=>({text:source,language:'ja'})}),
+  getTranslator:()=>({translate:(_t: string,_f: string,_to: string,ctx:any)=>{chunk=ctx.onPartial;return new Promise(r=>finish=r)}}),
+  getGlossary:()=>[],getSimulMtConfig:()=>({enabled:false,waitK:3}),resolveTargetLanguage:()=> 'zh',
+  incrementProcessing(){},decrementProcessing(){}
+ } as unknown as StreamingDeps)
+ try {
+  await processor.processStreaming(new Float32Array(16000),16000);await vi.advanceTimersByTimeAsync(0)
+  chunk('今天先去');expect(updates.at(-1).translatedText).toBe('今天先去')
+  expect(updates.at(-1).isInterim).toBe(true)
+  source='今日は先に寝ません。'
+  await processor.processStreaming(new Float32Array(16000),16000)
+  const beforeCorrection=updates.length
+  chunk('今天先去睡了');expect(updates).toHaveLength(beforeCorrection)
+  processor.reset();const count=updates.length
+  chunk('不該再顯示');finish('今天先去睡了。');await vi.advanceTimersByTimeAsync(0)
+  expect(updates).toHaveLength(count)
+ } finally {processor.reset();vi.useRealTimers()}
+})

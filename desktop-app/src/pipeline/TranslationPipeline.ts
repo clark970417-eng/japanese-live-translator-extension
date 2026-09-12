@@ -137,15 +137,21 @@ export class TranslationPipeline extends EventEmitter {
       getSTTEngine: () => this.engineManager.sttEngine,
       getTranslator: () => this.engineManager.translator,
       getGlossary: () => this.glossary,
+      getCachedTranslation: (text, from, to) => {
+        // These local models intentionally ignore previous utterance context.
+        if (!['hunyuan-mt-15', 'hunyuan-mt-2'].includes(this.engineManager.translator?.id ?? '') || this.adaptiveRouter.getConfig().enabled) return undefined
+        return this.translationCache.get(text, from, to)
+      },
       canReuseInterimTranslation: () => !this.adaptiveRouter.getConfig().enabled,
       translateFinal: async (text, from, to) => {
+        const glossaryVersion = this.glossary
         const cached = this.translationCache.get(text, from, to)
         if (cached !== undefined) return cached
         const context = this.contextBuffer.getContext(this.glossary.length ? this.glossary : undefined)
         const translated = this.adaptiveRouter.getConfig().enabled && this.adaptiveRouter.isReady
           ? (await this.adaptiveRouter.translate(text, from, to, context)).translated
           : await this.engineManager.translator!.translate(text, from, to, context)
-        this.translationCache.set(text, from, to, translated)
+        if (glossaryVersion === this.glossary) this.translationCache.set(text, from, to, translated)
         return translated
       },
       getSimulMtConfig: () => ({ enabled: this.simulMtEnabled, waitK: this.simulMtWaitK }),
@@ -225,7 +231,8 @@ export class TranslationPipeline extends EventEmitter {
 
   /** Set glossary terms for context-aware translation */
   setGlossary(glossary: GlossaryEntry[]): void {
-    this.glossary = glossary
+    this.translationCache.clear()
+    this.glossary = glossary.map(entry => ({ ...entry }))
     this.adaptiveRouter.setGlossary(glossary)
   }
 
@@ -486,6 +493,7 @@ export class TranslationPipeline extends EventEmitter {
     }
 
     try {
+      const glossaryVersion = this.glossary
       // Check translation cache before calling engine
       const cached = this.translationCache.get(sttResult.text, sttResult.language, targetLang)
       let translated: string
@@ -502,7 +510,7 @@ export class TranslationPipeline extends EventEmitter {
           this.contextBuffer.getContext(glossary)
         )
         translated = routeResult.translated
-        this.translationCache.set(sttResult.text, sttResult.language, targetLang, translated)
+        if (glossaryVersion === this.glossary) this.translationCache.set(sttResult.text, sttResult.language, targetLang, translated)
       } else {
         const t1 = performance.now()
         const glossary = this.glossary.length > 0 ? this.glossary : undefined
@@ -514,7 +522,7 @@ export class TranslationPipeline extends EventEmitter {
         )
         const translateMs = (performance.now() - t1).toFixed(0)
         log.info(`Translate: ${translateMs}ms → "${translated}"`)
-        this.translationCache.set(sttResult.text, sttResult.language, targetLang, translated)
+        if (glossaryVersion === this.glossary) this.translationCache.set(sttResult.text, sttResult.language, targetLang, translated)
       }
 
       this.contextBuffer.add(sttResult.text, translated)

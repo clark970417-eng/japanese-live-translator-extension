@@ -1,0 +1,13 @@
+{"type":"metadata","purpose":"Repeated exact final translations reused in interim; mocked recognition, not end-to-end latency"}
+{"type":"trial","mode":"baseline","source":"まだ終わっていません。","translated":"還沒有結束呢。","ms":163.05416699999932,"sameAsCompleted":true}
+{"type":"trial","mode":"cached","source":"まだ終わっていません。","translated":"還沒有結束呢。","ms":30.446750000000065,"sameAsCompleted":true}
+{"type":"trial","mode":"cached","source":"今日は先に寝ます。","translated":"今天我會先睡一下。","ms":0.5109579999998459,"sameAsCompleted":true}
+{"type":"trial","mode":"baseline","source":"今日は先に寝ます。","translated":"今天我會先睡一下。","ms":256.90175,"sameAsCompleted":true}
+{"type":"trial","mode":"baseline","source":"左から二番目の箱です。","translated":"這是從左邊數起第二個箱子。","ms":406.2624159999996,"sameAsCompleted":true}
+{"type":"trial","mode":"cached","source":"左から二番目の箱です。","translated":"這是從左邊數起第二個箱子。","ms":0.5097919999989244,"sameAsCompleted":true}
+{"type":"trial","mode":"cached","source":"もう一回だけ試します。","translated":"我再試一次吧。","ms":1.4098329999997077,"sameAsCompleted":true}
+{"type":"trial","mode":"baseline","source":"もう一回だけ試します。","translated":"我再試一次吧。","ms":210.78583399999843,"sameAsCompleted":true}
+{"type":"trial","mode":"baseline","source":"無理して来なくても大丈夫です。","translated":"就算您無理地過來，也沒關係的。","ms":539.7615000000005,"sameAsCompleted":true}
+{"type":"trial","mode":"cached","source":"無理して来なくても大丈夫です。","translated":"就算您無理地過來，也沒關係的。","ms":4.945374999999331,"sameAsCompleted":true}
+{"type":"trial","mode":"cached","source":"昨日は買えませんでした。","translated":"昨天是買不到的。","ms":0.18429199999991397,"sameAsCompleted":true}
+{"type":"trial","mode":"baseline","source":"昨日は買えませんでした。","translated":"昨天是買不到的。","ms":291.89495800000077,"sameAsCompleted":true}
