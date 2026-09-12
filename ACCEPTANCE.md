@@ -2,7 +2,10 @@
 
 Status: in progress. These are targets, not achieved results.
 
-Latest completed subsystem work: [3.8.4](RETEST-3.8.4.md) replaces the shared
+Latest draft change: [3.8.5](RETEST-3.8.5.md) adds selective, bounded repair for lost
+possibility in written zh→ja drafts. Broad semantic accuracy remains open.
+
+Previous completed subsystem work: [3.8.4](RETEST-3.8.4.md) replaces the shared
 translation request queue and adds bounded cancellation recovery. A 46-segment
 repeated-audio run passed missing-output/restart controls; it is not a diverse
 one-hour or end-to-end comparison. Opera 3.8.4 reload, audio-caption updates and Stop-to-Ready were subsequently

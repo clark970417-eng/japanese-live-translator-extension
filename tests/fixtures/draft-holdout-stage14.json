@@ -1,0 +1,85 @@
+{
+  "purpose": "Frozen before evaluating the selective draft repair. No tuning on these outputs. Developer review, not independent blind scoring.",
+  "samples": [
+    {
+      "id": "fresh-1",
+      "direction": "zh-ja",
+      "text": "週五可能沒辦法陪你聊天，但我會把影片看完。"
+    },
+    {
+      "id": "fresh-2",
+      "direction": "zh-ja",
+      "text": "今晚或許會提早離開，明天還有工作要忙。"
+    },
+    {
+      "id": "fresh-3",
+      "direction": "zh-ja",
+      "text": "我下個月可能不會續訂，因為要先存一些錢。"
+    },
+    {
+      "id": "fresh-4",
+      "direction": "zh-ja",
+      "text": "也許這次沒有辦法赴約，等我確認後再告訴你。"
+    },
+    {
+      "id": "fresh-5",
+      "direction": "zh-ja",
+      "text": "我今天不一定會買票，還要跟朋友討論。"
+    },
+    {
+      "id": "fresh-6",
+      "direction": "zh-ja",
+      "text": "明晚可能無法到現場，但還是祝活動順利！"
+    },
+    {
+      "id": "fresh-7",
+      "direction": "zh-ja",
+      "text": "我可能不是第一個到的人，請你們先開始。"
+    },
+    {
+      "id": "fresh-8",
+      "direction": "zh-ja",
+      "text": "或許我會選另一種顏色，現在還沒有決定。"
+    },
+    {
+      "id": "fresh-9",
+      "direction": "zh-ja",
+      "text": "如果我明天可能趕不上，你們就先走吧。"
+    },
+    {
+      "id": "fresh-10",
+      "direction": "zh-ja",
+      "text": "我不是不想幫忙，而是現在真的沒空。"
+    },
+    {
+      "id": "fresh-11",
+      "direction": "zh-ja",
+      "text": "我不可能答應這個要求，請不要再問了。"
+    },
+    {
+      "id": "fresh-12",
+      "direction": "zh-ja",
+      "text": "我明晚一定沒辦法出門，因為家裡有客人。"
+    },
+    {
+      "id": "fresh-13",
+      "direction": "zh-ja",
+      "text": "我不一定能回覆每則訊息，但我都有看見。"
+    },
+    {
+      "id": "fresh-14",
+      "direction": "zh-ja",
+      "text": "今天可能有點忙，但如果有空我就會去看。"
+    },
+    {
+      "id": "fresh-15",
+      "direction": "zh-ja",
+      "text": "我說「也許下次再試」，並不是說一定會再試。"
+    },
+    {
+      "id": "fresh-16",
+      "direction": "zh-ja",
+      "text": "謝謝你今天教我操作，我終於學會了！"
+    }
+  ]
+}

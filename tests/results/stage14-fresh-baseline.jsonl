@@ -1,0 +1,18 @@
+{"type":"metadata","model":"hunyuan-mt-15","draftRepair":false,"variant":"1.5-small","manifestHash":"5a57bca1fdd54c0aaac813137b201b201e12a9ac0dad36d8ee73962039249607","scope":"Actual desktop worker text translation; no audio, browser capture, or blind human quality score"}
+{"type":"trial","id":"fresh-1","text":"週五可能沒辦法陪你聊天，但我會把影片看完。","from":"zh","to":"ja","translated":"金曜日はお話しすることができないかもしれませんが、動画は最後まで見ます。","ms":425.61029199999984}
+{"type":"trial","id":"fresh-2","text":"今晚或許會提早離開，明天還有工作要忙。","from":"zh","to":"ja","translated":"今夜は早く帰るかもしれません。明日はまだ仕事があるので忙しいです。","ms":372.403542}
+{"type":"trial","id":"fresh-3","text":"我下個月可能不會續訂，因為要先存一些錢。","from":"zh","to":"ja","translated":"来月はおそらく続けないでしょう。なぜなら、まず少しお金を貯めておかなければならないからです。","ms":468.2104589999999}
+{"type":"trial","id":"fresh-4","text":"也許這次沒有辦法赴約，等我確認後再告訴你。","from":"zh","to":"ja","translated":"もしかすると、今回は予定通りに行けないかもしれません。確認した後でまたご連絡します。","ms":435.64720899999975}
+{"type":"trial","id":"fresh-5","text":"我今天不一定會買票，還要跟朋友討論。","from":"zh","to":"ja","translated":"今日は必ずしもチケットを購入するわけではありません。友人と相談しなければなりません。","ms":485.5617500000003}
+{"type":"trial","id":"fresh-6","text":"明晚可能無法到現場，但還是祝活動順利！","from":"zh","to":"ja","translated":"明晩は現場に行けないかもしれませんが、どうかイベントが成功することを願っています！","ms":500.0876250000001}
+{"type":"trial","id":"fresh-7","text":"我可能不是第一個到的人，請你們先開始。","from":"zh","to":"ja","translated":"私は最初に到着する人かもしれませんが、どうぞ先に始めてください。","ms":322.00712500000054}
+{"type":"trial","id":"fresh-8","text":"或許我會選另一種顏色，現在還沒有決定。","from":"zh","to":"ja","translated":"もしかすると、別の色を選ぶかもしれません。まだ決定していません。","ms":410.1252919999997}
+{"type":"trial","id":"fresh-9","text":"如果我明天可能趕不上，你們就先走吧。","from":"zh","to":"ja","translated":"もし私が明日間に合わない可能性があるなら、皆さんは先に行ってください。","ms":393.19408400000066}
+{"type":"trial","id":"fresh-10","text":"我不是不想幫忙，而是現在真的沒空。","from":"zh","to":"ja","translated":"私は助けたくないわけではありませんが、今は本当に時間がありません。","ms":341.9782500000001}
+{"type":"trial","id":"fresh-11","text":"我不可能答應這個要求，請不要再問了。","from":"zh","to":"ja","translated":"この要求には応じることはできません。もう尋ねないでください。","ms":293.6385420000006}
+{"type":"trial","id":"fresh-12","text":"我明晚一定沒辦法出門，因為家裡有客人。","from":"zh","to":"ja","translated":"私は明日の夜には出かけられないでしょう。家に客がいるからです。","ms":354.61504200000036}
+{"type":"trial","id":"fresh-13","text":"我不一定能回覆每則訊息，但我都有看見。","from":"zh","to":"ja","translated":"私はすべてのメッセージに返信できるわけではありませんが、全てを見ています。","ms":383.0932499999999}
+{"type":"trial","id":"fresh-14","text":"今天可能有點忙，但如果有空我就會去看。","from":"zh","to":"ja","translated":"今日は少し忙しいかもしれませんが、時間があれば見に行きます。","ms":343.76216699999986}
+{"type":"trial","id":"fresh-15","text":"我說「也許下次再試」，並不是說一定會再試。","from":"zh","to":"ja","translated":"「次回は挑戦してみるかもしれない」と言ったのは、必ず挑戦するという意味ではありません。","ms":505.9325000000008}
+{"type":"trial","id":"fresh-16","text":"謝謝你今天教我操作，我終於學會了！","from":"zh","to":"ja","translated":"今日、操作方法を教えてくれてありがとう。ついに習得しました！","ms":314.6795000000002}
+{"type":"complete"}

@@ -32,7 +32,7 @@ async function makeDraft(text){
  const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
  if((await settings()).speechMode==='desktop'){
   const result=await desktop.request('translate',{text,direction:'zh-ja'});
-  return {draft:validateTranslation(result.text,'zh-ja',text),mode:'本機翻譯草稿 · 請確認語氣'};
+  return {draft:validateTranslation(result.text,'zh-ja',text),mode:result.reviewWarning ? `本機翻譯草稿 · ${result.reviewWarning}` : '本機翻譯草稿 · 請確認語氣'};
  }
  try{return {draft:await textMemo.run('styled:'+text,()=>styledTranslation(text,'zh-ja')),mode:'可愛禮貌'};}
  catch(_error){return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}

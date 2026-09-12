@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, appendFileSync } from 'fs'
 import { createHash } from 'crypto'
 import { HunyuanMT15Translator } from '../src/engines/translator/HunyuanMT15Translator'
 import { HunyuanMT2Translator } from '../src/engines/translator/HunyuanMT2Translator'
+import { translateWrittenDraft } from '../src/main/draft-fidelity'
 import type { Language } from '../src/engines/types'
 const {COMPARE_PROFILE,COMPARE_REPORT,FIDELITY_CASES,COMPARE_TRANSLATOR}=process.env
 if(!COMPARE_PROFILE||!COMPARE_REPORT||!FIDELITY_CASES)throw new Error('Set profile, report and cases')
@@ -17,14 +18,15 @@ app.whenReady().then(async()=>{
  const emit=(row:unknown)=>{appendFileSync(COMPARE_REPORT,JSON.stringify(row)+'\n');console.log(JSON.stringify(row))}
  writeFileSync(COMPARE_REPORT,'')
  try{
-  emit({type:'metadata',model:engine.id,variant:COMPARE_TRANSLATOR||'1.5-small',manifestHash:createHash('sha256').update(input).digest('hex'),scope:'Actual desktop worker text translation; no audio, browser capture, or blind human quality score'})
+  emit({type:'metadata',model:engine.id,draftRepair:process.env.COMPARE_DRAFT==='1',variant:COMPARE_TRANSLATOR||'1.5-small',manifestHash:createHash('sha256').update(input).digest('hex'),scope:'Actual desktop worker text translation; no audio, browser capture, or blind human quality score'})
   await engine.initialize()
   await engine.translate('準備ができました。','ja','zh')
   for(const item of cases){
    const start=performance.now()
    try{
-    const translated=await engine.translate(item.text,item.from,item.to)
-    emit({type:'trial',...item,translated,ms:performance.now()-start})
+    const draft = process.env.COMPARE_DRAFT === '1' && item.from === 'zh' && item.to === 'ja' ? await translateWrittenDraft(item.text, (text, signal) => engine.translate(text, item.from, item.to, {signal, previousSegments: []})) : {text: await engine.translate(item.text,item.from,item.to)}
+    const translated=draft.text
+    emit({type:'trial',...item,translated,...('repaired' in draft ? {repaired:draft.repaired}:{}),...('reviewWarning' in draft ? {reviewWarning:draft.reviewWarning}:{}),ms:performance.now()-start})
     if(!translated.trim())throw new Error('Empty output')
    }catch(error){emit({type:'error',id:item.id,error:String(error)});process.exitCode=1}
   }

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "modality-1",
+    "text": "明天可能沒辦法來看，但我會看直播存檔，不要勉強自己喔",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-2",
+    "text": "今晚可能沒辦法看到最後，因為我要早起。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-3",
+    "text": "我可能會晚一點回來，不用等我。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-4",
+    "text": "今天應該可以參加，但還沒確定。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-5",
+    "text": "我不一定能準時到，不過會盡量。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-6",
+    "text": "也許下週有空，我還要看行程。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-7",
+    "text": "我明天沒辦法參加，已經確定了。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-8",
+    "text": "我可能不會買，還想考慮一下。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-9",
+    "text": "那可能不是我的東西。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-10",
+    "text": "我不是不想來，是今天有事情。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-11",
+    "text": "如果明天下雨，我就不去了。",
+    "from": "zh",
+    "to": "ja"
+  },
+  {
+    "id": "modality-12",
+    "text": "謝謝你提醒，我會再確認時間。",
+    "from": "zh",
+    "to": "ja"
+  }
+]

@@ -11,6 +11,7 @@ import type { EngineMode, SttEngineType } from '../engine-selection'
 import type { AppContext } from './app-context'
 import { HunyuanMT2Translator } from '../engines/translator/HunyuanMT2Translator'
 import { HunyuanMT15Translator } from '../engines/translator/HunyuanMT15Translator'
+import { translateWrittenDraft } from './draft-fidelity'
 import { CompanionScheduler } from './companion-scheduler'
 
 export async function startExtensionCompanion(ctx: AppContext, directory?: string): Promise<Server> {
@@ -147,7 +148,10 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
                 translatorMode = requestedMode
               }
               await translator.initialize()
-              result = { text: await translator.translate(m.text, from, to) }
+              const activeTranslator = translator
+              result = from === 'zh' && to === 'ja'
+                ? await translateWrittenDraft(m.text, (text, signal) => activeTranslator.translate(text, from, to, {signal, previousSegments: []}))
+                : { text: await activeTranslator.translate(m.text, from, to) }
             } else throw new Error('Unsupported operation')
             send({ id: m.id, ok: true, result })
           } catch (error) {

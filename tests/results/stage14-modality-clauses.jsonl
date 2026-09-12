@@ -1,0 +1,26 @@
+{"type":"metadata","model":"hunyuan-mt-15","variant":"1.5-small","manifestHash":"d5b31b826fc4d34f7b61a118d945148443d16341b5959f4b7550925aaea53710","scope":"Actual desktop worker text translation; no audio, browser capture, or blind human quality score"}
+{"type":"trial","id":"modality-1-0","text":"明天可能沒辦法來看","from":"zh","to":"ja","translated":"明日は見ることができないかもしれません","ms":263.54654200000004}
+{"type":"trial","id":"modality-1-1","text":"但我會看直播存檔","from":"zh","to":"ja","translated":"でも、配信の記録を見るつもりです","ms":242.64650000000006}
+{"type":"trial","id":"modality-1-2","text":"不要勉強自己喔","from":"zh","to":"ja","translated":"無理に自分を追い込まないでくださいね。","ms":223.94154200000003}
+{"type":"trial","id":"modality-2-0","text":"今晚可能沒辦法看到最後","from":"zh","to":"ja","translated":"今夜は最後を見ることができないかもしれません。","ms":274.77674999999977}
+{"type":"trial","id":"modality-2-1","text":"因為我要早起。","from":"zh","to":"ja","translated":"早起する必要があるからです。","ms":147.94116699999995}
+{"type":"trial","id":"modality-3-0","text":"我可能會晚一點回來","from":"zh","to":"ja","translated":"私はおそく戻るかもしれません","ms":186.8908749999996}
+{"type":"trial","id":"modality-3-1","text":"不用等我。","from":"zh","to":"ja","translated":"待つ必要はありません。","ms":104.72987499999999}
+{"type":"trial","id":"modality-4-0","text":"今天應該可以參加","from":"zh","to":"ja","translated":"今日は参加できるはずです","ms":132.98091599999998}
+{"type":"trial","id":"modality-4-1","text":"但還沒確定。","from":"zh","to":"ja","translated":"しかし、まだ確定していません。","ms":180.2353750000002}
+{"type":"trial","id":"modality-5-0","text":"我不一定能準時到","from":"zh","to":"ja","translated":"私は必ずしも時間通りに到着できるとは限りません。","ms":298.5894999999996}
+{"type":"trial","id":"modality-5-1","text":"不過會盡量。","from":"zh","to":"ja","translated":"でも、できるだけ努力します。","ms":139.86679200000026}
+{"type":"trial","id":"modality-6-0","text":"也許下週有空","from":"zh","to":"ja","translated":"もしかすると、来週は空きがあるかもしれません。","ms":235.03595799999994}
+{"type":"trial","id":"modality-6-1","text":"我還要看行程。","from":"zh","to":"ja","translated":"行程をまだ確認しなければなりません。","ms":177.3278750000004}
+{"type":"trial","id":"modality-7-0","text":"我明天沒辦法參加","from":"zh","to":"ja","translated":"明日は参加できません","ms":175.19262500000013}
+{"type":"trial","id":"modality-7-1","text":"已經確定了。","from":"zh","to":"ja","translated":"もう決まりました。","ms":164.3576250000001}
+{"type":"trial","id":"modality-8-0","text":"我可能不會買","from":"zh","to":"ja","translated":"私は購入しないかもしれません。","ms":225.3592090000002}
+{"type":"trial","id":"modality-8-1","text":"還想考慮一下。","from":"zh","to":"ja","translated":"もう少し考えてみたいです。","ms":198.84887499999968}
+{"type":"trial","id":"modality-9-0","text":"那可能不是我的東西。","from":"zh","to":"ja","translated":"それは私のものではないかもしれません。","ms":191.03379099999984}
+{"type":"trial","id":"modality-10-0","text":"我不是不想來","from":"zh","to":"ja","translated":"私は来たくないわけではありません。","ms":164.18375000000015}
+{"type":"trial","id":"modality-10-1","text":"是今天有事情。","from":"zh","to":"ja","translated":"今日は予定があります。","ms":114.64795799999956}
+{"type":"error","id":"modality-11-0","error":"Error: Translation exceeded its output limit"}
+{"type":"trial","id":"modality-11-1","text":"我就不去了。","from":"zh","to":"ja","translated":"私は行かないです。","ms":413.47241699999995}
+{"type":"trial","id":"modality-12-0","text":"謝謝你提醒","from":"zh","to":"ja","translated":"ご指摘ありがとうございます。","ms":158.88525000000027}
+{"type":"trial","id":"modality-12-1","text":"我會再確認時間。","from":"zh","to":"ja","translated":"時間をもう一度確認します。","ms":126.59654199999932}
+{"type":"complete"}

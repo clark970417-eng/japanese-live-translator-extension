@@ -1,0 +1,14 @@
+{"type":"metadata","model":"hunyuan-mt-15","variant":"1.5-small","manifestHash":"2e713abe291d217c0ae42a5d12723f9bce1cb24c3b303c82ac327ab2323a676a","scope":"Actual desktop worker text translation; no audio, browser capture, or blind human quality score"}
+{"type":"trial","id":"modality-1","text":"明天可能沒辦法來看，但我會看直播存檔，不要勉強自己喔","from":"zh","to":"ja","translated":"明日はできませんが、配信の保存映像を観るつもりです。無理にはさせませんよ。","ms":489.322666}
+{"type":"trial","id":"modality-2","text":"今晚可能沒辦法看到最後，因為我要早起。","from":"zh","to":"ja","translated":"今夜は最後を見ることができないかもしれません。なぜなら、早起きする必要があるからです。","ms":419.36770799999977}
+{"type":"trial","id":"modality-3","text":"我可能會晚一點回來，不用等我。","from":"zh","to":"ja","translated":"私はもう少し遅く戻るかもしれませんので、待つ必要はありません。","ms":382.848833}
+{"type":"trial","id":"modality-4","text":"今天應該可以參加，但還沒確定。","from":"zh","to":"ja","translated":"今日は参加できると思いますが、まだ確定していません。","ms":307.0411250000002}
+{"type":"trial","id":"modality-5","text":"我不一定能準時到，不過會盡量。","from":"zh","to":"ja","translated":"私は必ずしも時間通りに到着できるとは限りませんが、できるだけ努力します。","ms":308.73416599999973}
+{"type":"error","id":"modality-6","error":"Error: Translation exceeded its output limit"}
+{"type":"trial","id":"modality-7","text":"我明天沒辦法參加，已經確定了。","from":"zh","to":"ja","translated":"明日は参加できません。確定しました。","ms":484.6511250000003}
+{"type":"trial","id":"modality-8","text":"我可能不會買，還想考慮一下。","from":"zh","to":"ja","translated":"私は購入しないかもしれませんが、もう少し考えたいです。","ms":410.55012499999975}
+{"type":"trial","id":"modality-9","text":"那可能不是我的東西。","from":"zh","to":"ja","translated":"それは私のものではないかもしれません。","ms":172.94295799999963}
+{"type":"trial","id":"modality-10","text":"我不是不想來，是今天有事情。","from":"zh","to":"ja","translated":"私は来たくないわけではありません。今日はちょっとした用事があるのです。","ms":392.21187499999996}
+{"type":"trial","id":"modality-11","text":"如果明天下雨，我就不去了。","from":"zh","to":"ja","translated":"もし明日雨が降ったら、私は行きません。","ms":208.10975000000053}
+{"type":"trial","id":"modality-12","text":"謝謝你提醒，我會再確認時間。","from":"zh","to":"ja","translated":"ご指摘ありがとうございます。時間をもう一度確認します。","ms":272.8032920000005}
+{"type":"complete"}
