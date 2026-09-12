@@ -13,11 +13,13 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--ffmpeg', default=shutil.which('ffmpeg'))
+parser.add_argument('--manifest', default='tests/corpus/continuity.json',
+                    help='manifest path relative to the repository root')
 args = parser.parse_args()
 if not args.ffmpeg or not shutil.which('say'):
     parser.error('Requires macOS say with Kyoko voice, and --ffmpeg or ffmpeg on PATH')
 
-manifest = Path(__file__).resolve().parents[2] / 'tests/corpus/continuity.json'
+manifest = Path(__file__).resolve().parents[2] / args.manifest
 args.output.mkdir(parents=True, exist_ok=True)
 RATE = '16000'
 # A plain three-tone bed stands in for background music. It is synthetic, not a

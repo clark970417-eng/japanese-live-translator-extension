@@ -1,0 +1,34 @@
+{"atSeconds":5,"type":"start","minutes":2,"ok":true,"model":"mlx-whisper + hunyuan-mt-15","rssMB":1691}
+{"atSeconds":10,"type":"cycle","cycle":1,"id":"soak-b","queueAgeMaxMs":785,"finalDelayMs":1855,"finalText":"え、今の音なんだろう。ちょっと巻き戻してみます。","rssMB":1609,"modelReloads":1}
+{"atSeconds":14,"type":"cycle","cycle":2,"id":"soak-c","queueAgeMaxMs":785,"finalDelayMs":1647,"finalText":"ごめん、ちょっと水飲んでくる。","rssMB":1615,"modelReloads":1}
+{"atSeconds":21,"type":"draft","cycle":3,"ok":true,"text":"今日の配信はとても良かったです、ありがとうございました。","warning":false}
+{"atSeconds":21,"type":"cycle","cycle":3,"id":"soak-d","queueAgeMaxMs":812,"finalDelayMs":1124,"finalText":"次の話題に行く前に、コメントを少し読みますね。","rssMB":1604,"modelReloads":1}
+{"atSeconds":25,"type":"non-speech","cycle":4,"control":"silence-control","text":"","captions":0}
+{"atSeconds":25,"type":"cycle","cycle":4,"id":"soak-e","queueAgeMaxMs":812,"finalDelayMs":1251,"finalText":"うわ、危な、今の完全に死んだと思った。","rssMB":1590,"modelReloads":1}
+{"atSeconds":36,"type":"cycle","cycle":5,"id":"soak-f","queueAgeMaxMs":812,"finalDelayMs":1137,"finalText":"この装備の強化素材、どこで集めたらいいんだろう。","rssMB":1753,"modelReloads":1}
+{"atSeconds":41,"type":"draft","cycle":6,"ok":true,"text":"今日の配信はとても良かったです、ありがとうございました。","warning":false}
+{"atSeconds":41,"type":"restarting-host","cycle":6,"rssMB":1784}
+{"atSeconds":48,"type":"host-restarted","cycle":6,"ok":true,"model":"mlx-whisper + hunyuan-mt-15","rssMB":3170}
+{"atSeconds":48,"type":"cycle","cycle":6,"id":"soak-g","queueAgeMaxMs":802,"finalDelayMs":1290,"finalText":"あと5分だけやって、今日は終わりにします。","rssMB":3170,"modelReloads":1}
+{"atSeconds":50,"type":"cycle","cycle":7,"id":"soak-h","queueAgeMaxMs":802,"finalDelayMs":477,"finalText":"はい。","rssMB":3182,"modelReloads":1}
+{"atSeconds":56,"type":"non-speech","cycle":8,"control":"music-only-control","text":"","captions":0}
+{"atSeconds":56,"type":"cycle","cycle":8,"id":"soak-a","queueAgeMaxMs":752,"finalDelayMs":1126,"finalText":"このダンジョンは初見なので慎重に進んでいきますね","rssMB":3204,"modelReloads":1}
+{"atSeconds":62,"type":"draft","cycle":9,"ok":true,"text":"今日の配信はとても良かったです、ありがとうございました。","warning":false}
+{"atSeconds":62,"type":"cycle","cycle":9,"id":"soak-b","queueAgeMaxMs":756,"finalDelayMs":1676,"finalText":"え、今の音なんだろう。ちょっと巻き戻してみます。","rssMB":3202,"modelReloads":1}
+{"atSeconds":71,"type":"cycle","cycle":10,"id":"soak-c","queueAgeMaxMs":756,"finalDelayMs":1583,"finalText":"ごめん、ちょっと水飲んでくる。","rssMB":1777,"modelReloads":1}
+{"atSeconds":77,"type":"cycle","cycle":11,"id":"soak-d","queueAgeMaxMs":756,"finalDelayMs":1074,"finalText":"次の話題に行く前に、コメントを少し読みますね。","rssMB":1741,"modelReloads":1}
+{"atSeconds":81,"type":"non-speech","cycle":12,"control":"silence-control","text":"","captions":0}
+{"atSeconds":82,"type":"draft","cycle":12,"ok":true,"text":"今日の配信はとても良かったです、ありがとうございました。","warning":false}
+{"atSeconds":82,"type":"restarting-host","cycle":12,"rssMB":1734}
+{"atSeconds":89,"type":"host-restarted","cycle":12,"ok":true,"model":"mlx-whisper + hunyuan-mt-15","rssMB":2667}
+{"atSeconds":89,"type":"cycle","cycle":12,"id":"soak-e","queueAgeMaxMs":754,"finalDelayMs":1112,"finalText":"うわ、危な、今の完全に死んだと思った。","rssMB":2379,"modelReloads":1}
+{"atSeconds":95,"type":"cycle","cycle":13,"id":"soak-f","queueAgeMaxMs":818,"finalDelayMs":1402,"finalText":"この装備の強化素材、どこで集めたらいいんだろう。","rssMB":1675,"modelReloads":1}
+{"atSeconds":100,"type":"cycle","cycle":14,"id":"soak-g","queueAgeMaxMs":818,"finalDelayMs":1435,"finalText":"あと5分だけやって、今日は終わりにします。","rssMB":1670,"modelReloads":1}
+{"atSeconds":102,"type":"draft","cycle":15,"ok":true,"text":"今日の配信はとても良かったです、ありがとうございました。","warning":false}
+{"atSeconds":107,"type":"cycle","cycle":15,"id":"soak-h","queueAgeMaxMs":818,"finalDelayMs":414,"finalText":"はい。","rssMB":1804,"modelReloads":1}
+{"atSeconds":113,"type":"non-speech","cycle":16,"control":"music-only-control","text":"","captions":0}
+{"atSeconds":113,"type":"cycle","cycle":16,"id":"soak-a","queueAgeMaxMs":760,"finalDelayMs":1161,"finalText":"このダンジョンは初見なので慎重に進んでいきますね","rssMB":1554,"modelReloads":1}
+{"atSeconds":119,"type":"cycle","cycle":17,"id":"soak-b","queueAgeMaxMs":772,"finalDelayMs":1902,"finalText":"え、今の音なんだろう。ちょっと巻き戻してみます。","rssMB":1575,"modelReloads":1}
+{"atSeconds":123,"type":"draft","cycle":18,"ok":true,"text":"今日の配信はとても良かったです、ありがとうございました。","warning":false}
+{"atSeconds":123,"type":"cycle","cycle":18,"id":"soak-c","queueAgeMaxMs":772,"finalDelayMs":1510,"finalText":"ごめん、ちょっと水飲んでくる。","rssMB":1581,"modelReloads":1}
+{"atSeconds":124,"type":"summary","minutes":2,"utterances":18,"drafts":6,"restarts":2,"sessionCycles":3,"blank":0,"missingFinal":0,"duplicates":140,"staleAfterStop":0,"reconnects":2,"errors":[],"queueAgeP50":707,"queueAgeP95":802,"queueAgeMax":818,"finalDelayP50":1290,"finalDelayP95":1855,"finalDelayMax":1902,"rssMB":1581}

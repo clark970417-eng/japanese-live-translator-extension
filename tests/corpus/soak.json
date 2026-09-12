@@ -1,0 +1,10 @@
+[
+ {"id":"soak-a","text":"このダンジョンは初見なので、慎重に進んでいきますね。","rate":180,"condition":"normal","expect":"speech"},
+ {"id":"soak-b","text":"えっ、今の音なんだろう。ちょっと巻き戻してみます。","rate":200,"condition":"normal","expect":"speech"},
+ {"id":"soak-c","text":"ごめん、ちょっと水飲んでくる。","rate":220,"condition":"fast","expect":"speech"},
+ {"id":"soak-d","text":"次の話題に行く前に、コメントを少し読みますね。","rate":170,"condition":"normal","expect":"speech"},
+ {"id":"soak-e","text":"うわ、あぶな。今の完全に死んだと思った。","rate":240,"condition":"fast","expect":"speech"},
+ {"id":"soak-f","text":"この装備の強化素材、どこで集めたらいいんだろう。","rate":180,"condition":"normal","expect":"speech"},
+ {"id":"soak-g","text":"あと五分だけやって、今日は終わりにします。","rate":180,"condition":"normal","expect":"speech"},
+ {"id":"soak-h","text":"はい。","rate":180,"condition":"short","expect":"speech"}
+]
