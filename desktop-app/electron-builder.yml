@@ -6,6 +6,8 @@ files:
   - 'out/**/*'
   - 'package.json'
   - '!out/main/benchmark-*.cjs'
+  - '!out/main/verify-*.cjs'
+  - '!out/main/soak-*.cjs'
 extraResources:
   - from: 'resources/'
     to: 'bridge-scripts/'
