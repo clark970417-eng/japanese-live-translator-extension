@@ -1,0 +1,6 @@
+{"time": "2026-09-12T08:53:48.494759+00:00", "event": "Independent small-model prompt A/B begins during soak; latency in this interval includes concurrent inference"}
+{"time": "2026-09-12T08:55:36.846923+00:00", "event": "Prompt reference-text A/B complete; recognized-text A/B begins"}
+{"time": "2026-09-12T08:56:34.429527+00:00", "event": "Opera browser audio integration test begins; concurrent capture/inference"}
+{"time": "2026-09-12T09:03:05.891058+00:00", "event": "Prompt benchmarks and Opera capture stopped; installed app idle"}
+{"time": "2026-09-12T09:11:16.703112+00:00", "event": "Viewer-style prompt probe completed; browser composer smoke test performed with one typed translation"}
+{"time": "2026-09-12T17:29:11.411296+08:00", "event": "Build, packaging, codesigning and isolated UI checks ran during the latter soak interval. No additional prompt benchmark was started. Desktop app was quit for installation; user applications remained open."}

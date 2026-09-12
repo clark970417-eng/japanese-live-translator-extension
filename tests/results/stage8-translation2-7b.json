@@ -1,0 +1,281 @@
+[
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "都好好聽呀～！",
+    "translated": "全部素敵ですね～！",
+    "ms": 895
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "以前和現在的歌聲都很好聽，我都很喜歡！",
+    "translated": "以前の歌声も今の歌声もとても素敵で、どちらも大好きです！",
+    "ms": 1432
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "晚安啊，REC加油～",
+    "translated": "おやすみなさい、RECさん、頑張ってくださいね～",
+    "ms": 1127
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "睡飽飽補精神喔🤎✨",
+    "translated": "しっかり寝て元気をチャージしましょう🤎✨",
+    "ms": 1278
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "謝謝排程，了解🫡",
+    "translated": "スケジュールをご案内いただき、ありがとうございます。了解です🫡",
+    "ms": 1269
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "鹿乃chan，今天也辛苦了！",
+    "translated": "鹿乃ちゃん、今日もお疲れさまでした！",
+    "ms": 1100
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "如果有不懂的漢字和功能，可以問我ww",
+    "translated": "分からない漢字や機能があれば、私に聞いてくださいねww",
+    "ms": 1325
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "今日は配信しません。明日の夜八時に会いましょう。",
+    "translated": "今天不會直播。明天晚上八點見吧。",
+    "ms": 1077
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "あと二回だけ挑戦します。まだクリアしていません。",
+    "translated": "我還要再挑戰兩次。我還沒有通關呢。",
+    "ms": 876
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "右じゃなくて、左の扉を開けてください。",
+    "translated": "不是右邊，請打開左邊的門。",
+    "ms": 661
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "ちょっと待って。魚が逃げちゃった！",
+    "translated": "等一下。魚跑掉了！",
+    "ms": 461
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "来てくれてありがとうございます。",
+    "translated": "謝謝你過來。",
+    "ms": 400
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "やばい、やばい！ああー！",
+    "translated": "糟了，糟了！啊——！",
+    "ms": 536
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "今天的直播很開心，謝謝你！請好好休息喔。",
+    "translated": "今日の配信、とても楽しかったです。ありがとうございます！どうぞゆっくり休んでくださいね。",
+    "ms": 1922
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "這套衣服好可愛！也很適合你。",
+    "translated": "この服、すごく可愛いですね！あなたにもぴったりです。",
+    "ms": 1379
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "不好意思，我還不太懂日文，請問明天幾點開始呢？",
+    "translated": "すみません、私はまだ日本語があまり得意ではないのですが、明日は何時に始まるのでしょうか？",
+    "ms": 1688
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "不用勉強自己喔，我會慢慢等的。",
+    "translated": "無理に頑張らなくて大丈夫ですよ。私はゆっくり待っていますから。",
+    "ms": 1188
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "不是右邊，是左邊喔。",
+    "translated": "右側ではなく、左側ですよ。",
+    "ms": 592
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "今天沒辦法看到最後，明天再來看！",
+    "translated": "今日は最後まで見ることができません。明日また来てみます！",
+    "ms": 1410
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "等一下要出門，今天不能待到結束。",
+    "translated": "もうすぐ出かけなくて、今日は最後までいられません。",
+    "ms": 1400
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "昨天太忙，沒能看完直播。",
+    "translated": "昨日はとても忙しくて、配信を最後まで見ることができませんでした。",
+    "ms": 1637
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "明天也不一定能來，請不要等我。",
+    "translated": "明日も来られるとは限りませんので、待たないでください。",
+    "ms": 1325
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "今日はもう遊べませんが、昨日は最後まで遊べました。",
+    "translated": "今天已經不能玩了，但昨天可以玩到最後。",
+    "ms": 1039
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "我明天晚上還會來看，今天先去睡了。",
+    "translated": "明日の夜もまた見に来ます。今日はもう寝に行きますね。",
+    "ms": 1442
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "我昨天沒能來，今天終於趕上了！",
+    "translated": "昨日は参加できませんでしたが、今日やっと来ることができました！",
+    "ms": 1169
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "謝謝你整理下週的時間表，我知道了。",
+    "translated": "来週のスケジュールをまとめてくださってありがとうございます。分かりました。",
+    "ms": 1164
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "希望你今晚能睡飽，明天精神好一點。",
+    "translated": "今夜はしっかりお休みになって、明日は元気いっぱいでいられますように。",
+    "ms": 1473
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "剛才那首歌真好聽，不用再唱一次也沒關係喔。",
+    "translated": "さっきの歌、本当に素敵でした。もう一度歌ってもらわなくても大丈夫ですよ。",
+    "ms": 2193
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "明日も来られるかはまだ分かりません。待たなくて大丈夫です。",
+    "translated": "明天還能不能來還不清楚。不用等也沒關係。",
+    "ms": 1409
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "昨日じゃなくて、来週の金曜日に変更になりました。",
+    "translated": "不是昨天，改成下週的星期五了。",
+    "ms": 877
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "7B-Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "あと三回と言いましたが、今日はもう一回だけにします。",
+    "translated": "我說還有三次，但今天就只做一次啦。",
+    "ms": 997
+  }
+]

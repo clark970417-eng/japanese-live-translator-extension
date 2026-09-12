@@ -35,3 +35,30 @@ test('capture messages require active session and correct offscreen sender; stop
  listener({type:'speech-result',session,id:2,text:'古い'},{url:'chrome-extension://test/offscreen.html'},()=>{});
  assert.equal((await call({type:'subtitles'},{tab:{id:7}})).text.items.length,0);
 });
+
+test('failed capture startup cleans up and exposes an actionable error, then can retry',async()=>{
+ let listener,fail=true;const stopped=[];
+ const chrome={storage:{local:{get:async()=>({subtitleSettings:{captionMode:'realtime'}}),set:async()=>{}}},tabs:{sendMessage:async()=>{},onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=>{if(fail)throw Error('Extension has not been invoked (activeTab)');return 'stream';}},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{stopped.push(m.type);return{ok:true};}}};
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console});
+ const call=m=>new Promise(resolve=>listener(m,{},resolve));
+ const failure=await call({type:'subtitle-control',action:'start',tabId:7});
+ assert.equal(failure.ok,false);assert.match(failure.error,/影片分頁/);
+ const health=(await call({type:'health'})).text;
+ assert.equal(health.running,false);assert.equal(health.captureTabId,null);assert.equal(health.lastError,failure.error);
+ assert.equal(stopped.filter(t=>t==='offscreen-stop').length,2);
+ fail=false;assert.equal((await call({type:'subtitle-control',action:'start',tabId:7})).ok,true);
+ assert.equal((await call({type:'health'})).text.lastError,'');
+ await call({type:'subtitle-control',action:'stop'});
+});
+
+test('frequent chat cheers bypass both desktop inference and network translation',async()=>{
+ let listener,inference=0,network=0;
+ const chrome={storage:{local:{get:async()=>({speechMode:'desktop'}),set:async()=>{}}},tabs:{onRemoved:{addListener(){}}},runtime:{onMessage:{addListener:f=>listener=f}}};
+ class NativeClient{request(){inference++;throw Error('Unexpected inference');}}
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch:async()=>{network++;throw Error('Unexpected network');}});
+ const replies=await Promise.all(Array.from({length:40},(_,i)=>new Promise(resolve=>listener({type:'translate',text:['ないすー','頑張れー！','ファイト','おしい'][i%4],direction:'ja-zh'}, {},resolve))));
+ assert(replies.every(r=>r.ok));assert.deepEqual([...new Set(replies.map(r=>r.text))],['漂亮！','加油！','可惜了！']);
+ assert.equal(inference,0);assert.equal(network,0);
+});

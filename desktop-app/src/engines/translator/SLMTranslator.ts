@@ -64,7 +64,7 @@ export class SLMTranslator extends LlamaWorkerTranslator {
 
     return workerPool.sendRequest(
       { type: 'summarize', transcript },
-      'summarize'
+      'summarize', this.workerOptions
     )
   }
 }

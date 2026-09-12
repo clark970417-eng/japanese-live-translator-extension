@@ -152,7 +152,15 @@ export function TranslatorSettings({
           />
           <div>
             <div style={{ fontWeight: 500 }}>HY-MT 1.5 (Offline default)</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>Fast + high quality, 36 languages, ~1GB — surpasses Google/DeepL</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>Compact local model, about 1 GB. Lower resource use; review important translations.</div>
+          </div>
+        </label>
+        <label style={radioLabelStyle}>
+          <input type="radio" name="engine" checked={engineMode === 'offline-hymt2'}
+            onChange={() => onEngineModeChange('offline-hymt2')} disabled={disabled} />
+          <div>
+            <div style={{ fontWeight: 500 }}>Hy-MT2 7B (Offline)</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>About 4.6 GB. More natural wording in some cases; longer processing time and higher memory use.</div>
           </div>
         </label>
         <label style={radioLabelStyle}>
@@ -221,7 +229,7 @@ export function TranslatorSettings({
                 <div style={{ fontSize: '11px', color: '#94a3b8' }}>Reduces VRAM ~50%</div>
               </div>
             </label>
-            {(engineMode === 'offline-hymt15' || engineMode === 'offline-hunyuan-mt') && (
+            {(engineMode === 'offline-hymt15' || engineMode === 'offline-hymt2' || engineMode === 'offline-hunyuan-mt') && (
               <label style={{ ...radioLabelStyle, paddingLeft: '24px' }}>
                 <input
                   type="checkbox"
@@ -232,7 +240,7 @@ export function TranslatorSettings({
                 <div>
                   <div style={{ fontWeight: 500, fontSize: '12px' }}>Speculative decoding (LFM2 draft)</div>
                   <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    LFM2-350M generates draft tokens, verified by the main model — 1.5-2x faster
+                    LFM2-350M proposes draft tokens for the main model to verify. Speed gains depend on the selected model and input.
                   </div>
                   <div style={{ fontSize: '10px', color: '#64748b' }}>
                     Requires LFM2 model (~230MB). Extra memory: ~230MB on top of the main model.

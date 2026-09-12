@@ -42,7 +42,7 @@ export function SpeakerSettings({
       </label>
       <div style={{ marginTop: '4px', fontSize: '11px', color: '#94a3b8' }}>
         Identifies speakers via FluidAudio (CoreML). Color-coded labels appear on subtitles.
-        ~32MB models, ~40μs/chunk on Apple Silicon.
+        Downloads about 32 MB of model data. Speaker labels are estimates.
       </div>
       {speakerDiarizationEnabled && (
         <div style={{ marginTop: '6px', fontSize: '11px', color: '#f59e0b' }}>

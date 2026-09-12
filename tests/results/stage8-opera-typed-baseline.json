@@ -1,0 +1,5 @@
+{
+  "version": "3.7.5",
+  "isolatedProfile": true,
+  "result": "{\n  \"passed\": true,\n  \"elapsedMs\": 2236,\n  \"voiceRunning\": false,\n  \"draft\": \"今日は最後を見ることができません。明日また見に来ます！\",\n  \"mode\": \"本機翻譯草稿 · 請確認語氣\"\n}"
+}

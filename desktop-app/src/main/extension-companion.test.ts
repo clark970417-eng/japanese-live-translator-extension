@@ -6,13 +6,19 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { startExtensionCompanion } from './extension-companion'
 import type { AppContext } from './app-context'
+import { store } from './store'
 import { startPipeline } from './ipc/pipeline-ipc'
 
 vi.mock('./store', () => ({ store: { get: vi.fn() } }))
 vi.mock('./ipc/pipeline-ipc', () => ({ startPipeline: vi.fn(async () => ({ success: true })) }))
+const textInference = vi.hoisted(() => vi.fn(async () => 'こんにちは'))
 
 vi.mock('../engines/translator/HunyuanMT15Translator', () => ({ HunyuanMT15Translator: class {
-  async initialize() {} async dispose() {} async translate() { return 'こんにちは' }
+  async initialize() {} async dispose() {} async translate() { return textInference() }
+} }))
+
+vi.mock('../engines/translator/HunyuanMT2Translator', () => ({ HunyuanMT2Translator: class {
+  async initialize() {} async dispose() {} async translate() { return '新しいモデル' }
 } }))
 
 it('emits Japanese before translation, rejects invalid audio, and continues after errors', async () => {
@@ -61,9 +67,64 @@ it('emits Japanese before translation, rejects invalid audio, and continues afte
     pipeline.emit('ger-corrected',{sourceText:'こんにちは！',translatedText:'你好！',timestamp:2})
     await vi.waitFor(()=>expect(messages).toHaveLength(8))
     expect(messages[7]).toMatchObject({segment:'first',result:{correction:true}})
+    pipeline.emit('draft-stt-result',{sourceText:'暫定',translatedText:'',isInterim:true,timestamp:3})
+    await vi.waitFor(()=>expect(messages).toHaveLength(9))
+    expect(messages[8]).toMatchObject({event:'caption',segment:'first',result:{text:'暫定',translated:'',interim:true}})
+    vi.mocked(store.get).mockReturnValue('offline-hymt2')
+    socket.write(JSON.stringify({id:6,op:'translate',direction:'zh-ja',text:'你好'})+'\n')
+    await vi.waitFor(()=>expect(messages).toHaveLength(10))
+    expect(messages[9]).toMatchObject({id:6,ok:true,result:{text:'新しいモデル'}})
+    vi.mocked(store.get).mockReset()
   } finally {
     socket.destroy()
     await new Promise<void>(resolve => server.close(() => resolve()))
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+it('rejects excess page translations without disconnecting audio and gives queued audio priority', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'jtl-queue-'))
+  const order: string[] = []
+  const pipeline = Object.assign(new EventEmitter(), {
+    active: false, running: true, stop: vi.fn(async () => {}),
+    process: vi.fn(async () => { order.push('audio'); return { sourceText: '声', translatedText: '聲音' } })
+  })
+  const server = await startExtensionCompanion({pipeline} as unknown as AppContext, directory)
+  const socket = connect(join(directory, 'desktop.sock'))
+  const messages: Array<Record<string, unknown>> = []
+  let buffer = ''
+  socket.setEncoding('utf8')
+  socket.on('data', data => {
+    buffer += data
+    let newline: number
+    while ((newline = buffer.indexOf('\n')) >= 0) {
+      messages.push(JSON.parse(buffer.slice(0, newline))); buffer = buffer.slice(newline + 1)
+    }
+  })
+  const send = (message: object): void => { socket.write(JSON.stringify(message) + '\n') }
+  let release!: (value: string) => void
+  try {
+    send({id:0,op:'init'})
+    await vi.waitFor(() => expect(messages.some(m => m.id === 0 && m.ok)).toBe(true))
+    textInference.mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+    textInference.mockImplementation(async () => { order.push('text'); return 'こんにちは' })
+    send({id:1,op:'translate',text:'最初'})
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    for (let id = 2; id < 20; id++) send({id,op:'translate',text:'文字' + id})
+    send({id:30,op:'decode',audio:Buffer.from(new Float32Array([.1]).buffer).toString('base64')})
+    await vi.waitFor(() => expect(messages.some(m => String(m.error).includes('queue is full'))).toBe(true))
+    expect(socket.destroyed).toBe(false)
+    release('最初')
+    await vi.waitFor(() => expect(messages.some(m => m.id === 30 && m.ok)).toBe(true))
+    expect(order[0]).toBe('audio')
+    await vi.waitFor(() => expect(messages.filter(m => m.id !== 0)).toHaveLength(20))
+    send({id:31,op:'translate',text:'再試行'})
+    await vi.waitFor(() => expect(messages.some(m => m.id === 31 && m.ok)).toBe(true))
+  } finally {
+    release?.('cleanup')
+    socket.destroy()
+    await new Promise<void>(resolve => server.close(() => resolve()))
+    textInference.mockReset().mockResolvedValue('こんにちは')
     rmSync(directory, { recursive: true, force: true })
   }
 })

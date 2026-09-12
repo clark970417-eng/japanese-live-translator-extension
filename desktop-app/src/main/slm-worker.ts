@@ -1,3 +1,4 @@
+import { boundedTranslation } from './bounded-translation'
 /**
  * UtilityProcess worker for SLM inference via node-llama-cpp.
  * Supports TranslateGemma, Hunyuan-MT, LFM2, and PLaMo-2 models.
@@ -21,14 +22,17 @@ import type { Llama, LlamaModel, LlamaContext, LlamaContextSequence, Token } fro
 import { LANG_NAMES_EN, LANG_NAMES_ZH } from '../engines/language-names'
 import { formatGlossaryPrompt } from '../engines/translator/glossary-utils'
 import { createLogger } from './logger'
-import { resetTranslationHistory } from './translation-session'
+import { resetTranslationHistory, translationContextForModel } from './translation-session'
 
 const log = createLogger('slm-worker')
 
-type ModelType = 'translategemma' | 'hunyuan-mt' | 'hunyuan-mt-15' | 'lfm2' | 'plamo'
+type ModelType = 'translategemma' | 'hunyuan-mt' | 'hunyuan-mt-15' | 'hunyuan-mt-2' | 'lfm2' | 'plamo'
 
 /** Messages sent from main process to this worker */
+let activeRequest: {id:string,controller:AbortController} | null = null
+
 type WorkerInboundMessage =
+  | {type:'cancel';id:string}
   | { type: 'init'; modelPath: string; kvCacheQuant?: boolean; modelType?: ModelType; draftModelPath?: string }
   | { type: 'translate'; id: string; text: string; from: string; to: string; context?: TranslateContextPayload }
   | { type: 'translate-incremental'; id: string; text: string; previousOutput: string; from: string; to: string; context?: TranslateContextPayload }
@@ -132,7 +136,7 @@ async function handleInit(
   llama = await getLlama({ gpu: 'auto' })
   log.info('Loading model:', modelPath)
   model = await llama.loadModel({ modelPath })
-  log.info('Model loaded, creating context...')
+  log.info(`Model loaded (backend=${llama.gpu}, GPU layers=${model.gpuLayers}), creating context...`)
 
   const contextOptions: Record<string, unknown> = {
     contextSize: TRANSLATION_CONTEXT_SIZE
@@ -220,7 +224,7 @@ function buildTranslationPrompt(
 ): string {
   const fromLang = LANG_NAMES_EN[from] ?? from
   const toLang = LANG_NAMES_EN[to] ?? to
-  const contextSection = buildContextPrompt(translateContext)
+  const contextSection = buildContextPrompt(translationContextForModel(translateContext, activeModelType))
 
   if (activeModelType === 'plamo') {
     // PLaMo-2-Translate uses structured tags for translation.
@@ -236,7 +240,7 @@ function buildTranslationPrompt(
     return `${contextSection}${text}`
   }
 
-  if (activeModelType === 'hunyuan-mt-15') {
+  if (activeModelType === 'hunyuan-mt-15' || activeModelType === 'hunyuan-mt-2') {
     const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
     if (isChinese) {
       const targetZh = LANG_NAMES_ZH[to] ?? to
@@ -286,7 +290,7 @@ function getInferenceParams(): { temperature: number; maxTokens: number; topK?: 
   if (activeModelType === 'lfm2') {
     return { temperature: 0.5, maxTokens: 512, topP: 1.0, minP: 0.1, repeatPenalty: { penalty: 1.05 } }
   }
-  if (activeModelType === 'hunyuan-mt' || activeModelType === 'hunyuan-mt-15') {
+  if (activeModelType === 'hunyuan-mt' || activeModelType === 'hunyuan-mt-15' || activeModelType === 'hunyuan-mt-2') {
     return { temperature: 0, maxTokens: 512, repeatPenalty: { penalty: 1.05 } }
   }
   return { temperature: 0.1, maxTokens: 512 }
@@ -383,7 +387,8 @@ async function warmPrefixCache(): Promise<void> {
 async function runInference(
   prompt: string,
   previousOutput?: string,
-  systemPrompt?: string
+  systemPrompt?: string,
+  sourceLength?: number
 ): Promise<{ response: string; inferenceMs: number; contextMs: number }> {
   const t0 = performance.now()
 
@@ -401,10 +406,10 @@ async function runInference(
 
     const inferenceParams = getInferenceParams()
     const t1 = performance.now()
-    const response = await session.prompt(prompt, {
+    const response = await boundedTranslation(session, prompt, {
       ...inferenceParams,
       ...(previousOutput?.trim() && { responsePrefix: previousOutput })
-    })
+    }, sourceLength, 15_000, activeRequest?.controller.signal)
     const inferenceMs = performance.now() - t1
 
     // Log speculative decoding stats for debugging
@@ -416,7 +421,7 @@ async function runInference(
 
     return { response: response.trim(), inferenceMs, contextMs }
   } catch (err) {
-    // Invalidate prefix cache on error to avoid corrupted state
+    // Unexpected inference errors still invalidate potentially corrupted state.
     log.error('Inference failed, invalidating prefix cache:', err)
     prefixCacheSequence?.dispose?.()
     prefixCacheSession?.dispose?.()
@@ -450,7 +455,7 @@ async function handleTranslate(
     const promptMs = performance.now() - t0
 
     const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
-    const { response, inferenceMs, contextMs } = await runInference(prompt, undefined, systemPrompt)
+    const { response, inferenceMs, contextMs } = await runInference(prompt, undefined, systemPrompt, text.length)
     const memAfter = process.memoryUsage()
     const totalMs = performance.now() - t0
 
@@ -499,7 +504,7 @@ async function handleTranslateIncremental(
     const prompt = buildTranslationPrompt(text, from, to, translateContext)
     const promptMs = performance.now() - t0
     const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
-    const { response, inferenceMs, contextMs } = await runInference(prompt, previousOutput, systemPrompt)
+    const { response, inferenceMs, contextMs } = await runInference(prompt, previousOutput, systemPrompt, text.length)
     const memAfter = process.memoryUsage()
     const totalMs = performance.now() - t0
 
@@ -562,7 +567,7 @@ async function handleTranslateSSBD(
     // The persistent prefix cache may own the only available sequence. Avoid
     // throwing on every streaming update when speculative decoding is unavailable.
     if (context.sequencesLeft === 0) {
-      const { response } = await runInference(prompt, undefined, systemPrompt)
+      const { response } = await runInference(prompt, undefined, systemPrompt, text.length)
       process.parentPort!.postMessage({ type: 'result', id, text: response })
       return
     }
@@ -572,7 +577,7 @@ async function handleTranslateSSBD(
 
     if (previousTokens.length === 0) {
       // No tokens to speculate with, fall back to regular translation
-      const { response, inferenceMs, contextMs } = await runInference(prompt, undefined, systemPrompt)
+      const { response, inferenceMs, contextMs } = await runInference(prompt, undefined, systemPrompt, text.length)
       const totalMs = performance.now() - t0
       logSSBDProfile(totalMs, promptMs, 0, inferenceMs, text.length, response.length, 0, 0, memBefore)
       process.parentPort!.postMessage({ type: 'result', id, text: response })
@@ -600,9 +605,9 @@ async function handleTranslateSSBD(
 
       // Draft tokens must be verified, not forced into the response: an earlier
       // translation can become incorrect when the source hypothesis changes.
-      const response = await ssbdSession.prompt(prompt, {
+      const response = await boundedTranslation(ssbdSession, prompt, {
         ...inferenceParams
-      })
+      }, text.length, 15_000, activeRequest?.controller.signal)
       const inferenceMs = performance.now() - t1
 
       // Collect speculative decoding stats
@@ -626,12 +631,16 @@ async function handleTranslateSSBD(
       predictor.dispose()
     }
   } catch (err) {
+    if (activeRequest?.controller.signal.aborted || /Translation (timed out|exceeded its output limit|cancelled)/.test(String(err))) {
+      process.parentPort!.postMessage({type:'error',id,message:err instanceof Error ? err.message : String(err)})
+      return
+    }
     // SSBD failed — fall back to regular translation
     log.warn('SSBD failed, falling back to regular translate:', err instanceof Error ? err.message : err)
     try {
       const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
       const prompt = buildTranslationPrompt(text, from, to, translateContext)
-      const { response } = await runInference(prompt, undefined, systemPrompt)
+      const { response } = await runInference(prompt, undefined, systemPrompt, text.length)
       process.parentPort!.postMessage({ type: 'result', id, text: response })
     } catch (fallbackErr) {
       process.parentPort!.postMessage({
@@ -696,7 +705,7 @@ function buildSimulMtPrompt(
 
   if (isRevision) {
     // Revision: full clause has arrived, retranslate for accuracy
-    if (activeModelType === 'hunyuan-mt-15') {
+    if (activeModelType === 'hunyuan-mt-15' || activeModelType === 'hunyuan-mt-2') {
       const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
       if (isChinese) {
         const targetZh = LANG_NAMES_ZH[to] ?? to
@@ -708,7 +717,7 @@ function buildSimulMtPrompt(
   }
 
   // Incremental: partial clause, translate what's available
-  if (activeModelType === 'hunyuan-mt-15') {
+  if (activeModelType === 'hunyuan-mt-15' || activeModelType === 'hunyuan-mt-2') {
     const isChinese = from === 'zh' || from === 'zh-Hant' || to === 'zh' || to === 'zh-Hant'
     if (isChinese) {
       const targetZh = LANG_NAMES_ZH[to] ?? to
@@ -778,15 +787,15 @@ async function handleTranslateSimulMt(
       log.info(`SimulMT session created for ${langPair}`)
     }
 
-    const contextSection = buildContextPrompt(translateContext)
+    const contextSection = buildContextPrompt(translationContextForModel(translateContext, activeModelType))
     const prompt = contextSection + buildSimulMtPrompt(text, from, to, isRevision)
     const inferenceParams = getInferenceParams()
 
     const t1 = performance.now()
-    const response = await simulMtSession.prompt(prompt, {
+    const response = await boundedTranslation(simulMtSession, prompt, {
       ...inferenceParams,
       ...(previousOutput?.trim() && !isRevision && { responsePrefix: previousOutput })
-    })
+    }, text.length, 15_000, activeRequest?.controller.signal)
     const inferenceMs = performance.now() - t1
     const totalMs = performance.now() - t0
 
@@ -982,8 +991,13 @@ async function handleDispose(): Promise<void> {
 // Serialize translate/summarize requests to prevent concurrent context access
 process.parentPort!.on('message', (e: { data: WorkerInboundMessage }) => {
   const msg = e.data
+  if (msg.type === 'cancel') {
+    if (activeRequest?.id === msg.id) activeRequest.controller.abort()
+    return
+  }
 
   const handleMessage = async (): Promise<void> => {
+    activeRequest = 'id' in msg ? {id:msg.id,controller:new AbortController()} : null
     try {
       switch (msg.type) {
         case 'init':
@@ -1020,7 +1034,7 @@ process.parentPort!.on('message', (e: { data: WorkerInboundMessage }) => {
         id: 'id' in msg ? msg.id : undefined,
         message: err instanceof Error ? err.message : String(err)
       })
-    }
+    } finally { activeRequest = null }
   }
 
   // Lifecycle operations touch the same context as inference. Serialize them

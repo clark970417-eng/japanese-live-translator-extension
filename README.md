@@ -10,7 +10,7 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
-Current validation: [desktop 3.7.4 follow-up and known limitations](RETEST-3.7.4.md).
+Current validation: [3.8.0 measurements and remaining checks](RETEST-3.8.0.md).
 
 ## Project overview
 
@@ -28,7 +28,8 @@ The extension never publishes a message automatically. Its optional writing assi
 - Local Japanese recognition through browser WebGPU or the full desktop MLX engine.
 - Silero V5 voice activity detection in a dedicated worker.
 - Incremental Japanese hypotheses before the final recognition result.
-- Traditional Chinese translation with bounded requests and fallback handling.
+- Traditional Chinese translation with bounded requests, cancellation of obsolete work, and recognition recovery.
+- Optional local Hy-MT2 7B translation; the smaller HY-MT1.5 model remains available for faster output.
 - Two display modes: one low-latency caption pair or a four-entry ordered transcript queue.
 - A movable and resizable caption panel with configurable type size, color, outline, background, and opacity.
 - Persistent transcript records, failed-translation retry, and text export.
@@ -80,11 +81,11 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The integration passes 56 extension tests, 496 desktop tests, and five Python
-bridge tests. Coverage includes native response ordering, source-before-translation
+The current revision passes 60 extension tests and 526 desktop tests. An isolated
+desktop interface run passed 13 checks; its audio-start check was not run. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See
-[3.7 verification](RETEST-3.7.0.md) and the [upstream comparison](COMPARISON-LIVETRANSLATE.md).
+[3.8 verification](RETEST-3.8.0.md) and the [upstream comparison](COMPARISON-LIVETRANSLATE.md).
 
 The end-to-end browser fixture at `tests/capture.html` uses the production capture
 and caption path with a 10.7-second synthetic Japanese recording. Historical
@@ -96,7 +97,7 @@ they should not be interpreted as measurements of the new desktop backend.
 - Recognition quality can decrease with music, overlapping speakers, proper names, noise, and very short utterances.
 - Translation quality and latency depend on model choice, available compute, and, for network providers, service and network conditions.
 - Picture-in-picture windows cannot host a normal page content-script overlay.
-- A 140-round, 31.8-minute local-engine test completed with 14 reinitializations; hours-long live streams and all optional engines remain unverified. See [the staged optimization report](OPTIMIZATION-PROGRESS.md).
+- A 60.02-minute repeated-speech stress run completed 329 trials and 32 restarts without empty final strings, but had substantial high-load latency spikes. Diverse hours-long livestreams and all optional engines remain unverified. See [the verification report](RETEST-3.8.0.md).
 - The model has not been fine-tuned for this project.
 
 ## Third-party components

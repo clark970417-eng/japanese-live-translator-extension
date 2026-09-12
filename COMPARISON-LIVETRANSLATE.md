@@ -27,7 +27,40 @@ browser messaging, so it is not an end-to-end UI comparison.
 | Stop lifecycle | Original subprocess cleanup logged a null-process error | Fork already captures the child process before asynchronous disposal; additional stale-work guards added |
 | Chinese suitability | Simplified Chinese output, with context sometimes repeated ahead of the current source | Traditional Chinese output and source-only context; awkward wording still occurs |
 
-## Awake A/B results
+## September 12: twenty-utterance comparison
+
+On Apple M5 with 16 GB memory, both source builds replayed JSUT
+BASIC5000_4501–4520 with Whisper Large v3 Turbo and HY-MT1.5 1.8B Q4_K_M.
+The same growing-window schedule was used, one inference benchmark at a time.
+These are previously used development inputs, not unseen or blinded evaluation.
+
+| Engine-only measurement | Pinned upstream | Revised fork |
+| --- | ---: | ---: |
+| First Chinese, median | 6.04 s | 1.43 s |
+| First Chinese, p95 | 22.20 s | 2.45 s |
+| Final delay after speech end, median | 12.48 s | 1.40 s |
+| Missing final outputs | 0 / 20 | 0 / 20 |
+| Silent controls producing text | 2 / 2 | 0 / 2 |
+| Punctuation-insensitive recognition character error | 8.17% | 8.17% |
+
+The fork was faster in this run and did not hallucinate on the silent controls.
+This does not establish translation-quality superiority: both still mistranslated
+some words, and recognition error is not a translation score. The corpus has one
+read-speech speaker and does not represent noisy, overlapping livestream speech.
+
+Important conditions: the original Python bridge ignores the requested Japanese
+setting and uses automatic language detection; the fork honors it. Its initial
+warm-up and deterministic decoding also differ. The original requires FFmpeg,
+which was supplied for the valid comparison. These are implementation differences,
+not identical decoder configurations. The selected HY-MT1.5 path is not a benchmark
+of every upstream engine or its automatic default selection. Machine load was not
+held constant, and capture, VAD, browser messaging and rendering were bypassed.
+
+Raw evidence: [upstream](tests/results/stage8-upstream-ready-matched.jsonl),
+[fork](tests/results/stage8-fork-context-isolated.jsonl). Failed setup runs and
+rejected experiments are described in [the revision report](RETEST-3.8.0.md).
+
+## Historical awake A/B results
 
 The comparison was repeated while awake on September 11, 2026. Values below are
 elapsed seconds from the beginning of a 10.7223-second recording. Engines were

@@ -8,6 +8,7 @@ import { bindPipelineActivity } from '../src/main/pipeline-activity';
 import { readFileSync, writeFileSync } from 'fs';
 import { TranslationPipeline } from '../src/pipeline/TranslationPipeline';
 import { MlxWhisperEngine } from '../src/engines/stt/MlxWhisperEngine';
+import { HunyuanMT2Translator } from '../src/engines/translator/HunyuanMT2Translator';
 import { HunyuanMT15Translator } from '../src/engines/translator/HunyuanMT15Translator';
 if (!process.env.COMPARE_PROFILE || !process.env.COMPARE_AUDIO || !process.env.COMPARE_REPORT) {
     throw new Error('Set COMPARE_PROFILE, COMPARE_AUDIO, and COMPARE_REPORT to isolated test paths.');
@@ -20,8 +21,8 @@ app.whenReady().then(async () => {
     let start = Date.now();
     let run = 'init';
     const record = (type: string, data: any) => { const e = { type, run, seconds: (Date.now() - start) / 1000, sessionSeconds: (Date.now() - sessionStart) / 1000, ...data }; events.push(e); console.log('MEASURE ' + JSON.stringify(e)); };
-    const stt = new MlxWhisperEngine();
-    const translator = new HunyuanMT15Translator({ kvCacheQuant: process.env.COMPARE_KV_QUANT !== 'false' });
+    const stt = new MlxWhisperEngine({model:process.env.COMPARE_STT_MODEL});
+    const translator = process.env.COMPARE_TRANSLATOR === 'hunyuan-mt-2' ? new HunyuanMT2Translator({variant:'7B-Q4_K_M'}) : new HunyuanMT15Translator({ kvCacheQuant: process.env.COMPARE_KV_QUANT !== 'false' });
     // Engine durations include time waiting for the shared translation worker.
     let phase = 'initialization';
     const originalStt = stt.processAudio.bind(stt);
@@ -42,9 +43,15 @@ app.whenReady().then(async () => {
     const releaseActivity = bindPipelineActivity(pipeline, powerSaveBlocker);
     pipeline.registerSTT('mlx-whisper', () => stt);
     pipeline.registerTranslator('hunyuan-mt-15', () => translator);
+    if (process.env.COMPARE_DRAFT_MODEL) {
+        pipeline.registerSTT('benchmark-draft', () => new MlxWhisperEngine({model:process.env.COMPARE_DRAFT_MODEL,language:'ja'}));
+        pipeline.setDraftSttEnabled(true, 'benchmark-draft');
+    }
+    pipeline.on('draft-stt-result', r => record('draft', r));
     pipeline.on('interim-result', r => record('interim', r));
     pipeline.on('error', e => record('error', { error: String(e) }));
     try {
+        record('configuration', {translatorModel:process.env.COMPARE_TRANSLATOR || 'hunyuan-mt-15',sttModel:process.env.COMPARE_STT_MODEL || 'mlx-community/whisper-large-v3-turbo',draftModel:process.env.COMPARE_DRAFT_MODEL || null,warmed:true,repeatedFixture:true,bypassesCapture:true});
         await pipeline.switchEngine({ mode: 'cascade', sttEngineId: 'mlx-whisper', translatorEngineId: 'hunyuan-mt-15' });
         pipeline.start();
         const wav = readFileSync(process.env.COMPARE_AUDIO!);
@@ -63,7 +70,7 @@ app.whenReady().then(async () => {
                 run = target + '-' + round;
                 start = Date.now();
                 phase = 'interim';
-                for (const sec of [1.2, 2.8, 4.5, 6.5, 8.5]) {
+                for (const sec of (process.env.COMPARE_WINDOWS ? process.env.COMPARE_WINDOWS.split(',').map(Number) : [1.2, 2.8, 4.5, 6.5, 8.5]).filter(s=>s<pcm.length/16000)) {
                     await sleep(sec * 1000 - (Date.now() - start));
                     const r = await pipeline.processStreaming(pcm.slice(0, Math.round(sec * 16000)), 16000);
                     if (r)

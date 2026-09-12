@@ -15,7 +15,7 @@ describe('EngineMode catalog (#702)', () => {
   })
 
   it('LLM_ENGINE_MODES only retains the two supported LLM engines', () => {
-    expect(LLM_ENGINE_MODES).toEqual(['offline-hymt15', 'offline-hunyuan-mt'])
+    expect(LLM_ENGINE_MODES).toEqual(['offline-hymt15', 'offline-hymt2', 'offline-hunyuan-mt'])
   })
 
   it('API_ENGINE_MODES still lists every online provider mode', () => {
@@ -200,3 +200,7 @@ describe('buildEngineConfig realtime e2e precedence (#723)', () => {
     expect(buildEngineConfig('offline-hymt15', STT, BOTH_KEYS)).toEqual(CASCADE)
   })
 })
+
+ it('routes Hy-MT2 to its registered local engine', () => {
+   expect(buildEngineConfig('offline-hymt2', 'mlx-whisper', {apiKey:'',deeplApiKey:'',geminiApiKey:'',microsoftApiKey:'',microsoftRegion:''})).toEqual({mode:'cascade',sttEngineId:'mlx-whisper',translatorEngineId:'hunyuan-mt-2'})
+ })

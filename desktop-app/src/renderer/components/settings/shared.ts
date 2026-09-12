@@ -159,13 +159,14 @@ export const disclosureArrowStyle = (isOpen: boolean): React.CSSProperties => ({
 export const API_ENGINE_MODES: EngineMode[] = ['rotation', 'online', 'online-deepl', 'online-gemini']
 
 /** LLM-based engine modes that support KV cache / SimulMT options */
-export const LLM_ENGINE_MODES: EngineMode[] = ['offline-hymt15', 'offline-hunyuan-mt']
+export const LLM_ENGINE_MODES: EngineMode[] = ['offline-hymt15', 'offline-hymt2', 'offline-hunyuan-mt']
 
 /** Display name for each engine mode */
 export function getEngineDisplayName(mode: EngineMode): string {
   switch (mode) {
     case 'offline-apple': return 'Apple Translate (Built-in)'
     case 'offline-hymt15': return 'HY-MT 1.5 (Recommended)'
+    case 'offline-hymt2': return 'Hy-MT2 7B (Offline)'
     case 'offline-hunyuan-mt': return 'Hunyuan-MT 7B (High Quality)'
     case 'rotation': return 'API Auto Rotation'
     case 'online': return 'Google Translation'

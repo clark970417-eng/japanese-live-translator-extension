@@ -146,7 +146,7 @@ export function STTSettings({
       )}
       {sttEngine === 'mlx-whisper' && (
         <div style={{ marginTop: '4px', fontSize: '11px', color: '#94a3b8' }}>
-          MLX Whisper: optimized for Apple Silicon. JA CER 8.1%, EN WER 3.8%, ~3s latency.
+          MLX Whisper runs locally on Apple Silicon. Recognition speed and accuracy depend on the audio and current device load.
         </div>
       )}
       {(sourceLanguage === 'ja' || sourceLanguage === 'auto') && (
@@ -162,7 +162,7 @@ export function STTSettings({
             Fast interim results (Moonshine Tiny JA)
           </label>
           <div style={{ marginTop: '4px', fontSize: '11px', color: '#94a3b8' }}>
-            Uses ultra-fast draft STT (27M params, 845ms) for instant interim transcription while primary STT processes final results. Japanese source only.
+            Shows an early Japanese draft while the primary recognizer prepares the result. Experimental: uses extra memory and may revise words.
           </div>
           {draftSttEnabled && sourceLanguage === 'auto' && (
             <div style={{ marginTop: '2px', fontSize: '11px', color: '#f59e0b' }}>

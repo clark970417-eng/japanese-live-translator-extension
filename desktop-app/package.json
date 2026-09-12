@@ -1,6 +1,6 @@
 {
   "name": "live-translate",
-  "version": "3.7.5",
+  "version": "3.8.0",
   "description": "Local-first live captions and Japanese/Traditional Chinese translation with browser controls",
   "main": "./out/main/index.js",
   "scripts": {

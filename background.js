@@ -80,7 +80,7 @@ function recordTranscript(m){
 const gate=new ResultGate();
 const cueCursor=new CueCursor();
 let nativeUntil=0, nativeText='', outputSequence=0, lastSpeechId=-1;
-let diagnostics={}, modelStatus='', controlBusy=false, translationPending=null, publishedId=-1;
+let diagnostics={}, modelStatus='', controlBusy=false, controlAction='', translationPending=null, publishedId=-1;
 const captionRequests=new Map();
 function cancelTranslations(){translationPending=null;publishedId=-1;for(const controller of captionRequests.values())controller.abort();captionRequests.clear();}
 async function translateCaption(text,signal){
@@ -187,6 +187,7 @@ async function startCapture(tabId){
  if(!Number.isInteger(tabId))throw new Error('請先選擇影片分頁');
  await stopCapture();const prefs=(await settings()).subtitleSettings;setHold(prefs?.holdSeconds);captionMode=prefs?.captionMode==='realtime'?'realtime':'record';if(captionMode==='record')await initRecording();captureTabId=tabId;diagnostics={};lastError='';
  engineMode=(await settings()).speechMode==='desktop'?'desktop':'browser';
+ try{
  if(engineMode==='desktop'){modelStatus='正在載入桌面模型，首次可能需要下載…';await desktop.request('init',{},600000);}
  await ensureOffscreen();
  const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});
@@ -195,6 +196,11 @@ async function startCapture(tabId){
  if(!reply?.ok){running=false;throw new Error(reply?.error||'無法擷取分頁聲音');}
  await chrome.storage.local.set({captionsHidden:false});
  return{running};
+ }catch(error){
+  await stopCapture().catch(()=>{});captureTabId=null;
+  lastError=/not been invoked|activeTab/i.test(error.message||'')?'請先在影片分頁點一下翻譯助手圖示，再按開始語音。':(error.message||'無法開始語音');
+  modelStatus=lastError;throw new Error(lastError);
+ }
 }
 chrome.tabs.onRemoved.addListener(id=>{if(id===captureTabId)stopCapture();});
 chrome.runtime.onMessage.addListener((m,s,send)=>{
@@ -240,13 +246,13 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
  else if(m.type==='make-draft')task=makeDraft(m.text);
  else if(m.type==='translate')task=translate(m.text,m.direction,Boolean(m.priority));
  else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?(captionMode==='record'?[recordingItem()]:items.filter(fresh)):[]});
- else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,diagnostics,captureTabId,captionMode,recordingPending:recording.pending,recordingFailed:recording.failed});
+ else if(m.type==='health')task=Promise.resolve({running,lastError,modelStatus,controlBusy,controlAction,diagnostics,captureTabId,captionMode,recordingPending:recording.pending,recordingFailed:recording.failed});
  else if(m.type==='subtitle-reset'){
   if(s.tab?.id!==captureTabId)return;
   task=resetCapture();
  } else if(m.type==='subtitle-control'){
   if(controlBusy){send({ok:false,error:'正在切換，請稍候'});return;}
-  controlBusy=true;task=(m.action==='stop'?stopCapture():startCapture(m.tabId||s.tab?.id)).finally(()=>{controlBusy=false;});
+  controlBusy=true;controlAction=m.action==='stop'?'stop':'start';task=(m.action==='stop'?stopCapture():startCapture(m.tabId||s.tab?.id)).finally(()=>{controlBusy=false;controlAction='';});
  } else return;
  Promise.resolve(task).then(text=>send({ok:true,text}),e=>send({ok:false,error:e.message}));return true;
 });

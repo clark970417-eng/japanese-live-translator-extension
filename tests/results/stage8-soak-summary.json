@@ -1,0 +1,28 @@
+{
+  "file": "tests/results/stage8-soak-60m.jsonl",
+  "trials": 329,
+  "complete": true,
+  "missing_finals": 0,
+  "errors": [],
+  "silent_controls": 32,
+  "silence_outputs": [],
+  "restarts": 32,
+  "firstJaMs": {
+    "valid": 329,
+    "median": 1625.8389580000658,
+    "p95": 3856.063457999844,
+    "max": 28000.57129199989
+  },
+  "firstZhMs": {
+    "valid": 329,
+    "median": 2280.0517080000136,
+    "p95": 7691.33579099999,
+    "max": 28656.797208999982
+  },
+  "finalDelayMs": {
+    "valid": 329,
+    "median": 3885.447792000021,
+    "p95": 12333.52600000007,
+    "max": 84502.801584
+  }
+}

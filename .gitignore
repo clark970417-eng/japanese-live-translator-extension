@@ -2,3 +2,6 @@
 *.zip
 .venv-desktop/
 __pycache__/
+
+# Isolated desktop UI test build
+/desktop-app/.test-out/

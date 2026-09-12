@@ -28,13 +28,13 @@ export const QWEN_ASR_NATIVE_VARIANTS: Record<QwenAsrNativeVariant, QwenAsrNativ
     dirName: 'qwen3-asr-0.6b',
     sizeMB: 1200,
     label: '0.6B (Fast)',
-    description: '0.6B params, ~1.2GB safetensors — 92ms TTFT, ~7.99x realtime on M3 Max'
+    description: '0.6B parameters, ~1.2GB safetensors; performance varies by device'
   },
   '1.7b': {
     dirName: 'qwen3-asr-1.7b',
     sizeMB: 3400,
     label: '1.7B (Best Quality)',
-    description: '1.7B params, ~3.4GB safetensors — SOTA accuracy, competitive with GPT-4o'
+    description: '1.7B parameters, ~3.4GB safetensors; uses more memory'
   }
 }
 

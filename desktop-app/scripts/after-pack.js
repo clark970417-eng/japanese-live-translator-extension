@@ -3,7 +3,7 @@
 // Handles both macOS (symlinks + rpath) and Windows (junctions).
 const fs = require('fs')
 const path = require('path')
-const { execSync } = require('child_process')
+const { execFileSync } = require('child_process')
 
 exports.default = async function afterPack(context) {
   const platform = context.packager.platform.name // 'mac', 'windows', 'linux'
@@ -50,18 +50,21 @@ async function fixMacOS(context) {
     }
   }
 
-  // Fix rpath for whisper.node dylib
-  const archDir = process.arch === 'arm64' ? 'mac-arm64' : 'mac-x64'
-  const addonDir = path.join(unpackedBase, archDir)
-  const whisperNode = path.join(addonDir, 'whisper.node')
-
-  if (fs.existsSync(whisperNode)) {
-    try {
-      execSync(`install_name_tool -add_rpath "${addonDir}" "${whisperNode}" 2>/dev/null || true`)
-      console.log(`[after-pack] Added rpath: ${addonDir}`)
-    } catch (e) {
-      console.warn(`[after-pack] Failed to add rpath: ${e.message}`)
+  // Resolve bundled dylibs relative to the addon, never to the build machine.
+  for (const archDir of ['mac-arm64', 'mac-x64']) {
+    const whisperNode = path.join(unpackedBase, archDir, 'whisper.node')
+    if (!fs.existsSync(whisperNode)) continue
+    const commands = execFileSync('/usr/bin/otool', ['-l', whisperNode], { encoding: 'utf8' })
+    const rpaths = [...commands.matchAll(/cmd LC_RPATH\n[\s\S]*?\n\s*path (.+?) \(offset /g)].map(match => match[1])
+    for (const rpath of rpaths) {
+      if (rpath.startsWith('/Users/') || rpath.startsWith('/home/')) {
+        execFileSync('/usr/bin/install_name_tool', ['-delete_rpath', rpath, whisperNode])
+      }
     }
+    if (!rpaths.includes('@loader_path')) {
+      execFileSync('/usr/bin/install_name_tool', ['-add_rpath', '@loader_path', whisperNode])
+    }
+    console.log(`[after-pack] Portable loader path configured: ${archDir}`)
   }
 
   console.log('[after-pack] macOS whisper-node-addon fixes applied')

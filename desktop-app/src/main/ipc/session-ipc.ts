@@ -45,7 +45,7 @@ export function registerSessionIpc(ctx: AppContext): void {
       try {
         const summary = await workerPool.sendRequest(
           { type: 'summarize', transcript },
-          'summarize'
+          'summarize', { modelPath, kvCacheQuant: store.get('slmKvCacheQuant') as boolean }
         )
         return { summary }
       } finally {

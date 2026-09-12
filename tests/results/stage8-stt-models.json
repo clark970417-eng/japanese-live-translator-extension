@@ -1,0 +1,146 @@
+[
+  {
+    "model": "mlx-community/whisper-base-mlx",
+    "initializationMs": 3763.790375
+  },
+  {
+    "model": "mlx-community/whisper-base-mlx",
+    "id": "negation",
+    "reference": "右ではなく、左の青い扉を開けてください。赤いボタンは押さないでください。",
+    "source": "右ではなく、左の青い扉を開けてください。赤いボタンは押さないでください。",
+    "durationMs": 80.79066699999976,
+    "audioSeconds": 5.8229375,
+    "characterErrorRate": 0,
+    "sha256": "f817e0eb83bf0735523273d67ade9acf253a8ffb976a08ef27b8a1666467146d",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-base-mlx",
+    "id": "schedule",
+    "reference": "明日の配信は午後九時からです。昨日お知らせした八時ではありません。",
+    "source": "明日の配信は5個時からです。機能を知らせした8時ではありません。",
+    "durationMs": 72.87679200000002,
+    "audioSeconds": 5.41075,
+    "characterErrorRate": 0.22580645161290322,
+    "sha256": "716e5181263400db43005d9e40828e2581de81f3b687d2b48c22e2a07af3260e",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-base-mlx",
+    "id": "reaction",
+    "reference": "あっ、危ない！ちょっと待って、まだ準備ができていません。よし、今度こそできました！",
+    "source": "あぶないちょっと待ってまだ準備ができていませんよし今度こそできました",
+    "durationMs": 59.20879200000036,
+    "audioSeconds": 6.2231875,
+    "characterErrorRate": 0.05714285714285714,
+    "sha256": "3ae616a9208f0515cc818c3ad516d06d8b23b4c94640c456f736ae47153a94cb",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-base-mlx",
+    "id": "intent",
+    "reference": "今日はもう寝ます。皆さんは無理しないでください。来てくれてありがとうございました。",
+    "source": "今日はもう寝ます。みなさんは無理しないでください。 来てくれてありがとうございました。",
+    "durationMs": 65.11991600000056,
+    "audioSeconds": 6.2873125,
+    "characterErrorRate": 0.05263157894736842,
+    "sha256": "58860487ab62e75fa15a6553b0b628543247787fbdd4dd28eed8fabdefa75bd2",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-small-mlx",
+    "initializationMs": 1277.0477500000006
+  },
+  {
+    "model": "mlx-community/whisper-small-mlx",
+    "id": "negation",
+    "reference": "右ではなく、左の青い扉を開けてください。赤いボタンは押さないでください。",
+    "source": "右ではなく、左の青い扉を開けてください。赤いボタンは押さないでください。",
+    "durationMs": 198.62687499999993,
+    "audioSeconds": 5.8229375,
+    "characterErrorRate": 0,
+    "sha256": "f817e0eb83bf0735523273d67ade9acf253a8ffb976a08ef27b8a1666467146d",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-small-mlx",
+    "id": "schedule",
+    "reference": "明日の配信は午後九時からです。昨日お知らせした八時ではありません。",
+    "source": "明日の配信は午後9時からです昨日を知らせした8時ではありません",
+    "durationMs": 184.375583,
+    "audioSeconds": 5.41075,
+    "characterErrorRate": 0.0967741935483871,
+    "sha256": "716e5181263400db43005d9e40828e2581de81f3b687d2b48c22e2a07af3260e",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-small-mlx",
+    "id": "reaction",
+    "reference": "あっ、危ない！ちょっと待って、まだ準備ができていません。よし、今度こそできました！",
+    "source": "あぶないちょっと待ってまだ準備ができ ていませんよし今度こそできました",
+    "durationMs": 153.05729100000008,
+    "audioSeconds": 6.2231875,
+    "characterErrorRate": 0.05714285714285714,
+    "sha256": "3ae616a9208f0515cc818c3ad516d06d8b23b4c94640c456f736ae47153a94cb",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-small-mlx",
+    "id": "intent",
+    "reference": "今日はもう寝ます。皆さんは無理しないでください。来てくれてありがとうございました。",
+    "source": "今日はもう寝ます。皆さんは無理しないでください。来てくれてありがとうございました。",
+    "durationMs": 161.2925839999998,
+    "audioSeconds": 6.2873125,
+    "characterErrorRate": 0,
+    "sha256": "58860487ab62e75fa15a6553b0b628543247787fbdd4dd28eed8fabdefa75bd2",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "initializationMs": 1957.7317080000003
+  },
+  {
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "id": "negation",
+    "reference": "右ではなく、左の青い扉を開けてください。赤いボタンは押さないでください。",
+    "source": "右ではなく、左の青い扉を開けてください。赤いボタンは押さないでください。",
+    "durationMs": 435.8767089999983,
+    "audioSeconds": 5.8229375,
+    "characterErrorRate": 0,
+    "sha256": "f817e0eb83bf0735523273d67ade9acf253a8ffb976a08ef27b8a1666467146d",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "id": "schedule",
+    "reference": "明日の配信は午後九時からです。昨日お知らせした八時ではありません。",
+    "source": "明日の配信は午後9時からです。昨日お知らせした8時ではありません。",
+    "durationMs": 428.6893339999988,
+    "audioSeconds": 5.41075,
+    "characterErrorRate": 0.06451612903225806,
+    "sha256": "716e5181263400db43005d9e40828e2581de81f3b687d2b48c22e2a07af3260e",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "id": "reaction",
+    "reference": "あっ、危ない！ちょっと待って、まだ準備ができていません。よし、今度こそできました！",
+    "source": "あ、危ない。ちょっと待って、まだ準備ができていません。よし、今度こそできました。",
+    "durationMs": 425.088291,
+    "audioSeconds": 6.2231875,
+    "characterErrorRate": 0.02857142857142857,
+    "sha256": "3ae616a9208f0515cc818c3ad516d06d8b23b4c94640c456f736ae47153a94cb",
+    "synthetic": true
+  },
+  {
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "id": "intent",
+    "reference": "今日はもう寝ます。皆さんは無理しないでください。来てくれてありがとうございました。",
+    "source": "今日はもう寝ます。皆さんは無理しないでください。来てくれてありがとうございました。",
+    "durationMs": 407.51045800000065,
+    "audioSeconds": 6.2873125,
+    "characterErrorRate": 0,
+    "sha256": "58860487ab62e75fa15a6553b0b628543247787fbdd4dd28eed8fabdefa75bd2",
+    "synthetic": true
+  }
+]

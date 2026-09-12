@@ -3,13 +3,9 @@ productName: Japanese Live Translate
 directories:
   buildResources: build
 files:
+  - 'out/**/*'
+  - 'package.json'
   - '!out/main/benchmark-*.cjs'
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.*'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - '!benchmark/*'
 extraResources:
   - from: 'resources/'
     to: 'bridge-scripts/'

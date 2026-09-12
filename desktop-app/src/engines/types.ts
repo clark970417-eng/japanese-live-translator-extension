@@ -266,6 +266,8 @@ export interface GlossaryEntry {
 
 /** Context passed to translators that support context-aware translation */
 export interface TranslateContext {
+  /** Local inference cancellation; never serialized to a provider. */
+  signal?: AbortSignal
   /** Previous confirmed translation segments for coherence */
   previousSegments: Array<{ source: string; translated: string }>
   /** Glossary terms that must use fixed translations */

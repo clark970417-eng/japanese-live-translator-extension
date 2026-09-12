@@ -14,3 +14,10 @@ test('capture status distinguishes audio, recognition, translation, and interrup
  assert.equal(captureStatus({...health,running:false},18000),'● 已就緒');
  assert.equal(captureStatus({...health,lastError:'測試錯誤'},11000),'提示：測試錯誤');
 });
+
+test('model initialization stays visible before capture is running',()=>{
+ assert.match(captureStatus({running:false,controlBusy:true,controlAction:'start',modelStatus:'正在載入桌面模型'}),/正在載入桌面模型/);
+ assert.match(captureStatus({running:false,controlBusy:true,controlAction:'start',modelStatus:'已停止'}),/正在啟動語音/);
+ assert.match(captureStatus({running:true,controlBusy:true,controlAction:'stop'}),/正在停止語音/);
+ assert.match(captureStatus({running:false,controlBusy:false,lastError:'無法擷取聲音'}),/無法擷取聲音/);
+});

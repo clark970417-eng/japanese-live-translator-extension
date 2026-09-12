@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+import { isImplausibleTranscript } from './transcript-guard'
 import { execFileSync } from 'child_process'
 import { join } from 'path'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
@@ -16,6 +18,9 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
   private language?: Language
   private model: string
   private onProgress?: (message: string) => void
+  private lifecycle = 0
+  private active = false
+  private restartAfter = 0
 
   constructor(options?: {
     language?: Language
@@ -68,10 +73,33 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
     this.onProgress?.('mlx-whisper ready')
   }
 
-  async processAudio(audioChunk: Float32Array, sampleRate: number): Promise<STTResult | null> {
-    if (!this.process) return null
+  async initialize(): Promise<void> {
+    const lifecycle = this.lifecycle
+    await super.initialize()
+    if (lifecycle === this.lifecycle) this.active = true
+    else await super.dispose()
+  }
 
-    const tempPath = join(tmpdir(), `mlx-whisper-${Date.now()}.wav`)
+  async dispose(): Promise<void> {
+    this.active = false
+    this.lifecycle++
+    await super.dispose()
+  }
+
+  async processAudio(audioChunk: Float32Array, sampleRate: number): Promise<STTResult | null> {
+    if (!this.process) {
+      if (!this.active || Date.now() < this.restartAfter) return null
+      this.restartAfter = Date.now() + 5000
+      this.onProgress?.('Speech recognition disconnected; reconnecting')
+      try { await this.initialize() } catch (error) {
+        this.log.error('Recognition reconnect failed:', error)
+        return null
+      }
+      if (!this.active || !this.process) return null
+    }
+
+    const lifecycle = this.lifecycle
+    const tempPath = join(tmpdir(), `mlx-whisper-${randomUUID()}.wav`)
     try {
       writeWav(tempPath, audioChunk, sampleRate)
 
@@ -86,6 +114,18 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
       } catch (err) {
         // Timeout or bridge error — return null per interface contract
         this.log.error('Bridge error:', err instanceof Error ? err.message : err)
+        if (err instanceof Error && err.message === 'Bridge command timed out' && lifecycle === this.lifecycle) {
+          this.onProgress?.('Speech recognition stalled; restarting recognition')
+          // A timed-out Python job keeps running unless its process is stopped.
+          // Never queue the next audio behind that stale job.
+          await super.dispose()
+          if (lifecycle === this.lifecycle) {
+            try { await this.initialize() } catch (error) {
+              this.log.error('Recognition restart failed:', error)
+              this.onProgress?.('Recognition restart failed; stop and start audio to retry')
+            }
+          }
+        }
         return null
       }
 
@@ -96,6 +136,10 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
 
       if (!result.text || !(result.text as string).trim()) return null
 
+      if (isImplausibleTranscript(result.text as string, audioChunk.length / sampleRate)) {
+        this.log.warn('Rejected implausible short-window transcript; waiting for more audio')
+        return null
+      }
       return {
         text: result.text as string,
         language: (ALL_LANGUAGES.includes(result.language as Language) ? result.language : 'en') as Language,

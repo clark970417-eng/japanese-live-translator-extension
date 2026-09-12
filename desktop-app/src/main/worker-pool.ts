@@ -58,7 +58,7 @@ const TIMEOUT_BY_TYPE: Record<RequestType, number> = {
  * Singleton pool managing a single slm-worker UtilityProcess.
  * Reference-counted: the process stays alive while any engine holds a reference.
  */
-class WorkerPool {
+export class WorkerPool {
   private worker: Electron.UtilityProcess | null = null
   private pending = new Map<string, PendingRequest>()
   private nextId = 0
@@ -68,49 +68,71 @@ class WorkerPool {
   private onProgress?: (message: string) => void
   /** Mutex to serialize initModel/disposeModel operations */
   private opLock: Promise<void> = Promise.resolve()
+  private requestLock: Promise<unknown> = Promise.resolve()
+  private queuedRequests = 0
+  private currentOptionsKey: string | null = null
+
+  private exclusive<T>(operation: () => Promise<T>): Promise<T> {
+    const task = this.requestLock.then(operation)
+    this.requestLock = task.catch(() => {})
+    return task
+  }
+
+  private async ensureModel(options: WorkerInitOptions): Promise<void> {
+    const key = JSON.stringify([options.modelPath, options.modelType ?? '', options.kvCacheQuant ?? false, options.draftModelPath ?? ''])
+    if (this.worker && this.currentOptionsKey === key) return
+    this.currentOptionsKey = null
+    if (this.worker) await this.hotSwapModel(options)
+    else await this.spawnAndInit(options)
+    this.currentOptionsKey = key
+  }
 
   /**
    * Acquire a reference to the shared worker, initializing it with the given model.
    * If the worker is already running with a different model, it will hot-swap.
    */
   async acquire(options: WorkerInitOptions, onProgress?: (message: string) => void): Promise<void> {
-    // Safe: JS is single-threaded; increment completes before any await yields
-    this.refCount++
-    this.onProgress = onProgress
-
-    // If worker exists and same model is loaded, skip init
-    if (this.worker && this.currentModelPath === options.modelPath) {
-      return
-    }
-
-    // If worker exists but different model, hot-swap via dispose+init
-    if (this.worker && this.currentModelPath !== options.modelPath) {
-      await this.hotSwapModel(options)
-      return
-    }
-
-    // No worker yet — spawn and init
-    if (!this.initPromise || !this.worker) {
-      this.initPromise = this.spawnAndInit(options)
-    }
-    return this.initPromise
+    return this.exclusive(async () => {
+      this.onProgress = onProgress
+      try {
+        await this.ensureModel(options)
+        this.refCount++
+      } catch (error) {
+        this.currentOptionsKey = null
+        if (this.refCount === 0) await this.killWorker()
+        throw error
+      }
+    })
   }
 
   /**
    * Release a reference. When refCount reaches 0, the worker is killed.
    */
   async release(): Promise<void> {
-    this.refCount = Math.max(0, this.refCount - 1)
-
-    if (this.refCount === 0) {
-      await this.killWorker()
-    }
+    return this.exclusive(async () => {
+      this.refCount = Math.max(0, this.refCount - 1)
+      if (this.refCount === 0) await this.killWorker()
+    })
   }
 
   /**
    * Send a message to the worker and return a promise for the result.
    */
-  sendRequest(message: Record<string, unknown>, type: RequestType): Promise<string> {
+  sendRequest(message: Record<string, unknown>, type: RequestType, options?: WorkerInitOptions, signal?: AbortSignal): Promise<string> {
+    if (this.queuedRequests >= WORKER_MAX_PENDING_REQUESTS) {
+      return Promise.reject(new Error('Translation queue is full; please retry'))
+    }
+    this.queuedRequests++
+    return this.exclusive(async () => {
+      if (signal?.aborted) throw new Error('Translation cancelled')
+      if (this.refCount === 0) throw new Error('Translation engine was released')
+      if (options) await this.ensureModel(options)
+      if (signal?.aborted) throw new Error('Translation cancelled')
+      return this.dispatchRequest(message, type, signal)
+    }).finally(() => { this.queuedRequests-- })
+  }
+
+  private dispatchRequest(message: Record<string, unknown>, type: RequestType, signal?: AbortSignal): Promise<string> {
     if (!this.worker) {
       return Promise.reject(new Error('[worker-pool] Worker not initialized'))
     }
@@ -119,6 +141,8 @@ class WorkerPool {
     const timeout = TIMEOUT_BY_TYPE[type]
     const sendTime = performance.now()
 
+    const cancel = (): void => { this.worker?.postMessage({type:'cancel',id}) }
+    signal?.addEventListener('abort', cancel, {once:true})
     return new Promise<string>((resolve, reject) => {
       this.evictOldestPending()
 
@@ -139,16 +163,17 @@ class WorkerPool {
         timer
       })
       this.worker!.postMessage({ ...message, id })
-    })
+    }).finally(() => signal?.removeEventListener('abort', cancel))
   }
 
   /**
    * Send a fire-and-forget message to the worker (no response expected).
    * Used for commands like 'simulmt-reset' that don't return a result.
    */
-  sendFireAndForget(message: Record<string, unknown>): void {
-    if (!this.worker) return
-    this.worker.postMessage(message)
+  sendFireAndForget(message: Record<string, unknown>, modelPath?: string): void {
+    void this.exclusive(async () => {
+      if (!modelPath || this.currentModelPath === modelPath) this.worker?.postMessage(message)
+    }).catch(error => log.error('Worker command failed', error))
   }
 
   /** Check if the worker is alive and initialized */
@@ -177,6 +202,7 @@ class WorkerPool {
     this.worker.on('exit', (code) => {
       log.info(`Worker exited with code ${code}`)
       this.worker = null
+      this.currentOptionsKey = null
       this.currentModelPath = null
       this.initPromise = null
       // Reject all pending requests
@@ -279,7 +305,8 @@ class WorkerPool {
               settled = true
               clearTimeout(timeout)
               cleanup()
-              this.currentModelPath = null
+              this.currentOptionsKey = null
+      this.currentModelPath = null
               resolve()
             }
           }
@@ -352,6 +379,7 @@ class WorkerPool {
     }
 
     this.worker = null
+    this.currentOptionsKey = null
     this.currentModelPath = null
     this.initPromise = null
 

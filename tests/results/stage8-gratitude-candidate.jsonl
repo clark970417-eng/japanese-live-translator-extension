@@ -1,0 +1,11 @@
+{"type":"metadata","candidate":"conditional-gratitude-role","development":true,"concurrentLoad":true}
+{"source":"今天也謝謝你陪大家聊天，請早點休息喔。","translated":"今日も皆さんとお話しできてありがとうございました。早めに休むことをお勧めしますね。","stopReason":"eogToken","ms":3418.3605000000002}
+{"source":"謝謝你今天唱了這麼多歌，我聽得很開心！","translated":"今日はたくさんの歌を歌ってくれて、とても楽しかったです！","stopReason":"eogToken","ms":714.4136669999998}
+{"source":"剛剛是我看錯了，不是你操作錯了。","translated":"ちょうど見間違いだったのです。あなたが操作を間違えたわけではありません。","stopReason":"eogToken","ms":1376.0820000000003}
+{"source":"我明天要上課，今天不能陪你到最後。","translated":"明日は授業があるので、今日は一緒にいられません。","stopReason":"eogToken","ms":999.4464169999992}
+{"source":"昨天沒有趕上，但明天我會再來。","translated":"昨日は参加できませんでしたが、明日はまた来ます。","stopReason":"eogToken","ms":712.0848339999993}
+{"source":"不用特別為我再唱一次，能聽到你的聲音就很開心了。","translated":"特別に再び歌ってくれる必要はありません。あなたの声が聞こえるだけで、とても嬉しいです。","stopReason":"eogToken","ms":1427.1123749999988}
+{"source":"希望你今天錄音順利，晚安～","translated":"今日の録音が順調でありますように、おやすみなさい～","stopReason":"eogToken","ms":967.6887500000012}
+{"source":"如果你不方便回答也沒關係，我只是有點好奇。","translated":"もし回答が難しい場合でも問題ありません。私はちょっと興味がありますだけです。","stopReason":"eogToken","ms":1272.9944579999992}
+{"source":"等一下要出門，今天不能待到結束。","translated":"ちょっと出かけなければならないので、今日は最後までいられません。","stopReason":"eogToken","ms":1437.208917}
+{"source":"晚安啊，REC加油～","translated":"おやすみなさい、REC、頑張ってね～","stopReason":"eogToken","ms":1873.7899589999997}

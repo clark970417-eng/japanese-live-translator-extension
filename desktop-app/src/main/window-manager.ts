@@ -1,3 +1,4 @@
+import { isUiTest } from './ui-test-mode'
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
@@ -15,6 +16,7 @@ export function getSubtitleHeight(display: Electron.Display): number {
 
 export function createMainWindow(ctx: AppContext): void {
   ctx.mainWindow = new BrowserWindow({
+    show: !isUiTest,
     width: 520,
     height: 720,
     minWidth: 480,
@@ -56,6 +58,7 @@ export function createSubtitleWindow(ctx: AppContext): void {
   const initialY = savedPos?.y ?? (targetDisplay.bounds.y + targetDisplay.bounds.height - subtitleHeight)
 
   ctx.subtitleWindow = new BrowserWindow({
+    show: !isUiTest,
     x: initialX,
     y: initialY,
     width: targetDisplay.bounds.width,

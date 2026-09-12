@@ -1,6 +1,7 @@
 /** Local text-quality probe; records outputs for human review, never posts messages. */
 import { app } from 'electron'
 import { writeFileSync } from 'fs'
+import { HunyuanMT2Translator } from '../src/engines/translator/HunyuanMT2Translator'
 import { HunyuanMT15Translator } from '../src/engines/translator/HunyuanMT15Translator'
 if (!process.env.COMPARE_PROFILE || !process.env.COMPARE_REPORT) throw new Error('Set isolated COMPARE_PROFILE and COMPARE_REPORT')
 app.setPath('userData',process.env.COMPARE_PROFILE)
@@ -38,14 +39,16 @@ const cases = [
   ['ja','zh','あと三回と言いましたが、今日はもう一回だけにします。']
 ] as const
 app.whenReady().then(async()=>{
- const engine = new HunyuanMT15Translator({ variant: process.env.COMPARE_VARIANT || 'Q4_K_M' })
+ const model = process.env.COMPARE_TRANSLATOR || 'hunyuan-mt-15'
+ if (!['hunyuan-mt-15','hunyuan-mt-2'].includes(model)) throw new Error('Unknown comparison translator')
+ const engine = model === 'hunyuan-mt-2' ? new HunyuanMT2Translator({variant:process.env.COMPARE_VARIANT || 'Q4_K_M'}) : new HunyuanMT15Translator({ variant: process.env.COMPARE_VARIANT || 'Q4_K_M' })
  const results: unknown[]=[]
  try {
   await engine.initialize()
   for(const [from,to,text] of cases){
    const start=performance.now()
    const translated=await engine.translate(text,from,to)
-   const result={variant:process.env.COMPARE_VARIANT || 'Q4_K_M',from,to,source:text,translated,ms:Math.round(performance.now()-start)}
+   const result={model,variant:process.env.COMPARE_VARIANT || 'Q4_K_M',from,to,source:text,translated,ms:Math.round(performance.now()-start)}
    results.push(result);console.log(JSON.stringify(result))
    if(!translated.trim())throw new Error('Empty translation')
   }

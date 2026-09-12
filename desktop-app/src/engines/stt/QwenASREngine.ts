@@ -28,13 +28,13 @@ export const QWEN_ASR_VARIANTS: Record<QwenASRVariant, QwenASRVariantConfig> = {
     modelId: 'Qwen/Qwen3-ASR-0.6B',
     sizeMB: 1800,
     label: '0.6B (Fast)',
-    description: '0.6B params, ~1.8GB — lowest latency, 92ms TTFT'
+    description: '0.6B parameters; latency depends on the inference backend and device'
   },
   '1.7b': {
     modelId: 'Qwen/Qwen3-ASR-1.7B',
     sizeMB: 3500,
     label: '1.7B (Best Quality)',
-    description: '2B params, ~3.5GB — SOTA accuracy, competitive with GPT-4o'
+    description: '1.7B parameters; uses more memory than the 0.6B model'
   }
 }
 

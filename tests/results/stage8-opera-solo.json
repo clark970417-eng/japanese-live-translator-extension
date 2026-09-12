@@ -1,0 +1,53 @@
+{
+  "observedAt": "2026-09-12T17:40:28.418408+08:00",
+  "kind": "manual Opera diagnostic snapshots",
+  "video": "BNybJ5Kttzs",
+  "requestedStartSeconds": 5125,
+  "model": "mlx-whisper + hunyuan-mt-15",
+  "mode": "record",
+  "chatTranslation": true,
+  "otherInferenceBenchmarkRunning": false,
+  "source": "popup accessibility text; approximately three minutes of capture",
+  "frames": 2741,
+  "processingMs": {
+    "p50": 726,
+    "p95": 1216,
+    "latest": 1507
+  },
+  "queueMs": {
+    "p50": 0,
+    "p95": 500
+  },
+  "firstCompletedRequestMs": {
+    "p50": 1554,
+    "p95": 2820
+  },
+  "latestAudioEndToChineseMs": 1484,
+  "queueDepth": 0,
+  "expiredAudio": 0,
+  "unreliableResults": 0,
+  "resynchronizations": 0,
+  "limitations": [
+    "Not a controlled randomized comparison",
+    "Earlier processing labels included translation, not recognition alone",
+    "Normal user applications remain open",
+    "No full semantic accuracy review or maximum-latency measurement"
+  ],
+  "finalStopSnapshot": {
+    "frames": 2999,
+    "processingMs": {
+      "p50": 764,
+      "p95": 1238,
+      "latest": 2255
+    },
+    "queueMs": {
+      "p50": 0,
+      "p95": 500
+    },
+    "latestAudioEndToChineseMs": 752,
+    "queueDepth": 0,
+    "status": "idle",
+    "startEnabled": true,
+    "stopEnabled": false
+  }
+}

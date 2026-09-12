@@ -9,7 +9,9 @@ import { startPipeline, type PipelineStartConfig } from './ipc/pipeline-ipc'
 import { buildEngineConfig, resolveEngineMode } from '../engine-selection'
 import type { EngineMode, SttEngineType } from '../engine-selection'
 import type { AppContext } from './app-context'
+import { HunyuanMT2Translator } from '../engines/translator/HunyuanMT2Translator'
 import { HunyuanMT15Translator } from '../engines/translator/HunyuanMT15Translator'
+import { CompanionScheduler } from './companion-scheduler'
 
 export async function startExtensionCompanion(ctx: AppContext, directory?: string): Promise<Server> {
   const dir = directory || join(homedir(), 'Library/Application Support/JapaneseLiveCaption')
@@ -24,8 +26,9 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     let ownsSession = false
     socket.setEncoding('utf8')
     let buffer = '', pending = 0, closed = false
-    let queue = Promise.resolve()
-    const translator = new HunyuanMT15Translator()
+    const queue = new CompanionScheduler()
+    let translator: HunyuanMT2Translator | HunyuanMT15Translator | undefined
+    let translatorMode: string | undefined
     const send = (value: unknown): void => { if (!closed) socket.write(JSON.stringify(value) + '\n') }
     let current: { segment?: string; id?: number } = {}
     let lastAudio: Float32Array | null = null
@@ -41,6 +44,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       if (segment) send({ event: 'caption', segment, result: { text: r.sourceText, translated: r.translatedText, correction: true, timestamp: r.timestamp } })
     }
     ctx.pipeline?.on('interim-result', caption)
+    ctx.pipeline?.on('draft-stt-result', caption)
     ctx.pipeline?.on('ger-corrected', correction)
     socket.on('data', chunk => {
       buffer += chunk.toString()
@@ -48,12 +52,18 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       for (;;) {
         const newline = buffer.indexOf('\n'); if (newline < 0) break
         const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1)
-        if (++pending > 16) { socket.destroy(); break }
-        queue = queue.then(async () => {
-          if (closed) return
-          let m: { id?: number; op?: string; audio?: string; text?: string; direction?: string; segment?: string; final?: boolean } = {}
+        let m: { id?: number; op?: string; audio?: string; text?: string; direction?: string; segment?: string; final?: boolean }
+        try { m = JSON.parse(line) } catch { send({ ok: false, error: 'Invalid request' }); continue }
+        if (!m || typeof m !== 'object') { send({ ok: false, error: 'Invalid request' }); continue }
+        const audioPriority = ['decode', 'init', 'stop'].includes(m.op || '')
+        // Reserve capacity for audio/control; excess page text must not disconnect capture.
+        if (pending >= (audioPriority ? 16 : 12)) {
+          send({ id: m.id, ok: false, error: 'Desktop queue is full; please retry' }); continue
+        }
+        pending++
+        void queue.run(audioPriority, async () => {
           try {
-            m = JSON.parse(line)
+            if (closed) return
             const pipeline = ctx.pipeline
             if (!pipeline) throw new Error('Desktop pipeline not ready')
             let result: unknown
@@ -105,6 +115,13 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               if (!['ja-zh', 'zh-ja', 'ja-en'].includes(m.direction || 'ja-zh')) throw new Error('Invalid language')
               const from = m.direction === 'zh-ja' ? 'zh' : 'ja'
               const to = m.direction === 'zh-ja' ? 'ja' : m.direction === 'ja-en' ? 'en' : 'zh'
+              const requestedMode = store.get('translationEngine') === 'offline-hymt2' ? 'offline-hymt2' : 'offline-hymt15'
+              if (!translator || translatorMode !== requestedMode) {
+                await translator?.dispose()
+                translator = requestedMode === 'offline-hymt2'
+                  ? new HunyuanMT2Translator({ variant: '7B-Q4_K_M' }) : new HunyuanMT15Translator()
+                translatorMode = requestedMode
+              }
               await translator.initialize()
               result = { text: await translator.translate(m.text, from, to) }
             } else throw new Error('Unsupported operation')
@@ -120,8 +137,9 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     socket.on('error', () => socket.destroy())
     socket.on('close', () => {
       closed = true
+      ctx.pipeline?.off('draft-stt-result', caption)
       ctx.pipeline?.off('interim-result', caption); ctx.pipeline?.off('ger-corrected', correction)
-      void queue.finally(async () => { try { if (ownsSession) { await ctx.pipeline?.stop(); ctx.logger?.endSession(); ctx.logger = null }; await translator.dispose() } finally { owned = false; ctx.extensionConnected = false } })
+      void queue.idle().then(async () => { try { if (ownsSession) { await ctx.pipeline?.stop(); ctx.logger?.endSession(); ctx.logger = null }; await translator?.dispose() } finally { owned = false; ctx.extensionConnected = false } })
     })
   })
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(path, () => { chmodSync(path, 0o600); resolve() }) })

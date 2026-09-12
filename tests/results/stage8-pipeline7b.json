@@ -1,0 +1,638 @@
+[
+  {
+    "type": "configuration",
+    "run": "init",
+    "seconds": 0,
+    "sessionSeconds": 0,
+    "translatorModel": "hunyuan-mt-2",
+    "sttModel": "mlx-community/whisper-large-v3-turbo",
+    "draftModel": null,
+    "warmed": true,
+    "repeatedFixture": true,
+    "bypassesCapture": true
+  },
+  {
+    "type": "stage",
+    "run": "init",
+    "seconds": 16.677,
+    "sessionSeconds": 16.677,
+    "stage": "stt",
+    "phase": "initialization",
+    "durationMs": 789.880459,
+    "audioSeconds": 5.41075
+  },
+  {
+    "type": "stage",
+    "run": "init",
+    "seconds": 17.121,
+    "sessionSeconds": 17.121,
+    "stage": "translate",
+    "phase": "initialization",
+    "durationMs": 443.7814169999983,
+    "inputLength": 9
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 1.16,
+    "sessionSeconds": 18.281,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 354.7077910000007,
+    "audioSeconds": 0.8
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 1.161,
+    "sessionSeconds": 18.282,
+    "sourceText": "明日の配信",
+    "confirmedText": "",
+    "interimText": "明日の配信",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146308460,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 1.161,
+    "sessionSeconds": 18.282,
+    "sourceText": "明日の配信",
+    "confirmedText": "",
+    "interimText": "明日の配信",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146308460,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 1.564,
+    "sessionSeconds": 18.685,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 402.17279100000087,
+    "inputLength": 5
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 1.565,
+    "sessionSeconds": 18.686,
+    "sourceText": "明日の配信",
+    "confirmedText": "",
+    "interimText": "明日の配信",
+    "translatedText": "明天的直播",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146308864,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 1.964,
+    "sessionSeconds": 19.085,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 359.38929199999984,
+    "audioSeconds": 1.6
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 1.964,
+    "sessionSeconds": 19.085,
+    "sourceText": "明日の配信は午後9時。",
+    "confirmedText": "明日の配信",
+    "interimText": "は午後9時。",
+    "translatedText": "明天的直播",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146309263,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 1.964,
+    "sessionSeconds": 19.085,
+    "sourceText": "明日の配信は午後9時。",
+    "confirmedText": "明日の配信",
+    "interimText": "は午後9時。",
+    "translatedText": "明天的直播",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146309263,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 2.664,
+    "sessionSeconds": 19.785,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 444.1578750000008,
+    "inputLength": 11
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 2.664,
+    "sessionSeconds": 19.785,
+    "sourceText": "明日の配信は午後9時。",
+    "confirmedText": "明日の配信",
+    "interimText": "は午後9時。",
+    "translatedText": "明天的直播是晚上9點。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146309963,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 3.191,
+    "sessionSeconds": 20.312,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 384.6018750000003,
+    "audioSeconds": 2.8
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 3.191,
+    "sessionSeconds": 20.312,
+    "sourceText": "明日の配信は午後9時からです。",
+    "confirmedText": "明日の配信は午後9時",
+    "interimText": "からです。",
+    "translatedText": "明天的直播是晚上9點。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146310490,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 3.191,
+    "sessionSeconds": 20.312,
+    "sourceText": "明日の配信は午後9時からです。",
+    "confirmedText": "明日の配信は午後9時",
+    "interimText": "からです。",
+    "translatedText": "明天的直播是晚上9點。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146310490,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 4.018,
+    "sessionSeconds": 21.139,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 576.7435419999965,
+    "inputLength": 15
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 4.018,
+    "sessionSeconds": 21.139,
+    "sourceText": "明日の配信は午後9時からです。",
+    "confirmedText": "明日の配信は午後9時",
+    "interimText": "からです。",
+    "translatedText": "明天的直播是從晚上9點開始。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146311317,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 4.946,
+    "sessionSeconds": 22.067,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 439.3931249999987,
+    "audioSeconds": 4.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-1",
+    "seconds": 4.946,
+    "sessionSeconds": 22.067,
+    "sourceText": "明日の配信は午後9時からです。昨日お知らせした8時で",
+    "confirmedText": "明日の配信は午後9時からです。",
+    "interimText": "昨日お知らせした8時で",
+    "translatedText": "明天的直播是從晚上9點開始。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146312245,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-1",
+    "seconds": 4.946,
+    "sessionSeconds": 22.067,
+    "sourceText": "明日の配信は午後9時からです。昨日お知らせした8時で",
+    "confirmedText": "明日の配信は午後9時からです。",
+    "interimText": "昨日お知らせした8時で",
+    "translatedText": "明天的直播是從晚上9點開始。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146312245,
+    "isInterim": true
+  },
+  {
+    "type": "final-start",
+    "run": "zh-1",
+    "seconds": 5.412,
+    "sessionSeconds": 22.533,
+    "audioDurationSeconds": 5.41075
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 6.275,
+    "sessionSeconds": 23.396,
+    "stage": "stt",
+    "phase": "final",
+    "durationMs": 863.2663329999996,
+    "audioSeconds": 5.41075
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 6.505,
+    "sessionSeconds": 23.626,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 1303.7618750000001,
+    "inputLength": 26
+  },
+  {
+    "type": "stage",
+    "run": "zh-1",
+    "seconds": 7.406,
+    "sessionSeconds": 24.527,
+    "stage": "translate",
+    "phase": "final",
+    "durationMs": 1130.500167000002,
+    "inputLength": 33
+  },
+  {
+    "type": "final",
+    "run": "zh-1",
+    "seconds": 7.406,
+    "sessionSeconds": 24.527,
+    "sourceText": "明日の配信は午後9時からです。昨日お知らせした8時ではありません。",
+    "translatedText": "明天的直播是從晚上9點開始。不是昨天所說的8點哦。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146314705,
+    "isInterim": false
+  },
+  {
+    "type": "memory",
+    "run": "zh-1",
+    "seconds": 8.912,
+    "sessionSeconds": 26.033,
+    "rssBytes": 66273280,
+    "heapUsedBytes": 4928620,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 64800
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 22944
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 15840
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 1350784
+      }
+    ]
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 1.163,
+    "sessionSeconds": 27.196,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 361.1080839999995,
+    "audioSeconds": 0.8
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 1.163,
+    "sessionSeconds": 27.196,
+    "sourceText": "明日の配信",
+    "confirmedText": "",
+    "interimText": "明日の配信",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146317374,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 1.163,
+    "sessionSeconds": 27.196,
+    "sourceText": "明日の配信",
+    "confirmedText": "",
+    "interimText": "明日の配信",
+    "translatedText": "",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146317374,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 1.325,
+    "sessionSeconds": 27.358,
+    "stage": "translate",
+    "phase": "interim",
+    "durationMs": 160.82675000000017,
+    "inputLength": 5
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 1.325,
+    "sessionSeconds": 27.358,
+    "sourceText": "明日の配信",
+    "confirmedText": "",
+    "interimText": "明日の配信",
+    "translatedText": "明天的直播",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146317536,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 1.982,
+    "sessionSeconds": 28.015,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 376.3634999999995,
+    "audioSeconds": 1.6
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 1.982,
+    "sessionSeconds": 28.015,
+    "sourceText": "明日の配信は午後9時。",
+    "confirmedText": "明日の配信",
+    "interimText": "は午後9時。",
+    "translatedText": "明天的直播",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146318193,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 1.982,
+    "sessionSeconds": 28.015,
+    "sourceText": "明日の配信は午後9時。",
+    "confirmedText": "明日の配信",
+    "interimText": "は午後9時。",
+    "translatedText": "明天的直播",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146318193,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 2.68,
+    "sessionSeconds": 28.713,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 444.74945800000205,
+    "inputLength": 11
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 2.68,
+    "sessionSeconds": 28.713,
+    "sourceText": "明日の配信は午後9時。",
+    "confirmedText": "明日の配信",
+    "interimText": "は午後9時。",
+    "translatedText": "明天的直播是晚上9點。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146318891,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 3.19,
+    "sessionSeconds": 29.223,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 384.2707499999997,
+    "audioSeconds": 2.8
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 3.19,
+    "sessionSeconds": 29.223,
+    "sourceText": "明日の配信は午後9時からです。",
+    "confirmedText": "明日の配信は午後9時",
+    "interimText": "からです。",
+    "translatedText": "明天的直播是晚上9點。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146319401,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 3.19,
+    "sessionSeconds": 29.223,
+    "sourceText": "明日の配信は午後9時からです。",
+    "confirmedText": "明日の配信は午後9時",
+    "interimText": "からです。",
+    "translatedText": "明天的直播是晚上9點。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146319401,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 4.005,
+    "sessionSeconds": 30.038,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 560.510291999999,
+    "inputLength": 15
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 4.005,
+    "sessionSeconds": 30.038,
+    "sourceText": "明日の配信は午後9時からです。",
+    "confirmedText": "明日の配信は午後9時",
+    "interimText": "からです。",
+    "translatedText": "明天的直播是從晚上9點開始。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146320216,
+    "isInterim": true
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 4.948,
+    "sessionSeconds": 30.981,
+    "stage": "stt",
+    "phase": "interim",
+    "durationMs": 441.9429170000003,
+    "audioSeconds": 4.5
+  },
+  {
+    "type": "interim",
+    "run": "zh-2",
+    "seconds": 4.949,
+    "sessionSeconds": 30.982,
+    "sourceText": "明日の配信は午後9時からです。昨日お知らせした8時で",
+    "confirmedText": "明日の配信は午後9時からです。",
+    "interimText": "昨日お知らせした8時で",
+    "translatedText": "明天的直播是從晚上9點開始。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146321160,
+    "isInterim": true
+  },
+  {
+    "type": "source",
+    "run": "zh-2",
+    "seconds": 4.949,
+    "sessionSeconds": 30.982,
+    "sourceText": "明日の配信は午後9時からです。昨日お知らせした8時で",
+    "confirmedText": "明日の配信は午後9時からです。",
+    "interimText": "昨日お知らせした8時で",
+    "translatedText": "明天的直播是從晚上9點開始。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146321160,
+    "isInterim": true
+  },
+  {
+    "type": "final-start",
+    "run": "zh-2",
+    "seconds": 5.414,
+    "sessionSeconds": 31.447,
+    "audioDurationSeconds": 5.41075
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 6.266,
+    "sessionSeconds": 32.299,
+    "stage": "stt",
+    "phase": "final",
+    "durationMs": 851.1655839999985,
+    "audioSeconds": 5.41075
+  },
+  {
+    "type": "final",
+    "run": "zh-2",
+    "seconds": 6.266,
+    "sessionSeconds": 32.299,
+    "sourceText": "明日の配信は午後9時からです。昨日お知らせした8時ではありません。",
+    "translatedText": "明天的直播是從晚上9點開始。不是昨天所說的8點哦。",
+    "sourceLanguage": "ja",
+    "targetLanguage": "zh",
+    "timestamp": 1789146322477,
+    "isInterim": false
+  },
+  {
+    "type": "stage",
+    "run": "zh-2",
+    "seconds": 6.51,
+    "sessionSeconds": 32.543,
+    "stage": "translateSSBD",
+    "phase": "interim",
+    "durationMs": 1306.939707999998,
+    "inputLength": 26
+  },
+  {
+    "type": "memory",
+    "run": "zh-2",
+    "seconds": 7.769,
+    "sessionSeconds": 33.802,
+    "rssBytes": 68157440,
+    "heapUsedBytes": 4940348,
+    "processes": [
+      {
+        "type": "Browser",
+        "workingSetKB": 66576
+      },
+      {
+        "type": "GPU",
+        "workingSetKB": 22928
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 16496
+      },
+      {
+        "type": "Utility",
+        "workingSetKB": 1357168
+      }
+    ]
+  },
+  {
+    "type": "stage",
+    "run": "silence",
+    "seconds": 0.002,
+    "sessionSeconds": 33.805,
+    "stage": "stt",
+    "phase": "final",
+    "durationMs": 2.162457999998878,
+    "audioSeconds": 1
+  },
+  {
+    "type": "silence",
+    "run": "silence",
+    "seconds": 0.002,
+    "sessionSeconds": 33.805
+  }
+]

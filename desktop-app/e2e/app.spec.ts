@@ -1,15 +1,18 @@
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
 import { _electron as electron } from 'playwright'
 import { resolve } from 'path'
+import { mkdtempSync } from 'fs'
+import { tmpdir } from 'os'
 
 let app: ElectronApplication
 let settingsWindow: Page
 
 test.beforeAll(async () => {
   app = await electron.launch({
-    args: [resolve(__dirname, '../out/main/index.js')],
+    args: [resolve(__dirname, 'isolated-bootstrap.cjs')],
     env: {
       ...process.env,
+      JTL_UI_PROFILE: mkdtempSync(resolve(tmpdir(), 'jtl-ui-')),
       // Disable hardware acceleration in CI to avoid GPU issues
       ELECTRON_DISABLE_GPU: '1',
       // Skip Quick Start onboarding so the settings panel renders immediately
@@ -124,6 +127,7 @@ test.describe('Start/Stop pipeline', () => {
   })
 
   test('should show Starting state when clicked', async () => {
+    test.skip(process.env.JTL_AUDIO_TEST !== '1', 'Set JTL_AUDIO_TEST=1 for an explicit audio-device test')
     const startBtn = settingsWindow.locator('button[aria-label="Start translation"]')
     await startBtn.click()
 

@@ -47,3 +47,11 @@ test('reviewed warm viewer phrases preserve meaning, names and supplied emoji wi
  assert.match(phraseTranslation('如果有不懂的漢字和功能，可以問我ww','zh-ja'),/漢字や機能.*ww$/);
  assert.equal(phraseTranslation('都好好聽啊，但我比較喜歡以前的版本','zh-ja'),undefined);
 });
+
+test('standalone cheer spellings preserve praise without rewriting negation or clauses',()=>{
+ for(const text of ['ないす','ないすー！','ナイスー!','ないす～'])assert.equal(phraseTranslation(text,'ja-zh'),'漂亮！');
+ assert.equal(phraseTranslation('次こそ！','ja-zh'),'下次一定！');
+ for(const text of ['頑張れ！！','がんばって～','がんばえ〜','ファイト'])assert.equal(phraseTranslation(text,'ja-zh'),'加油！');
+ assert.equal(phraseTranslation('おしい','ja-zh'),'可惜了！');
+ for(const text of ['ないです','ナイスじゃない','次こそ失敗しない','ないす？','頑張らないで','ファイトマネー'])assert.equal(phraseTranslation(text,'ja-zh'),undefined);
+});

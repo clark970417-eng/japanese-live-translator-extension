@@ -102,6 +102,16 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     this.initialized = true
   }
 
+  private serialContext(context?: TranslateContext): Omit<TranslateContext, 'signal'> | undefined {
+    if (!context) return undefined
+    const {signal: _signal, ...value} = context
+    return value
+  }
+
+  protected get workerOptions(): WorkerInitOptions {
+    return { modelPath: this.modelPath, kvCacheQuant: this.kvCacheQuant, ...this.getExtraInitOptions() }
+  }
+
   async translate(text: string, from: Language, to: Language, context?: TranslateContext): Promise<string> {
     if (!text.trim()) return ''
     if (from === to) return text
@@ -111,8 +121,8 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
 
     const t0 = performance.now()
     const result = await workerPool.sendRequest(
-      { type: 'translate', text, from, to, context },
-      'translate'
+      { type: 'translate', text, from, to, context: this.serialContext(context) },
+      'translate', this.workerOptions, context?.signal
     )
     const ms = performance.now() - t0
     this.log.info(`translate ${from}→${to} inputLen=${text.length} outputLen=${result.length} time=${ms.toFixed(0)}ms`)
@@ -133,8 +143,8 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     }
 
     return workerPool.sendRequest(
-      { type: 'translate-incremental', text, previousOutput, from, to, context },
-      'translate-incremental'
+      { type: 'translate-incremental', text, previousOutput, from, to, context: this.serialContext(context) },
+      'translate-incremental', this.workerOptions, context?.signal
     )
   }
 
@@ -167,8 +177,8 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
 
     const t0 = performance.now()
     const result = await workerPool.sendRequest(
-      { type: 'translate-ssbd', text, previousOutput, from, to, context },
-      'translate-ssbd'
+      { type: 'translate-ssbd', text, previousOutput, from, to, context: this.serialContext(context) },
+      'translate-ssbd', this.workerOptions, context?.signal
     )
     const ms = performance.now() - t0
     this.log.info(`ssbd ${from}→${to} inputLen=${text.length} outputLen=${result.length} time=${ms.toFixed(0)}ms`)
@@ -204,8 +214,8 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
 
     const t0 = performance.now()
     const result = await workerPool.sendRequest(
-      { type: 'translate-simulmt', text, previousOutput, from, to, isRevision, context },
-      'translate-simulmt'
+      { type: 'translate-simulmt', text, previousOutput, from, to, isRevision, context: this.serialContext(context) },
+      'translate-simulmt', this.workerOptions, context?.signal
     )
     const ms = performance.now() - t0
     const label = isRevision ? 'simulmt-rev' : 'simulmt-incr'
@@ -216,7 +226,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
   /** Reset the persistent SimulMT session (e.g. on speech segment boundary) */
   resetSimulMtSession(): void {
     if (this.initialized) {
-      workerPool.sendFireAndForget({ type: 'simulmt-reset' })
+      workerPool.sendFireAndForget({ type: 'simulmt-reset' }, this.modelPath)
     }
   }
 

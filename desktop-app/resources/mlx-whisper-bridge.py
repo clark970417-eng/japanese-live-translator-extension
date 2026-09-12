@@ -63,6 +63,7 @@ def transcribe(audio_path, sample_rate=16000, language=None):
                 audio, path_or_hf_repo=whisper_model,
                 language=language, condition_on_previous_text=False,
                 temperature=0, verbose=False,
+                sample_len=min(448, max(48, int(len(audio) / 16000 * 24) + 24)),
             )
 
         segments = result.get("segments", [])

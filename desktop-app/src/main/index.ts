@@ -1,3 +1,4 @@
+import { isUiTest } from './ui-test-mode'
 import { initAutoUpdater } from './auto-updater'
 import type { Language } from '../engines/types'
 import { app, protocol, net, powerSaveBlocker } from 'electron'
@@ -20,6 +21,7 @@ import { CarelessWhisperEngine } from '../engines/stt/CarelessWhisperEngine'
 import { OpusMTTranslator } from '../engines/translator/OpusMTTranslator'
 import { SLMTranslator } from '../engines/translator/SLMTranslator'
 import { HunyuanMTTranslator } from '../engines/translator/HunyuanMTTranslator'
+import { HunyuanMT2Translator } from '../engines/translator/HunyuanMT2Translator'
 import { HunyuanMT15Translator } from '../engines/translator/HunyuanMT15Translator'
 import { LFM2Translator } from '../engines/translator/LFM2Translator'
 import { PLaMoTranslator } from '../engines/translator/PLaMoTranslator'
@@ -166,6 +168,11 @@ async function initPipeline(): Promise<void> {
     onProgress: (msg) => ctx.mainWindow?.webContents.send('status-update', msg),
     kvCacheQuant: store.get('slmKvCacheQuant'),
     speculativeDecoding: store.get('slmSpeculativeDecoding')
+  }))
+  ctx.pipeline.registerTranslator('hunyuan-mt-2', () => new HunyuanMT2Translator({
+    variant: '7B-Q4_K_M',
+    onProgress: (msg) => ctx.mainWindow?.webContents.send('status-update', msg),
+    kvCacheQuant: store.get('slmKvCacheQuant')
   }))
   // ANEMLL Apple Neural Engine translator — macOS Apple Silicon only (#241) — experimental
   if (process.platform === 'darwin') {
@@ -357,7 +364,7 @@ app.whenReady().then(async () => {
   }
 
   await initPipeline()
-  await startExtensionCompanion(ctx)
+  if (!isUiTest) await startExtensionCompanion(ctx)
 
   // Initialize TTS manager (#508)
   ctx.ttsManager = new TTSManager()
@@ -396,9 +403,9 @@ app.whenReady().then(async () => {
   }
 
   cleanupDisplayHandlers = registerDisplayHandlers(ctx)
-  cleanupShortcuts = registerGlobalShortcuts(ctx)
+  if (!isUiTest) cleanupShortcuts = registerGlobalShortcuts(ctx)
   // This local fork must never replace itself with an upstream release.
-  initAutoUpdater(ctx)
+  if (!isUiTest) initAutoUpdater(ctx)
   if (process.argv.includes('--jtl-companion')) return
 
   // #694: Start progressive model download for instant offline start

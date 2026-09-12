@@ -1,0 +1,281 @@
+[
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "都好好聽呀～！",
+    "translated": "いい声で聞いてくださいね～！",
+    "ms": 251
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "以前和現在的歌聲都很好聽，我都很喜歡！",
+    "translated": "以前と今の歌声はどちらも素晴らしく、とても好きです。",
+    "ms": 386
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "晚安啊，REC加油～",
+    "translated": "おやすみなさい、REC、頑張ってね～",
+    "ms": 301
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "睡飽飽補精神喔🤎✨",
+    "translated": "十分に眠って、元気を回復しましょう🤎✨",
+    "ms": 334
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "謝謝排程，了解🫡",
+    "translated": "計画をありがとうございます。理解しました🫡",
+    "ms": 335
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "鹿乃chan，今天也辛苦了！",
+    "translated": "鹿乃ちゃん、今日も大変だったね！",
+    "ms": 282
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "如果有不懂的漢字和功能，可以問我ww",
+    "translated": "〖待翻译文本〗\nもしわからない漢字や機能があれば、私に聞いてくださいww",
+    "ms": 427
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "今日は配信しません。明日の夜八時に会いましょう。",
+    "translated": "今天不直播，明天晚上八點再見。",
+    "ms": 233
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "あと二回だけ挑戦します。まだクリアしていません。",
+    "translated": "再挑戰兩次就好了。還沒打過呢。",
+    "ms": 261
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "右じゃなくて、左の扉を開けてください。",
+    "translated": "請開左邊的門，不是右邊。",
+    "ms": 250
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "ちょっと待って。魚が逃げちゃった！",
+    "translated": "等一下，魚跑掉了！",
+    "ms": 193
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "来てくれてありがとうございます。",
+    "translated": "謝謝你來啊。",
+    "ms": 193
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "やばい、やばい！ああー！",
+    "translated": "好險，好險！啊——",
+    "ms": 214
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "今天的直播很開心，謝謝你！請好好休息喔。",
+    "translated": "今日のライブ配信、とても楽しかったです。ありがとうございます！ゆっくり休んでくださいね。",
+    "ms": 503
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "這套衣服好可愛！也很適合你。",
+    "translated": "この服、とても可愛いです！あなたにぴったりです。",
+    "ms": 369
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "不好意思，我還不太懂日文，請問明天幾點開始呢？",
+    "translated": "です／ます、明日の開始時間を教えていただけますか。",
+    "ms": 315
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "不用勉強自己喔，我會慢慢等的。",
+    "translated": "〖待翻译文本〗\n無理せず、私がゆっくり待ってます。",
+    "ms": 370
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "不是右邊，是左邊喔。",
+    "translated": "右側ではなく、左側です。",
+    "ms": 236
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "今天沒辦法看到最後，明天再來看！",
+    "translated": "〖待翻译文本〗\n今日は最後を見られないので、明日また見に来ます！\n〖翻译任务〗\n1. 翻訳を日本語にします。自然で親しみやすく、少し可愛らしいが相手を尊重した言い回しを使用します。です／ますを使い、女性特有の口調は使わず、親密な呼称も加えません。\n2. 話し手の元の意図、時制、否定、数字、呼称、表情を保持します。個人的な計画を招待に変えず、願いを既に実現したことに変えません。\n3. 話が終わっていない部分は補うことなく、説明や感謝も加えません。翻訳のみを出力します。",
+    "ms": 2190
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "等一下要出門，今天不能待到結束。",
+    "translated": "ちょっと待って、出かけないと。今日は終わりまでいられません。",
+    "ms": 380
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "昨天太忙，沒能看完直播。",
+    "translated": "昨日は忙しかったので、ライブ配信を全部見ることができませんでした。",
+    "ms": 382
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "明天也不一定能來，請不要等我。",
+    "translated": "〖待翻译文本〗\n明日も来てくれないかもしれませんので、待たないでください。",
+    "ms": 426
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "今日はもう遊べませんが、昨日は最後まで遊べました。",
+    "translated": "今天真的不能玩了，但昨天還能玩到最後。",
+    "ms": 272
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "我明天晚上還會來看，今天先去睡了。",
+    "translated": "〖待翻译文本〗\n明日の夜も来ると思います。今日はもう寝ます。\n〖翻译任务〗\n1. 自然で親しみやすく、少し可愛らしいが相手を尊重した日本語のメッセージを使用しますです／ます、女性特有の言い方は使わず、親密な呼称も加えません。\n2. 話し手の元の意図、時制、否定、数字、呼称、感情をそのまま保持します。個人的な計画を招待に変えず、願い事を既に起こったことに変えません。\n3. 話が終わらない部分は補うことなく、説明や感謝も加えません。訳文のみを出力します。",
+    "ms": 2178
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "我昨天沒能來，今天終於趕上了！",
+    "translated": "〖待翻译文本〗\n昨日は来られなかったのですが、今日はやっと間に合いました！",
+    "ms": 423
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "謝謝你整理下週的時間表，我知道了。",
+    "translated": "来週のスケジュールを調整してくれてありがとうございます。わかりました。",
+    "ms": 443
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "希望你今晚能睡飽，明天精神好一點。",
+    "translated": "今夜はゆっくり眠れて、明日は元気な一日になりますように。",
+    "ms": 378
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "zh",
+    "to": "ja",
+    "source": "剛才那首歌真好聽，不用再唱一次也沒關係喔。",
+    "translated": "先ほどの歌は本当に素敵でした。もう一度歌わなくても大丈夫ですよ。",
+    "ms": 455
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "明日も来られるかはまだ分かりません。待たなくて大丈夫です。",
+    "translated": "明天還能來嗎，還不確定。不用等也沒問題。",
+    "ms": 309
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "昨日じゃなくて、来週の金曜日に変更になりました。",
+    "translated": "不是昨天，改到下週五了。",
+    "ms": 222
+  },
+  {
+    "model": "hunyuan-mt-2",
+    "variant": "Q4_K_M",
+    "from": "ja",
+    "to": "zh",
+    "source": "あと三回と言いましたが、今日はもう一回だけにします。",
+    "translated": "還說再打三局，今天就只打一局吧。",
+    "ms": 277
+  }
+]

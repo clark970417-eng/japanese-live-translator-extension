@@ -91,6 +91,7 @@ export class TranslationPipeline extends EventEmitter {
 
   // Draft STT state (#536)
   private draftSttEnabled = false
+  private draftSttEngineId = 'moonshine-tiny-ja'
 
   // Speaker diarization state (#549)
   private diarizationEnabled = false
@@ -136,6 +137,7 @@ export class TranslationPipeline extends EventEmitter {
       getSTTEngine: () => this.engineManager.sttEngine,
       getTranslator: () => this.engineManager.translator,
       getGlossary: () => this.glossary,
+      canReuseInterimTranslation: () => !this.adaptiveRouter.getConfig().enabled,
       translateFinal: async (text, from, to) => {
         const cached = this.translationCache.get(text, from, to)
         if (cached !== undefined) return cached
@@ -250,8 +252,9 @@ export class TranslationPipeline extends EventEmitter {
   }
 
   /** Enable or disable draft STT for fast interim results (#536) */
-  setDraftSttEnabled(enabled: boolean): void {
+  setDraftSttEnabled(enabled: boolean, engineId = 'moonshine-tiny-ja'): void {
     this.draftSttEnabled = enabled
+    this.draftSttEngineId = engineId
   }
 
   /** Enable or disable speaker diarization (#549) */
@@ -330,7 +333,7 @@ export class TranslationPipeline extends EventEmitter {
       // Initialize draft STT if enabled (#536)
       if (this.draftSttEnabled) {
         try {
-          await this.engineManager.initDraftStt('moonshine-tiny-ja', this)
+          await this.engineManager.initDraftStt(this.draftSttEngineId, this)
         } catch (err) {
           log.warn('Draft STT initialization failed (non-fatal):', err)
           this.emit('engine-loading', 'Draft STT not available — continuing without fast interim results')

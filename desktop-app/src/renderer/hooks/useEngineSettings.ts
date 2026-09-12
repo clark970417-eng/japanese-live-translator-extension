@@ -89,7 +89,7 @@ export function useEngineSettings(init: EngineSettingsInit): EngineSettingsState
       // The main process also migrates the persisted value on startup.
       if (s.translationEngine) {
         const raw = str(s.translationEngine, 'auto')
-        const valid: EngineMode[] = ['auto', 'rotation', 'online', 'online-deepl', 'online-gemini', 'offline-hymt15', 'offline-hunyuan-mt', 'offline-apple']
+        const valid: EngineMode[] = ['auto', 'rotation', 'online', 'online-deepl', 'online-gemini', 'offline-hymt15', 'offline-hymt2', 'offline-hunyuan-mt', 'offline-apple']
         setEngineMode((valid.includes(raw as EngineMode) ? raw : 'auto') as EngineMode)
       }
       if (s.googleApiKey) setApiKey(str(s.googleApiKey, ''))
