@@ -241,3 +241,44 @@ it('releases optional draft repair for arriving audio, keeps the draft, and drai
   }
 })
 
+it('uses the draft model only while no caption session is running', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'jtl-draft-model-'))
+  const pipeline = Object.assign(new EventEmitter(), {
+    active: false, running: false, stop: vi.fn(async () => {}),
+    canOverlapFinalTranslation: false, prepareFinalStreaming: vi.fn(),
+    processStreaming: vi.fn(async () => ({ sourceText: '声', translatedText: '聲音' })),
+    finalizeStreaming: vi.fn(async () => ({ sourceText: '声', translatedText: '聲音', timestamp: 4 }))
+  })
+  vi.mocked(store.get).mockImplementation(key =>
+    (key === 'draftTranslationEngine' ? 'offline-hymt2' : 'offline-hymt15') as never)
+  const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
+  const socket = connect(join(directory, 'desktop.sock'))
+  const messages: Array<Record<string, unknown>> = []
+  let buffer = ''
+  socket.setEncoding('utf8')
+  socket.on('data', data => {
+    buffer += data
+    let newline: number
+    while ((newline = buffer.indexOf('\n')) >= 0) {
+      messages.push(JSON.parse(buffer.slice(0, newline))); buffer = buffer.slice(newline + 1)
+    }
+  })
+  const send = (message: object): void => { socket.write(JSON.stringify(message) + '\n') }
+  try {
+    // No caption session yet: the draft model is allowed.
+    send({ id: 1, op: 'translate', direction: 'zh-ja', text: '謝謝你' })
+    await vi.waitFor(() => expect(messages.some(m => m.id === 1 && m.ok)).toBe(true))
+    expect((messages.find(m => m.id === 1)?.result as { text: string }).text).toBe('新しいモデル')
+
+    // While captions run, a draft must not swap the shared worker's model.
+    pipeline.running = true
+    send({ id: 2, op: 'translate', direction: 'zh-ja', text: '謝謝你' })
+    await vi.waitFor(() => expect(messages.some(m => m.id === 2 && m.ok)).toBe(true))
+    expect((messages.find(m => m.id === 2)?.result as { text: string }).text).toBe('こんにちは')
+  } finally {
+    socket.destroy()
+    await new Promise<void>(resolve => server.close(() => resolve()))
+    vi.mocked(store.get).mockReset()
+    rmSync(directory, { recursive: true, force: true })
+  }
+})

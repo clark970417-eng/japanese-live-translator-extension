@@ -141,7 +141,15 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               if (!['ja-zh', 'zh-ja', 'ja-en'].includes(m.direction || 'ja-zh')) throw new Error('Invalid language')
               const from = m.direction === 'zh-ja' ? 'zh' : 'ja'
               const to = m.direction === 'zh-ja' ? 'ja' : m.direction === 'ja-en' ? 'en' : 'zh'
-              const requestedMode = store.get('translationEngine') === 'offline-hymt2' ? 'offline-hymt2' : 'offline-hymt15'
+              // Drafts may use a more accurate model than the captions, but only
+              // while no caption session is running. The shared worker unloads
+              // one model to load another, and measuring that swap against live
+              // audio put caption round trips above 20 s. Preemption cannot help:
+              // the cost is in loading weights, not in generating tokens.
+              const draftModelAllowed = from === 'zh' && to === 'ja' && !pipeline.running
+              const requestedMode = (draftModelAllowed
+                ? store.get('draftTranslationEngine') : store.get('translationEngine')) === 'offline-hymt2'
+                ? 'offline-hymt2' : 'offline-hymt15'
               if (!translator || translatorMode !== requestedMode) {
                 await translator?.dispose()
                 translator = requestedMode === 'offline-hymt2'

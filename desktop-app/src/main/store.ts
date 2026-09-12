@@ -93,6 +93,11 @@ export interface AppSettings {
   simulMtEnabled: boolean
   /** Wait-k value: start translating after k confirmed words (default 3) */
   simulMtWaitK: number
+  /** Local model for written Chinese-to-Japanese drafts when no caption session
+   * is running: 'offline-hymt2' (7B, more accurate) or 'offline-hymt15'. While
+   * captions are live the caption model is used instead, because swapping the
+   * shared worker's model costs more than the accuracy is worth. */
+  draftTranslationEngine: string
   /** Whisper model variant for local STT: kotoba-v2.0 (Japanese-optimized) or large-v3-turbo (multilingual) */
   whisperVariant: string
   /** Moonshine model variant for local STT: tiny (fastest) or base (recommended) */
@@ -199,6 +204,7 @@ export const store = new Store<AppSettings>({
     slmSpeculativeDecoding: false,
     simulMtEnabled: false,
     simulMtWaitK: 3,
+    draftTranslationEngine: 'offline-hymt2',
     whisperVariant: 'kotoba-v2.0',
     moonshineVariant: 'base',
     sherpaOnnxModel: 'whisper-base',
