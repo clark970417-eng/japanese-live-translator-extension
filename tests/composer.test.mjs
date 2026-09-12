@@ -22,3 +22,20 @@ test('late drafts cannot overwrite edits, removed editors, or disabled website t
  let p=button.click();box.textContent='我修改了原文';t.replies.at(-1).reply({ok:true,text:{draft:'wrong'}});await p;assert.equal(box.textContent,'我修改了原文');
  p=button.click();t.toggle(false);t.replies.at(-1).reply({ok:true,text:{draft:'wrong'}});await p;assert.equal(box.textContent,'我修改了原文');assert.equal(button.disabled,false);
 });
+
+test('a finished draft is only inserted for review; nothing is submitted',async()=>{
+ const t=setup();await Promise.resolve();const box=t.makeBox();
+ const events=[];box.dispatchEvent=event=>{events.push(event.constructor.name);};
+ t.scan();
+ const pending=t.controls[0].children[0].click();
+ t.replies.at(-1).reply({ok:true,text:{draft:'また明日ね！',mode:'本機草稿'}});
+ await pending;
+ assert.equal(box.textContent,'また明日ね！');
+ // Only the input notification that tells the page its editor changed.
+ assert.deepEqual(events,['InputEvent']);
+ // No keyboard event and no click on a send control may reach the page.
+ const source=fs.readFileSync(new URL('../content.js',import.meta.url),'utf8');
+ assert.equal(/KeyboardEvent|\.click\(\)|key:\s*['"]Enter/.test(source),false);
+ const xSource=fs.readFileSync(new URL('../x-content.js',import.meta.url),'utf8');
+ assert.equal(/KeyboardEvent|\.click\(\)|key:\s*['"]Enter/.test(xSource),false);
+});

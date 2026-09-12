@@ -1,0 +1,241 @@
+[
+  {
+    "id": "known-possibility-negation",
+    "surface": "comment",
+    "zh": "明天可能沒辦法來看，但我會看直播存檔，不要勉強自己喔",
+    "mustContain": ["かもしれ"],
+    "mustNotContain": ["配信の記録"],
+    "intent": "Possibility plus negation: may be unable to watch live, will watch the archive, and asks the streamer not to overexert.",
+    "tone": "warm, concerned, not intimate",
+    "note": "The known case named in the handoff. Deliberately carried over so it cannot regress."
+  },
+  {
+    "id": "comment-negation-simple",
+    "surface": "comment",
+    "zh": "這一段我完全沒有看懂，可以再解釋一次嗎",
+    "mustContain": ["ない", "か"],
+    "intent": "Did not understand at all; politely asks for another explanation.",
+    "tone": "humble request"
+  },
+  {
+    "id": "comment-possibility-schedule",
+    "surface": "comment",
+    "zh": "下週我也許會遲到一點，但一定會來",
+    "mustContain": ["かもしれ"],
+    "mustNotContain": ["行きません"],
+    "intent": "Might be late but will definitely come. The commitment must not become a refusal.",
+    "tone": "friendly"
+  },
+  {
+    "id": "comment-past-tense",
+    "surface": "comment",
+    "zh": "昨天那段我已經看完了，真的很精彩",
+    "mustContain": ["ました"],
+    "mustNotContain": ["まだ見ていません"],
+    "intent": "Already finished watching yesterday's part.",
+    "tone": "enthusiastic but polite"
+  },
+  {
+    "id": "comment-future-plan",
+    "surface": "comment",
+    "zh": "下次開台我會早一點到，幫你留位子",
+    "mustNotContain": ["遅れます"],
+    "intent": "Will arrive earlier next stream and save a seat.",
+    "tone": "playful, supportive"
+  },
+  {
+    "id": "comment-emoji-tail",
+    "surface": "comment",
+    "zh": "今天的表演超讚 🎉 辛苦了 💐",
+    "preserveEmoji": ["🎉", "💐"],
+    "intent": "Praise plus thanks for the effort.",
+    "tone": "celebratory"
+  },
+  {
+    "id": "comment-emoji-inline",
+    "surface": "comment",
+    "zh": "那個跳躍 😂 我笑到肚子痛",
+    "preserveEmoji": ["😂"],
+    "intent": "That jump was hilarious.",
+    "tone": "amused, casual"
+  },
+  {
+    "id": "comment-two-lines",
+    "surface": "comment",
+    "zh": "第一段的音樂很好聽\n請問曲名是什麼",
+    "preserveLines": 2,
+    "intent": "Compliments the music, then asks for the title.",
+    "tone": "polite question"
+  },
+  {
+    "id": "comment-three-lines",
+    "surface": "comment",
+    "zh": "今天很開心\n下次也會來\n請好好休息",
+    "preserveLines": 3,
+    "intent": "Three short lines: enjoyment, a promise to return, and a wish for rest.",
+    "tone": "warm"
+  },
+  {
+    "id": "shorts-short-praise",
+    "surface": "shorts",
+    "zh": "這剪得太厲害了吧",
+    "intent": "Short praise for the editing.",
+    "tone": "excited, casual"
+  },
+  {
+    "id": "shorts-negation-request",
+    "surface": "shorts",
+    "zh": "不要停更啊，我每天都在等",
+    "mustContain": ["ない"],
+    "intent": "Asks them not to stop posting; waits every day.",
+    "tone": "eager, a little pleading, not demanding"
+  },
+  {
+    "id": "shorts-name-handle",
+    "surface": "shorts",
+    "zh": "さくら的那段配音超可愛",
+    "mustContain": ["さくら"],
+    "mustNotContain": ["桜さんの"],
+    "intent": "A handle written in kana inside Chinese text must stay that handle.",
+    "tone": "admiring"
+  },
+  {
+    "id": "reply-thanks",
+    "surface": "reply",
+    "zh": "謝謝你回覆我，我這邊已經解決了",
+    "mustContain": ["ました"],
+    "intent": "Thanks for the reply; the issue is already resolved.",
+    "tone": "grateful, polite"
+  },
+  {
+    "id": "reply-disagree-softly",
+    "surface": "reply",
+    "zh": "我覺得不一定是這樣，也可能是設定的問題",
+    "mustContain": ["かもしれ"],
+    "mustNotContain": ["絶対に"],
+    "intent": "Soft disagreement plus an alternative possibility. Must not become an assertion.",
+    "tone": "gentle, non-confrontational"
+  },
+  {
+    "id": "reply-correct-fact",
+    "surface": "reply",
+    "zh": "那個版本我沒有安裝，所以不太清楚",
+    "mustContain": ["ない"],
+    "intent": "Has not installed that version, so is unsure.",
+    "tone": "honest, modest"
+  },
+  {
+    "id": "reply-emoji-and-line",
+    "surface": "reply",
+    "zh": "原來是這樣 😮\n謝謝你的說明",
+    "preserveEmoji": ["😮"],
+    "preserveLines": 2,
+    "intent": "Realization, then thanks.",
+    "tone": "appreciative"
+  },
+  {
+    "id": "chat-cheer",
+    "surface": "chat",
+    "zh": "加油加油！剩最後一關了",
+    "intent": "Cheering; only the final stage remains.",
+    "tone": "energetic, short enough for live chat"
+  },
+  {
+    "id": "chat-question-short",
+    "surface": "chat",
+    "zh": "這把武器是在哪裡拿到的",
+    "intent": "Asks where the weapon was obtained.",
+    "tone": "casual question"
+  },
+  {
+    "id": "chat-negation-warning",
+    "surface": "chat",
+    "zh": "右邊不要進去，那裡有陷阱",
+    "mustContain": ["ない"],
+    "intent": "Warns not to enter the right side because of a trap.",
+    "tone": "urgent but friendly"
+  },
+  {
+    "id": "chat-possibility-lag",
+    "surface": "chat",
+    "zh": "可能是我的網路問題，我這邊有點卡",
+    "mustContain": ["かもしれ"],
+    "intent": "Suspects their own connection; hedged, not an accusation.",
+    "tone": "considerate"
+  },
+  {
+    "id": "chat-late-night",
+    "surface": "chat",
+    "zh": "太晚了就不要硬撐，明天再繼續也可以",
+    "mustContain": ["ない"],
+    "mustNotContain": ["続けてください"],
+    "intent": "Tells them not to push through if it is late; continuing tomorrow is fine.",
+    "tone": "caring, respectful of their choice"
+  },
+  {
+    "id": "x-reply-agree",
+    "surface": "x-reply",
+    "zh": "同意，這個功能真的很需要",
+    "intent": "Agreement that the feature is needed.",
+    "tone": "concise, public-facing"
+  },
+  {
+    "id": "x-reply-tense-mix",
+    "surface": "x-reply",
+    "zh": "我昨天試過了，現在還在等回覆",
+    "mustContain": ["ました"],
+    "intent": "Tried yesterday, still waiting now. Both tenses must survive.",
+    "tone": "matter-of-fact"
+  },
+  {
+    "id": "x-reply-name-place",
+    "surface": "x-reply",
+    "zh": "下次去秋葉原的時候想去看看",
+    "mustContain": ["秋葉原"],
+    "intent": "Wants to visit next time in Akihabara.",
+    "tone": "casual"
+  },
+  {
+    "id": "x-reply-emoji-only-tail",
+    "surface": "x-reply",
+    "zh": "恭喜達成目標 🎊",
+    "preserveEmoji": ["🎊"],
+    "intent": "Congratulations on reaching the goal.",
+    "tone": "celebratory, brief"
+  },
+  {
+    "id": "x-reply-decline-politely",
+    "surface": "x-reply",
+    "zh": "這次我可能沒辦法參加，下次一定",
+    "mustContain": ["かもしれ"],
+    "mustNotContain": ["参加します。"],
+    "intent": "Probably cannot join this time, will next time. The hedge and the negation must both survive.",
+    "tone": "apologetic but warm"
+  },
+  {
+    "id": "comment-archive-term",
+    "surface": "comment",
+    "zh": "我上班沒辦法看直播，晚點會去看存檔",
+    "mustNotContain": ["配信の記録"],
+    "intent": "Cannot watch live because of work; will watch the archive later.",
+    "tone": "friendly"
+  },
+  {
+    "id": "chat-archive-request",
+    "surface": "chat",
+    "zh": "這段可以留在存檔裡嗎",
+    "mustNotContain": ["記録に残して"],
+    "intent": "Asks whether this part can stay in the archive.",
+    "tone": "polite request"
+  },
+  {
+    "id": "comment-long-mixed",
+    "surface": "comment",
+    "zh": "今天雖然有點卡，但我看得很開心 😊\n下次也請繼續加油\n不要太累了喔",
+    "preserveEmoji": ["😊"],
+    "preserveLines": 3,
+    "mustContain": ["ない"],
+    "intent": "Acknowledges lag, expresses enjoyment, encourages, then asks them not to overwork.",
+    "tone": "warm, three-line comment"
+  }
+]
