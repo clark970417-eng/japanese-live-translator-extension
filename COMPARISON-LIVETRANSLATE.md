@@ -104,3 +104,72 @@ Keep the machine awake, run each implementation separately, retain raw events,
 and exclude runs containing sleep. The harness does not request cloud inference.
 Use diverse held-out speech, silence, music, and overlapping voices before making
 quality or long-session claims. The current fixture alone is not representative.
+
+## September 13: feature behavior, compared separately from performance
+
+Upstream is the pinned revision `3d333e6`, which a fetch on September 12
+confirmed is still the tip of `rioX432/live-translate` main. A whole-tree diff
+shows **no file exists upstream that is absent from the fork**: the fork is a
+superset, with 45 modified files. Nothing below is a missing-source gap.
+
+The comparison that matters for behavior is what each build can actually do
+through the browser, because the fork's native companion exposes exactly five
+operations: `settings`, `stop`, `init`, `decode` and `translate`.
+
+| Capability | Upstream desktop | Fork through the browser | Verdict |
+| --- | --- | --- | --- |
+| Bilingual captions over browser tab audio | not offered | native companion plus overlay | fork only |
+| Traditional Chinese output | Simplified in the observed run | Traditional | fork, for this user's task |
+| Requested source language honored | the Python bridge ignores it and auto-detects | honored, with `auto` still available | fork |
+| Website text translation, YouTube and X | not offered | titles, chat, comments, X posts | fork only |
+| Japanese reply drafts from Chinese | not offered | composer drafts, never submitted | fork only |
+| Non-speech audio | shares the same dead `no_speech_prob` guard; not yet re-measured | stock outro rejected as of this round | fork, pending an upstream re-run |
+| Arbitrary audio file formats | FFmpeg decoding | 16 kHz PCM only | upstream |
+| Release and auto-update channel | published channel | no release published | upstream |
+| Live controls exposed in the interface | audio source, level meter, streaming interval, advanced panel | compact popup plus a desktop settings button | upstream |
+| Engine breadth reachable end to end | every engine including cloud realtime | local cascade only | upstream |
+| Speaker labels | desktop overlay | forwarded by the companion, unused by the extension | upstream |
+| TTS, virtual microphone, accessibility overlay, global shortcuts | present | not bridged | upstream, and out of scope by the handoff |
+
+Cloud realtime, TTS, virtual microphone, accessibility parity, FFmpeg format
+support and release publishing are all listed as non-goals in
+`CLAUDE-HANDOFF.md`. They are recorded here as honest gaps, not as a backlog.
+
+## What this round changed, and what it does not yet claim
+
+The latency and recognition numbers earlier in this file were measured before
+the changes in `RETEST-CONTENTION.md`, `RETEST-CONTINUITY.md`,
+`RETEST-ACCURACY.md` and `RETEST-DRAFTS.md`. They are **not** restated as
+current. A matched fork-versus-upstream rerun on the same corpus is required
+before any performance verdict in this section is updated, and it must run while
+nothing else holds the inference worker.
+
+No category above is claimed as a general win. "Fork only" means upstream does
+not offer the capability at all, not that the fork's implementation is good.
+
+## Reproduction of this round's harnesses
+
+All of these live in `desktop-app` and are compiled with esbuild to
+`out/main/<name>.cjs` before being run with the local Electron binary. A normal
+`npm run build` empties `out/main`, so recompile the benchmarks after building
+the app. Run one at a time; every measurement in these reports is invalid if two
+inference jobs overlap.
+
+| Harness | Purpose | Report |
+| --- | --- | --- |
+| `scripts/benchmark-draft-contention.ts` | audio versus written draft on the shared worker | `tests/results/contention-matched.jsonl` |
+| `scripts/verify-companion-host.ts` plus `scripts/verify-installed-contention.mjs` | the real companion over its socket protocol | `tests/results/companion-path-*.jsonl` |
+| `scripts/generate-continuity-corpus.py` with `--manifest` | authored condition clips | `tests/corpus/continuity.json`, `tests/corpus/soak.json` |
+| `scripts/benchmark-continuity.ts` | recognition continuity per condition | `tests/results/continuity-*.jsonl` |
+| `scripts/benchmark-holdout.ts` | Japanese to Chinese accuracy on a frozen set | `tests/results/holdout-*.jsonl` |
+| `scripts/benchmark-draft-review.ts` | Chinese to Japanese drafts on a frozen set | `tests/results/draft-review-*.jsonl` |
+| `scripts/soak-companion.mjs` | long session, restarts and recovery | `tests/results/soak-*.jsonl` |
+
+Shared environment variables are `COMPARE_PROFILE` (a test profile holding the
+GGUF weights), `COMPARE_REPORT`, and per-harness manifest and audio directories.
+`COMPARE_TRANSLATOR=hunyuan-mt-2` selects the 7B quality model,
+`COMPARE_GLOSSARY` switches terminology on or off.
+
+The upstream side is built in `desktop-app/.test-out/upstream`, which is
+byte-identical to `live-translate-upstream` and has its own `node_modules` and
+FFmpeg. Its corpus replay is `out/main/benchmark-corpus.cjs`.
