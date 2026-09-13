@@ -1,0 +1,33 @@
+[
+  {"id":"casual-hard-again","category":"casual","ja":"これガチでむずくない？でももう一回やろ。","zh":"這真的不是很難嗎？不過再玩一次吧。","mustContain":["難","再"],"mustNotContain":["簡單","不要再"],"intent":"Casual question followed by a suggestion to try again."},
+  {"id":"casual-forgot-heal","category":"casual","ja":"やば、回復するの忘れてたわ。","zh":"糟糕，我忘記回血了。","mustContain":["忘"],"mustNotContain":["記得回血"],"intent":"The speaker realizes they forgot to heal."},
+  {"id":"casual-route-stuck","category":"casual","ja":"そっち行ったら詰むって。","zh":"走那邊會卡死啦。","mustContain":["那邊"],"mustNotContain":["走這邊","通關"],"intent":"A casual warning that taking that route will make the game unwinnable."},
+
+  {"id":"neg-can-win-stop","category":"negation","ja":"勝てないわけじゃないけど、今日はやめとく。","zh":"也不是打不贏，但今天先不打了。","mustContain":["不是","今天"],"mustNotContain":["打不贏，所以繼續"],"intent":"The speaker could win but chooses to stop for today."},
+  {"id":"neg-not-ended","category":"negation","ja":"まだ終わったとは言ってないよ。","zh":"我還沒說已經結束了喔。","mustContain":["還沒","結束"],"mustNotContain":["已經結束了。"],"intent":"Denies having said it ended."},
+  {"id":"neg-no-payment","category":"negation","ja":"課金しなくても楽しめると思う。","zh":"我覺得不課金也能玩得開心。","mustContain":["不課金"],"mustNotContain":["一定要課金"],"intent":"Paying is not required to enjoy it."},
+
+  {"id":"hearsay-nerf","category":"hearsay","ja":"次のアップデートで弱体化されるらしい。","zh":"聽說下次更新會被削弱。","mustContain":["聽說"],"mustNotContain":["確定"],"intent":"Reported information about a future nerf."},
+  {"id":"hearsay-shop-close","category":"hearsay","ja":"あの店、来月閉まるそうですよ。","zh":"聽說那間店下個月要關門。","mustContain":["聽說","下個月"],"mustNotContain":["上個月"],"intent":"Hearsay about a shop closing next month."},
+  {"id":"hearsay-undecided","category":"hearsay","ja":"本人はまだ決めていないとのことです。","zh":"據說本人還沒有決定。","mustContain":["據說","還沒"],"mustNotContain":["已經決定"],"intent":"A report that the person remains undecided."},
+
+  {"id":"game-cooldown-three","category":"game","ja":"クールタイムが残り三秒だから待って。","zh":"冷卻還剩三秒，等一下。","mustContain":["冷卻","三秒"],"mustNotContain":["有效時間"],"intent":"Game cooldown with a remaining duration."},
+  {"id":"game-respawn-change","category":"game","ja":"リスポーン地点を変えたほうがいいかも。","zh":"也許換個重生點比較好。","mustContain":["重生點"],"mustNotContain":["回程點"],"intent":"Tentative suggestion to change the respawn point."},
+  {"id":"game-network-drop","category":"game","ja":"回線落ちして、マッチから切断されました。","zh":"因為斷線，被踢出對戰了。","mustContain":["斷線","對戰"],"mustNotContain":["電話線路"],"intent":"A network disconnect removed the speaker from a match."},
+
+  {"id":"archive-audio-drift","category":"archive","ja":"昨日のアーカイブは途中から音がずれてます。","zh":"昨天的直播存檔從中途開始聲音不同步。","mustContain":["存檔","聲音"],"mustNotContain":["檔案館"],"intent":"Archive means the saved livestream, with audio drift."},
+  {"id":"archive-may-not-save","category":"archive","ja":"この配信、アーカイブに残さないかもしれません。","zh":"這場直播可能不會保留存檔。","mustContain":["可能","不"],"mustNotContain":["一定會保留"],"intent":"Possibility that the stream will not be archived."},
+  {"id":"archive-clips-after","category":"archive","ja":"切り抜きはアーカイブ公開後にお願いします。","zh":"請在直播存檔公開後再做剪輯。","mustContain":["存檔","公開後"],"mustNotContain":["公開前"],"intent":"Clips are requested only after the stream archive is public."},
+
+  {"id":"tense-next-saturday","category":"tense","ja":"来週の土曜は朝から配信するつもりです。","zh":"下週六打算從早上開始直播。","mustContain":["下週六","打算"],"mustNotContain":["上週六"],"intent":"A plan for next Saturday."},
+  {"id":"tense-was-asleep","category":"tense","ja":"さっきまで寝てたけど、もう起きました。","zh":"剛剛之前還在睡，但現在已經起床了。","mustContain":["已經","起床"],"mustNotContain":["還在睡"],"intent":"Past sleeping state followed by completed waking."},
+  {"id":"tense-event-tomorrow","category":"tense","ja":"このイベントは明日の夜に終わります。","zh":"這個活動明晚結束。","mustContain":["明晚"],"mustNotContain":["昨晚"],"intent":"The event ends tomorrow night."},
+
+  {"id":"pronoun-viewer-leave","category":"pronoun","ja":"無理そうなら、先に帰っていいよ。","zh":"如果你覺得不行，可以先回去喔。","mustContain":["可以","回去"],"mustNotContain":["我要先回去"],"intent":"The omitted subject allowed to leave is the listener."},
+  {"id":"pronoun-speaker-voice","category":"pronoun","ja":"今日は声が出ないので、早めに終わります。","zh":"我今天發不出聲音，所以會早點結束。","mustContain":["今天","早點結束"],"mustNotContain":["你發不出聲音"],"intent":"The speaker ends early because their own voice is failing."},
+  {"id":"pronoun-returning-viewer","category":"pronoun","ja":"また来てくれたんだ、覚えてるよ。","zh":"你又來了啊，我記得你喔。","mustContain":["記得"],"mustNotContain":["你記得我"],"intent":"The viewer returned and the speaker remembers them."},
+
+  {"id":"incomplete-same-result","category":"incomplete","ja":"もし次も同じ結果だったら…","zh":"如果下次也是同樣的結果……","mustContain":["如果"],"mustNotContain":["就放棄","一定會"],"intent":"An unfinished conditional with no invented consequence."},
+  {"id":"incomplete-different","category":"incomplete","ja":"いや、それはちょっと違うというか","zh":"不，那個有點不太一樣，該怎麼說……","mustContain":["不太一樣"],"mustNotContain":["所以是錯的"],"intent":"A hesitant unfinished correction."},
+  {"id":"incomplete-plans-later","category":"incomplete","ja":"このあと予定があるから、そろそろ","zh":"因為等等還有安排，差不多該……","mustContain":["安排"],"mustNotContain":["現在就結束","謝謝收看"],"intent":"The speaker trails off before saying what they will do."}
+]
