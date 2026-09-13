@@ -4,8 +4,8 @@ import { createHash } from 'crypto'
 
 /** Extension files Opera actually loads, as installed by the Stage 9 procedure. */
 export const EXTENSION_RUNTIME = [
-  'manifest.json', 'background.js', 'content.js', 'x-content.js', 'caption-window.js', 'caption-window.css',
-  'content.css', 'x-content.css', 'offscreen.js', 'offscreen.html', 'popup.html', 'popup.js', 'popup.css',
+  'manifest.json', 'background.js', 'content.js', 'x-content.js', 'social-content.js', 'caption-window.js', 'caption-window.css',
+  'content.css', 'x-content.css', 'social-content.css', 'offscreen.js', 'offscreen.html', 'popup.html', 'popup.js', 'popup.css',
   'audio-worklet.js', 'vad-worker.js', 'speech-worker.js', 'desktop-worker.js', 'streaming.mjs', 'stream-core.mjs',
   'token-stream.mjs', 'cue-cursor.mjs', 'native-client.mjs', 'recording-queue.mjs', 'translation-policy.mjs',
   'capture-status.mjs', 'whisper-runtime.js'

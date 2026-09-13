@@ -20,8 +20,8 @@ The project explores a practical accessibility problem: live Japanese media ofte
 
 It supports two independent workflows:
 
-- **Page text translation** translates Japanese video titles, live chat messages, comments, and X posts into Traditional Chinese.
-- **Audio captioning** captures the current video or X Spaces tab and produces movable, resizable bilingual captions.
+- **Page text translation** translates Japanese video titles, live chat messages, comments, and X posts into Traditional Chinese across YouTube, X, Bilibili, and TikTok.
+- **Audio captioning** captures the current YouTube, X Spaces, Bilibili, or TikTok tab and produces movable, resizable bilingual captions.
 
 The extension never publishes a message automatically. Its optional writing assistant creates a Japanese draft from Chinese text and leaves review and submission to the user.
 
@@ -35,7 +35,8 @@ The extension never publishes a message automatically. Its optional writing assi
 - Two display modes: one low-latency caption pair or a four-entry ordered transcript queue.
 - A movable and resizable caption panel with configurable type size, color, outline, background, and opacity.
 - Persistent transcript records, failed-translation retry, and text export.
-- Translation of YouTube titles, chat, comments, and X posts.
+- Translation of Japanese titles, live chat, and comments on YouTube, Bilibili, and TikTok, plus X posts.
+- Chinese-to-Japanese review drafts for comment, reply, and live-chat editors on all four supported sites.
 - Local audio processing by default, with optional cloud engines in the desktop application; no automatic posting.
 
 ## System design
@@ -52,7 +53,7 @@ This is windowed incremental recognition rather than a stateful streaming acoust
 2. Open `opera://extensions` in Opera GX or `chrome://extensions` in Chrome.
 3. Enable Developer mode.
 4. Select **Load unpacked** and choose the directory containing `manifest.json`.
-5. Refresh the target YouTube or X page, open the extension, and select **Start audio**.
+5. Refresh the target YouTube, X, Bilibili, or TikTok page, open the extension, and select **Start audio**.
 
 Browser mode downloads Whisper Small and uses network translation. Desktop mode
 requires the [local app and native messaging registration](desktop-app/INTEGRATION.md);
@@ -70,7 +71,7 @@ The default browser and MLX desktop recognition paths process audio locally. Bro
 - `speech-worker.js` — WebGPU Whisper inference.
 - `vad-worker.js` and `vendor/silero/` — local voice activity detection.
 - `streaming.mjs` — resampling, overlapping speech windows, hypothesis alignment, and latency metrics.
-- `content.js` and `x-content.js` — page integration and translation controls.
+- `content.js`, `x-content.js`, and `social-content.js` — page integration and translation controls.
 - `caption-window.js` — movable and resizable bilingual caption interface.
 - `popup.js` — settings, diagnostics, transcript export, and start/stop controls.
 - `tests/` — unit, integration, browser, VAD, and tab-capture fixtures.

@@ -11,7 +11,7 @@ test('runtime comparison names missing and differing files and nothing else',()=
 });
 
 test('the runtime list covers every file the extension manifest and pages load',()=>{
- for(const file of ['manifest.json','background.js','native-client.mjs','offscreen.js','caption-window.js','x-content.js'])assert.ok(EXTENSION_RUNTIME.includes(file),file);
+ for(const file of ['manifest.json','background.js','native-client.mjs','offscreen.js','caption-window.js','x-content.js','social-content.js','social-content.css'])assert.ok(EXTENSION_RUNTIME.includes(file),file);
 });
 
 test('a session log without its end line is reported as a session that died',()=>{
