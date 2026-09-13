@@ -21,14 +21,17 @@ app.setPath('userData', env.COMPARE_PROFILE!)
 
 interface Row {
   id: string
-  surface: string
+  surface?: string
   zh: string
   mustContain?: string[]
   mustNotContain?: string[]
+  mustContainAny?: string[]
+  mustNotContainAny?: string[]
+  group?: string
   preserveEmoji?: string[]
   preserveLines?: number
-  intent: string
-  tone: string
+  intent?: string
+  tone?: string
 }
 
 app.whenReady().then(async () => {
@@ -68,13 +71,15 @@ app.whenReady().then(async () => {
       } catch (failure) {
         error = String(failure)
       }
-      const missing = (row.mustContain || []).filter(term => !draft.includes(term))
-      const forbidden = (row.mustNotContain || []).filter(term => draft.includes(term))
+      const anyMissing = row.mustContainAny && !row.mustContainAny.some(term => draft.includes(term))
+        ? [`one of ${row.mustContainAny.join('|')}`] : []
+      const missing = [...(row.mustContain || []).filter(term => !draft.includes(term)), ...anyMissing]
+      const forbidden = [...(row.mustNotContain || []), ...(row.mustNotContainAny || [])].filter(term => draft.includes(term))
       const lostEmoji = (row.preserveEmoji || []).filter(glyph => !draft.includes(glyph))
       const lines = draft.split('\n').filter(line => line.trim()).length
       const lineMismatch = row.preserveLines !== undefined && lines !== row.preserveLines
       emit({
-        type: 'trial', id: row.id, surface: row.surface, zh: row.zh, draft,
+        type: 'trial', id: row.id, surface: row.surface, group: row.group, zh: row.zh, draft,
         intent: row.intent, tone: row.tone,
         repaired, reviewWarning,
         missingRequired: missing, presentForbidden: forbidden, lostEmoji,

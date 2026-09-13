@@ -1,0 +1,133 @@
+[
+  {
+    "id": "anchor-handoff-case",
+    "group": "addressee",
+    "zh": "明天可能沒辦法來看，但我會看直播存檔，不要勉強自己喔",
+    "mustContainAny": ["ないで", "なくていい", "なくても", "ように"],
+    "mustNotContainAny": ["無理にはしません", "無理はしません", "無理をしません"],
+    "note": "The Stage 4 regression, carried over deliberately as an anchor. Every other item is new."
+  },
+  {
+    "id": "addr-rest",
+    "group": "addressee",
+    "zh": "今天辛苦了，不要熬夜太晚喔",
+    "mustContainAny": ["ないで", "ないように", "なくて"],
+    "mustNotContainAny": ["夜更かししません", "夜更かしはしません"]
+  },
+  {
+    "id": "addr-worry",
+    "group": "addressee",
+    "zh": "失敗也沒關係，別太在意",
+    "mustContainAny": ["ないで", "なくていい", "なくても", "ように", "気にしないで"],
+    "mustNotContainAny": ["気にしません"]
+  },
+  {
+    "id": "addr-sick",
+    "group": "addressee",
+    "zh": "感冒還沒好的話，不要硬撐著開台",
+    "mustContainAny": ["ないで", "ないように", "なくて"],
+    "mustNotContainAny": ["無理しません", "配信しません"]
+  },
+  {
+    "id": "addr-give-up",
+    "group": "addressee",
+    "zh": "這關真的很難，但不要放棄",
+    "mustContainAny": ["ないで", "ないように", "諦めずに"],
+    "mustNotContainAny": ["諦めません"]
+  },
+  {
+    "id": "addr-remember-water",
+    "group": "addressee",
+    "zh": "講了這麼久，記得多喝水",
+    "mustContainAny": ["てください", "てね", "ように", "ましょう", "忘れずに"],
+    "mustNotContainAny": ["水を飲みます。", "水を飲みました"]
+  },
+  {
+    "id": "addr-please-take-care",
+    "group": "addressee",
+    "zh": "天氣變冷了，請注意身體",
+    "mustContainAny": ["てください", "てね", "ように", "つけて"],
+    "mustNotContainAny": ["気をつけます。"]
+  },
+  {
+    "id": "addr-no-rush",
+    "group": "addressee",
+    "zh": "慢慢來就好，不要急",
+    "mustContainAny": ["ないで", "なくていい", "なくても", "ずに"],
+    "mustNotContainAny": ["急ぎません"]
+  },
+  {
+    "id": "addr-possibility-and-request",
+    "group": "addressee",
+    "zh": "我下週也許很忙，但你不要太累了",
+    "mustContainAny": ["ないで", "ないように", "すぎないで", "なくて"],
+    "mustNotContainAny": ["疲れすぎません", "疲れません"]
+  },
+  {
+    "id": "addr-archive-request",
+    "group": "addressee",
+    "zh": "今天可能看不完，記得把存檔留著",
+    "mustContainAny": ["てください", "てね", "ように", "ておいて", "ほしい"],
+    "mustNotContainAny": ["残します。", "残しておきます。"]
+  },
+  {
+    "id": "self-no-late-night",
+    "group": "self",
+    "zh": "我今天不要熬夜了，明天還要上班",
+    "mustNotContainAny": ["ないでください", "ないでね", "てください"]
+  },
+  {
+    "id": "self-will-not-push",
+    "group": "self",
+    "zh": "我不會勉強自己，大家放心",
+    "mustNotContainAny": ["無理しないでください", "無理をしないでください"]
+  },
+  {
+    "id": "self-we-skip",
+    "group": "self",
+    "zh": "我們今天先不要打那個魔王",
+    "mustNotContainAny": ["ないでください", "てください"]
+  },
+  {
+    "id": "self-dont-want",
+    "group": "self",
+    "zh": "我不要再輸給他了",
+    "mustNotContainAny": ["ないでください", "ないでね"]
+  },
+  {
+    "id": "self-forgot",
+    "group": "self",
+    "zh": "我剛剛忘記存檔了",
+    "mustNotContainAny": ["てください", "ないでください"]
+  },
+  {
+    "id": "trap-not-matter",
+    "group": "trap",
+    "zh": "遲到一點不要緊",
+    "mustNotContainAny": ["ないでください"]
+  },
+  {
+    "id": "trap-other-people",
+    "group": "trap",
+    "zh": "別人的意見聽聽就好",
+    "mustNotContainAny": ["ないでください"]
+  },
+  {
+    "id": "trap-no-thanks",
+    "group": "trap",
+    "zh": "不用謝，這是我應該做的",
+    "mustNotContainAny": ["ないでください", "感謝しないで"]
+  },
+  {
+    "id": "trap-question",
+    "group": "trap",
+    "zh": "請問這首歌叫什麼名字",
+    "mustNotContainAny": ["ないでください"]
+  },
+  {
+    "id": "trap-special",
+    "group": "trap",
+    "zh": "今天的服裝特別好看",
+    "mustNotContainAny": ["ないでください", "てください"]
+  }
+]

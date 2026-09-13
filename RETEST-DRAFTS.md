@@ -151,3 +151,11 @@ subject flip on the named case, the `さくら` handle rewritten as `サクラ`,
 - The 7B comparison is one run per model on short comments with a warm worker.
 - Codex MCP was unavailable for the design review that `.claude/rules` asks for;
   the shipped change reuses the existing glossary mechanism.
+
+## Follow-up: subject reversal
+
+`RETEST-DIRECTIVE.md` adds a request-to-the-reader fidelity property. The named
+case now reads `…無理に自分を追い込まないでくださいね。` with no other draft on this set
+changed. The gate above remains **not met** for the other failures listed, and
+that report records a new one: the bare `存檔` terminology entry turns a game save
+into a stream archive.

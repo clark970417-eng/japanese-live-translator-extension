@@ -31,7 +31,10 @@ function createWorker(): { translate: (text: string) => Promise<string>, calls: 
     const run = chain.then(async () => {
       calls++
       await sleep(CALL_MS)
-      return text === DRAFT_SOURCE ? '明日は見られません。' : text.includes('可能') ? 'かもしれません。' : 'はい。'
+      if (text === DRAFT_SOURCE) return '明日は見られません。'
+      if (text.includes('可能')) return 'かもしれません。'
+      // A request to the reader, rendered the way a correct clause would be.
+      return text.includes('不要') ? '無理しないでくださいね。' : 'はい。'
     })
     chain = run.catch(() => {})
     return run
@@ -91,4 +94,5 @@ it('still repairs a lost uncertainty marker when no audio contends', async () =>
   expect(draft.repaired).toBe(true)
   expect(draft.reviewWarning).toBeUndefined()
   expect(draft.text).toContain('かもしれません')
+  expect(draft.text).toContain('無理しないでください')
 })
