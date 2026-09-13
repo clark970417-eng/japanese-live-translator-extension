@@ -78,6 +78,11 @@ export function finishDraft(source: string, text: string): string {
   return result
 }
 
+const REPAIR_DEADLINE_MS = 1800
+const MAX_LINE_REPAIR_LINES = 4
+const LINE_WARNING = '換行後的內容可能被合併或遺漏，請對照原文'
+const writtenLines = (text: string): string[] => text.split('\n').filter(line => line.trim())
+
 /** `preempt` aborts only the optional repair, never the first translation, so a
  * requested draft is always produced. A preempted repair returns the completed
  * draft with the review warning. */
@@ -86,8 +91,45 @@ export async function translateWrittenDraft(
   translate: (text: string, signal?: AbortSignal) => Promise<string>,
   preempt?: AbortSignal
 ): Promise<DraftFidelityResult> {
-  const result = await translateWrittenDraftCore(source, translate, preempt)
-  return { ...result, text: finishDraft(source, result.text) }
+  const whole = await translateWrittenDraftCore(source, translate, preempt)
+  const lines = writtenLines(source)
+  if (lines.length < 2 || writtenLines(whole.text).length === lines.length) {
+    return { ...whole, text: finishDraft(source, whole.text) }
+  }
+  // The writer's line breaks separate thoughts. A draft that merged or dropped
+  // lines has lost structure and often content, so translate each line on its
+  // own under the same deadline and preemption as clause repair.
+  const unresolved = { ...whole, text: finishDraft(source, whole.text), reviewWarning: [whole.reviewWarning, LINE_WARNING].filter(Boolean).join('；') }
+  if (preempt?.aborted || lines.length > MAX_LINE_REPAIR_LINES) return unresolved
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(new Error('Draft repair deadline')), REPAIR_DEADLINE_MS)
+  const release = (): void => controller.abort(new Error('Preempted by live audio'))
+  preempt?.addEventListener('abort', release, { once: true })
+  const bounded = (text: string, signal?: AbortSignal): Promise<string> => {
+    controller.signal.throwIfAborted()
+    return translate(text, signal ?? controller.signal)
+  }
+  try {
+    const outputs: DraftFidelityResult[] = []
+    for (const line of source.split('\n')) {
+      if (!line.trim()) { outputs.push({ text: '' }); continue }
+      const output = await translateWrittenDraftCore(line.trim(), bounded, controller.signal)
+      controller.signal.throwIfAborted()
+      if (!output.text.trim() || writtenLines(output.text).length !== 1) return unresolved
+      outputs.push({ ...output, text: output.text.trim() })
+    }
+    const warnings = outputs.map(output => output.reviewWarning).filter(Boolean)
+    return {
+      text: finishDraft(source, outputs.map(output => output.text).join('\n')),
+      repaired: true,
+      ...(warnings.length ? { reviewWarning: [...new Set(warnings)].join('；') } : {})
+    }
+  } catch {
+    return unresolved
+  } finally {
+    clearTimeout(timer)
+    preempt?.removeEventListener('abort', release)
+  }
 }
 
 async function translateWrittenDraftCore(
@@ -111,7 +153,7 @@ async function translateWrittenDraftCore(
   if (parts.length < 2 || parts.length > 3 || parts.some(part => part.length < 5 || part.length > 60) || unsafeSplit.test(source)) return unresolved
   if (lost.some(property => property.leadClauseOnly && !property.inSource(parts[0]))) return unresolved
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(new Error('Draft repair deadline')), 1800)
+  const timer = setTimeout(() => controller.abort(new Error('Draft repair deadline')), REPAIR_DEADLINE_MS)
   const release = (): void => controller.abort(new Error('Preempted by live audio'))
   preempt?.addEventListener('abort', release, { once: true })
   try {
