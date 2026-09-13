@@ -26,16 +26,29 @@ async function freeTranslate(text,from,to,signal){
  if(!result)throw new Error('翻譯回應為空');return result;
 }
 const textMemo=new TranslationMemo();
+async function localTranslation(text,direction,timeout=60000){
+ const key=direction+':'+text.trim();const cached=desktopTranslations.get(key);if(cached)return cached;
+ const result=await desktop.request('translate',{text,direction},timeout);
+ const translated=validateTranslation(result.text,direction,text);
+ desktopTranslations.set(key,translated);if(desktopTranslations.size>200)desktopTranslations.delete(desktopTranslations.keys().next().value);
+ return translated;
+}
 async function makeDraft(text){
  if(typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的中文');
  text=text.trim();
  const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
- if((await settings()).speechMode==='desktop'){
-  const result=await desktop.request('translate',{text,direction:'zh-ja'});
-  return {draft:validateTranslation(result.text,'zh-ja',text),mode:result.reviewWarning ? `本機翻譯草稿 · ${result.reviewWarning}` : '本機翻譯草稿 · 請確認語氣'};
- }
- try{return {draft:await textMemo.run('styled:'+text,()=>styledTranslation(text,'zh-ja')),mode:'可愛禮貌'};}
- catch(_error){return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}
+ const configured=await settings();
+ const key=`draft:${configured.speechMode==='desktop'}:${Boolean(configured.openrouterKey)}:${Boolean(configured.nvidiaKey)}:${text}`;
+ return textMemo.run(key,async()=>{
+  const local=async timeout=>({draft:await localTranslation(text,'zh-ja',timeout),mode:'本機翻譯草稿 · 請確認語氣'});
+  if(configured.speechMode==='desktop'){try{return await local(60000);}catch(_error){/* Continue through independent fallbacks. */}}
+  try{return {draft:await styledTranslation(text,'zh-ja'),mode:'可愛禮貌'};}catch(_error){/* No configured provider or provider failed. */}
+  try{return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}
+  catch(networkError){
+   if(configured.speechMode!=='desktop'){try{return await local(15000);}catch(_localError){/* Report the faster network error below. */}}
+   throw networkError;
+  }
+ });
 }
 async function styledTranslation(text,direction,signal){
  const {openrouterKey,nvidiaKey}=await settings();
@@ -85,15 +98,15 @@ const captionRequests=new Map();
 function cancelTranslations(){translationPending=null;publishedId=-1;for(const controller of captionRequests.values())controller.abort();captionRequests.clear();}
 async function translateCaption(text,signal){
  const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
- if(engineMode==='desktop'){
-  const cached=desktopTranslations.get(text.trim());if(cached)return cached;
-  const result=await desktop.request('translate',{text});
-  return validateTranslation(result.text,'ja-zh',text);
- }
+ const configured=await settings();
+ if(engineMode==='desktop'||configured.speechMode==='desktop')return localTranslation(text,'ja-zh');
  const primary=async s=>validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW',s)),'ja-zh',text);
- const {nvidiaKey}=await settings();
- if(!nvidiaKey)return primary(deadline(signal,3000));
- return firstTranslation(primary,async s=>validateTranslation(polishChinese(text,await styledTranslation(text,'ja-zh',s)),'ja-zh',text),deadline(signal,3000),400);
+ try{
+  if(!configured.nvidiaKey)return await primary(deadline(signal,3000));
+  return await firstTranslation(primary,async s=>validateTranslation(polishChinese(text,await styledTranslation(text,'ja-zh',s)),'ja-zh',text),deadline(signal,3000),400);
+ }catch(networkError){
+  try{return await localTranslation(text,'ja-zh',15000);}catch(_localError){throw networkError;}
+ }
 }
 const translationCache=new Map();
 function desktopEvent(event){

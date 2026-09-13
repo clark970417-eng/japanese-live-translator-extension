@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../social-content.js',import.meta.url),'utf8');
 const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 
-function setup(hostname,japaneseOverride){
+function setup(hostname,japaneseOverride,composerDistractor){
  const requests=[];
  const translationLines=[];
  const controls=[];
@@ -17,6 +17,7 @@ function setup(hostname,japaneseOverride){
   insertAdjacentElement(_,line){line.isConnected=true;translationLines.push(line);}};
  const composerHost={append(node){node.isConnected=true;controls.push(node);}};
  const box={value:'今天也很可愛',isConnected:true,focus(){},dispatchEvent(){},
+  matches(){return false;},getBoundingClientRect(){return {width:300,height:40};},
   closest(){return composerHost;},parentElement:composerHost};
  const makeElement=tag=>({tagName:tag.toUpperCase(),children:[],isConnected:false,className:'',textContent:'',dataset:{},style:{setProperty(){}},
   classList:{add(){}},setAttribute(){},addEventListener(name,fn){this['on'+name]=fn;},append(...kids){this.children.push(...kids);},
@@ -25,6 +26,7 @@ function setup(hostname,japaneseOverride){
   querySelectorAll(selector){
    if(selector.includes('danmaku-content')||selector.includes('chat-message'))return [japanese];
    if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea'))return [box];
+   if(composerDistractor&&selector.includes('textarea:not([disabled])'))return [composerDistractor];
    return [];
   },
   createElement:makeElement,addEventListener(){},createRange:()=>({selectNodeContents(){}})};
@@ -34,6 +36,21 @@ function setup(hostname,japaneseOverride){
  vm.runInNewContext(source,{window,document,location:{hostname},chrome,MutationObserver:class{observe(){}},setTimeout:fn=>{fn();return 1;},setInterval(){},Event:class{},InputEvent:class{}});
  return {requests,translationLines,controls,box};
 }
+
+test('Bilibili page scans cannot steal the button from the focused live composer',async()=>{
+ const distractor={value:'',isConnected:true,focus(){},dispatchEvent(){},matches(){return false;},
+  getBoundingClientRect(){return {width:300,height:40};},closest(){return null;},parentElement:{append(){}}};
+ const t=setup('live.bilibili.com',null,distractor);await settle();
+ const original=t.controls[0];
+ // Repeated mutation scans discover the same composer but must retain the
+ // existing control and its bound Chinese source.
+ await settle();
+ assert.equal(t.controls.filter(control=>control.isConnected).length,1);
+ assert.equal(t.controls[0],original);
+ const button=original.children[0];
+ button.onclick({preventDefault(){},stopPropagation(){}});await settle();
+ assert.equal(t.requests.find(x=>x.message.type==='make-draft').message.text,'今天也很可愛');
+});
 
 test('TikTok fallback chat containers translate the message without nickname metadata',async()=>{
  const lines=[];

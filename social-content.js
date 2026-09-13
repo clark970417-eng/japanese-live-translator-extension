@@ -139,17 +139,32 @@
     range.selectNodeContents(box);
     selection.removeAllRanges();
     selection.addRange(range);
-    document.execCommand('insertText', false, text);
+    const inserted = document.execCommand?.('insertText', false, text);
+    // Some Bilibili editors expose a contenteditable surface but reject
+    // execCommand. Keep the visible editor and its framework input event in
+    // sync instead of silently leaving the Chinese source unchanged.
+    if (!inserted || clean(box.innerText || box.textContent) !== clean(text)) box.textContent = text;
     box.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: text}));
+    box.dispatchEvent(new Event('change', {bubbles: true}));
   }
 
   function composerHost(box) {
     return box.closest('[data-e2e="comment-input"], [data-e2e="chat-input"], .chat-input, .reply-box, .comment-box, .comment-send') || box.parentElement;
   }
 
-  function installComposer(box) {
+  function isUsableComposer(box) {
+    if (!box?.isConnected || box.matches?.('[disabled],[aria-disabled="true"]')) return false;
+    const rect = box.getBoundingClientRect?.();
+    return !rect || (rect.width > 0 && rect.height > 0);
+  }
+
+  function installComposer(box, force = false) {
     if (!enabled || !box?.isConnected) return;
     if (activeComposer === box && activeControls?.isConnected) return;
+    // Dynamic pages contain many unrelated text fields. Once a real composer
+    // is selected, background scans must not rebind the single visible button
+    // to a search field or an off-screen editor.
+    if (!force && isUsableComposer(activeComposer) && activeControls?.isConnected) return;
     const previous = composers.get(box);
     if (previous?.isConnected) return;
     activeControls?.remove();
@@ -162,6 +177,7 @@
     button.setAttribute('aria-label', '將這則中文留言翻成日文草稿');
     const status = document.createElement('span');
     status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
     button.addEventListener('click', async event => {
       event.preventDefault();
       event.stopPropagation();
@@ -197,7 +213,7 @@
       node.matches?.('textarea, input[type="text"], input:not([type])') ||
       node.isContentEditable || node.getAttribute?.('role') === 'textbox'
     ));
-    if (box) installComposer(box);
+    if (box) installComposer(box, true);
     scan();
   }
 
@@ -238,7 +254,14 @@
     if (!enabled) return;
     if (window.top === window) config.title.forEach(selector => document.querySelectorAll(selector).forEach(node => translateNode(node, true)));
     config.text.forEach(selector => document.querySelectorAll(selector).forEach(node => translateNode(node)));
-    config.composer.forEach(selector => document.querySelectorAll(selector).forEach(installComposer));
+    if (!isUsableComposer(activeComposer) || !activeControls?.isConnected) {
+      let candidate;
+      for (const selector of config.composer) {
+        candidate = [...document.querySelectorAll(selector)].find(isUsableComposer);
+        if (candidate) break;
+      }
+      if (candidate) installComposer(candidate);
+    }
   }
 
   function setEnabled(value) {

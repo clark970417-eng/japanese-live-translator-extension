@@ -49,3 +49,16 @@ test('local text drafts do not initialize speech capture or promise verified sty
  assert.match(result.text.mode,/請確認語氣/);
  assert.equal(result.text.draft,'今日は終わりまでいられない。');
 });
+test('rate-limited browser drafts fall back to the local translator',async()=>{
+ let listener;const calls=[];
+ const chrome={storage:{local:{get:async()=>({speechMode:'browser'})}},tabs:{onRemoved:{addListener(){}}},runtime:{onMessage:{addListener:f=>listener=f}}};
+ class NativeClient {async request(op,data){calls.push({op,data});return {text:'今晩は'};}}
+ const fetch=async()=>({ok:false,status:429,json:async()=>({})});
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,...policy,URLSearchParams,AbortSignal,AbortController,Date,fetch});
+ const result=await new Promise(resolve=>listener({type:'make-draft',text:'晚上好'},{},resolve));
+ assert.equal(result.ok,true);
+ assert.equal(result.text.draft,'今晩は');
+ assert.match(result.text.mode,/本機翻譯草稿/);
+ assert.deepEqual(calls.map(call=>call.op),['translate']);
+});

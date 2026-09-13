@@ -29,6 +29,7 @@
   background: rgba(20, 20, 20, .72) !important;
   font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif !important;
   color: #2fbe7c !important;
+  pointer-events: auto !important;
 }
 
 .jtl-social-language {
@@ -40,6 +41,7 @@
   background: #fff !important;
   cursor: pointer !important;
   font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, sans-serif !important;
+  pointer-events: auto !important;
 }
 
 .jtl-social-language:disabled { opacity: .55 !important; cursor: wait !important; }
