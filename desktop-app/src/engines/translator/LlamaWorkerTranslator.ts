@@ -2,7 +2,7 @@ import { join } from 'path'
 import type { TranslatorEngine, Language, TranslateContext } from '../types'
 import { getGGUFDir, downloadGGUF } from '../model-downloader'
 import type { WorkerInitOptions } from '../../main/worker-pool'
-import { workerPool, type WorkerPool } from '../../main/worker-pool'
+import { workerPool, WorkerTerminatedError, type WorkerPool } from '../../main/worker-pool'
 import { createLogger } from '../../main/logger'
 
 export interface GGUFVariantConfig {
@@ -31,6 +31,10 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
   protected kvCacheQuant: boolean
   protected modelPath: string = ''
   private _log: ReturnType<typeof createLogger> | null = null
+  /** Aborted by `interrupt`. An interrupted engine is finished: it starts no
+   * load and sends no request, so nothing it queued can reload its model after
+   * the worker was stopped for someone else. */
+  private interruption = new AbortController()
 
   /** The worker this engine runs in. Production shares one; a prototype may
    * pass its own so its model never enters the shared worker's queue. */
@@ -92,6 +96,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     await downloadGGUF(variantConfig.filename, variantConfig.url, this.onProgress, variantConfig.sha256)
 
     await this.afterDownload()
+    this.interruption.signal.throwIfAborted()
 
     const label = this.getModelSizeLabel()
     this.onProgress?.(`Starting ${label} worker...`)
@@ -100,7 +105,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
       modelPath: this.modelPath,
       kvCacheQuant: this.kvCacheQuant,
       ...this.getExtraInitOptions()
-    }, this.onProgress)
+    }, this.onProgress, this.interruption.signal)
 
     const suffix = this.getLoadedSuffix()
     this.onProgress?.(`${label} model loaded${suffix}`)
@@ -127,7 +132,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     const t0 = performance.now()
     const result = await this.pool.sendRequest(
       { type: 'translate', text, from, to, context: this.serialContext(context) },
-      'translate', this.workerOptions, context?.signal, context?.onPartial
+      'translate', this.workerOptions, this.requestSignal(context?.signal), context?.onPartial
     )
     const ms = performance.now() - t0
     this.log.info(`translate ${from}→${to} inputLen=${text.length} outputLen=${result.length} time=${ms.toFixed(0)}ms`)
@@ -149,7 +154,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
 
     return this.pool.sendRequest(
       { type: 'translate-incremental', text, previousOutput, from, to, context: this.serialContext(context) },
-      'translate-incremental', this.workerOptions, context?.signal
+      'translate-incremental', this.workerOptions, this.requestSignal(context?.signal)
     )
   }
 
@@ -183,7 +188,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     const t0 = performance.now()
     const result = await this.pool.sendRequest(
       { type: 'translate-ssbd', text, previousOutput, from, to, context: this.serialContext(context) },
-      'translate-ssbd', this.workerOptions, context?.signal
+      'translate-ssbd', this.workerOptions, this.requestSignal(context?.signal)
     )
     const ms = performance.now() - t0
     this.log.info(`ssbd ${from}→${to} inputLen=${text.length} outputLen=${result.length} time=${ms.toFixed(0)}ms`)
@@ -220,7 +225,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     const t0 = performance.now()
     const result = await this.pool.sendRequest(
       { type: 'translate-simulmt', text, previousOutput, from, to, isRevision, context: this.serialContext(context) },
-      'translate-simulmt', this.workerOptions, context?.signal
+      'translate-simulmt', this.workerOptions, this.requestSignal(context?.signal)
     )
     const ms = performance.now() - t0
     const label = isRevision ? 'simulmt-rev' : 'simulmt-incr'
@@ -239,7 +244,16 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
    * finishing, and the next request respawns the worker. `dispose` still
    * releases this engine's reference afterwards. */
   interrupt(reason: string): void {
+    // Terminate first, so work in progress fails as terminated rather than as
+    // a cancellation sent to a process that is about to be killed.
     this.pool.terminate(reason)
+    if (!this.interruption.signal.aborted) this.interruption.abort(new WorkerTerminatedError(reason))
+  }
+
+  /** The caller's signal, also aborted when this engine is interrupted. */
+  private requestSignal(signal?: AbortSignal): AbortSignal {
+    this.interruption.signal.throwIfAborted()
+    return signal ? AbortSignal.any([signal, this.interruption.signal]) : this.interruption.signal
   }
 
   async dispose(): Promise<void> {

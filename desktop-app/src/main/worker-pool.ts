@@ -45,6 +45,16 @@ export interface WorkerInitOptions {
   draftModelPath?: string
 }
 
+/** Work stopped by `WorkerPool.terminate`. The request itself was valid, so a
+ * caller may repeat it once the process it ran in has been replaced. */
+export class WorkerTerminatedError extends Error {
+  readonly retryable = true
+  constructor(reason: string) {
+    super(reason)
+    this.name = 'WorkerTerminatedError'
+  }
+}
+
 /** Timeout value by request type */
 export type RequestType = 'translate' | 'translate-incremental' | 'translate-ssbd' | 'translate-simulmt' | 'summarize' | 'ger-correct'
 
@@ -78,6 +88,9 @@ export class WorkerPool {
    * message, so without this a worker that dies mid-load would hold the request
    * queue until the initialization timeout. */
   private abortInit: ((error: Error) => void) | null = null
+  /** Ends a graceful model dispose early. A terminated process never answers
+   * it, and a hot swap must not spend the grace period waiting. */
+  private abortDispose: (() => void) | null = null
 
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
     return this.requestQueue.run(operation)
@@ -95,9 +108,11 @@ export class WorkerPool {
   /**
    * Acquire a reference to the shared worker, initializing it with the given model.
    * If the worker is already running with a different model, it will hot-swap.
+   * An acquire whose `signal` aborts while it waits leaves the queue without
+   * starting its load; once started, `terminate` is what stops it.
    */
-  async acquire(options: WorkerInitOptions, onProgress?: (message: string) => void): Promise<void> {
-    return this.exclusive(async () => {
+  async acquire(options: WorkerInitOptions, onProgress?: (message: string) => void, signal?: AbortSignal): Promise<void> {
+    return this.requestQueue.run(async () => {
       this.onProgress = onProgress
       try {
         await this.ensureModel(options)
@@ -107,7 +122,7 @@ export class WorkerPool {
         if (this.refCount === 0) await this.killWorker()
         throw error
       }
-    })
+    }, signal)
   }
 
   /**
@@ -158,7 +173,8 @@ export class WorkerPool {
         reject(cancellation ?? error)
       }
       const stop = (error: Error): void => {
-        if (cancellation) return
+        // A request already settled, for example by terminate, has nothing to cancel.
+        if (cancellation || !this.pending.has(id)) return
         cancellation = error
         clearTimeout(timer)
         // Keep ownership until the worker acknowledges cancellation. If native
@@ -247,8 +263,9 @@ export class WorkerPool {
     this.currentOptionsKey = null
     this.currentModelPath = null
     this.initPromise = null
-    const error = new Error(reason)
+    const error = new WorkerTerminatedError(reason)
     this.abortInit?.(error)
+    this.abortDispose?.()
     for (const [id, req] of this.pending) {
       clearTimeout(req.timer)
       req.reject(error)
@@ -311,6 +328,10 @@ export class WorkerPool {
     const op = this.opLock.then(
       () =>
         new Promise<void>((resolve, reject) => {
+          if (!this.worker) {
+            reject(new Error('Worker process exited'))
+            return
+          }
           let settled = false
 
           const cleanup = (): void => {
@@ -381,14 +402,18 @@ export class WorkerPool {
 
           const cleanup = (): void => {
             this.worker?.removeListener('message', disposeHandler)
+            if (this.abortDispose === finish) this.abortDispose = null
           }
 
-          const timeout = setTimeout(() => {
+          const finish = (): void => {
             if (settled) return
             settled = true
+            clearTimeout(timeout)
             cleanup()
             resolve()
-          }, WORKER_DISPOSE_GRACE_MS)
+          }
+          const timeout = setTimeout(finish, WORKER_DISPOSE_GRACE_MS)
+          this.abortDispose = finish
 
           const disposeHandler = (msg: WorkerMessage): void => {
             if (settled) return

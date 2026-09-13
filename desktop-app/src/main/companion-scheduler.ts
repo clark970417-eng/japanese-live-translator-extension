@@ -27,6 +27,12 @@ export class CompanionScheduler {
     return result
   }
 
+  /** Ask the active page-text operation to release optional work now, as
+   * arriving audio would. Used when its client has gone away. */
+  preemptActive(reason: Error): void {
+    this.activePreemption?.abort(reason)
+  }
+
   idle(): Promise<void> {
     return !this.active && !this.high.length && !this.normal.length
       ? Promise.resolve() : new Promise(resolve => this.idleWaiters.push(resolve))

@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ fork: vi.fn() }))
 vi.mock('electron', () => ({ utilityProcess: { fork: mocks.fork } }))
-import { WorkerPool } from './worker-pool'
+import { WorkerPool, WorkerTerminatedError } from './worker-pool'
 
 class FakeWorker extends EventEmitter {
   model = ''
@@ -244,4 +244,83 @@ it('treats terminate without a running worker as a no-op', () => {
   const pool = new WorkerPool()
   expect(() => pool.terminate('nothing running')).not.toThrow()
   expect(mocks.fork).not.toHaveBeenCalled()
+})
+
+it('marks terminated work as retryable, and a request queued behind the load runs once on a fresh worker', async () => {
+  const pool = new WorkerPool()
+  await pool.acquire({ modelPath: 'small' })
+  worker.hold = true
+  const inFlight = pool.sendRequest({ type: 'translate' }, 'translate', { modelPath: 'small' })
+  inFlight.catch(() => {})
+  await vi.waitFor(() => expect(worker.messages.some(m => m.type === 'translate')).toBe(true))
+  const queued = pool.sendRequest({ type: 'translate' }, 'translate', { modelPath: 'small' })
+  const old = worker
+  worker = new FakeWorker(); mocks.fork.mockReturnValue(worker)
+  pool.terminate('Live captions started')
+  const error = await inFlight.catch(reason => reason)
+  expect(error).toBeInstanceOf(WorkerTerminatedError)
+  expect(error.retryable).toBe(true)
+  expect(await queued).toBe('small')
+  expect(old.messages.filter(m => m.type === 'translate')).toHaveLength(1)
+  expect(worker.messages.filter(m => m.type === 'translate')).toHaveLength(1)
+  await pool.release()
+})
+
+/** A worker that never confirms a dispose, like one killed mid-swap. */
+class SilentDisposeWorker extends FakeWorker {
+  postMessage(message: Record<string, unknown>) {
+    if (message.type === 'dispose') { this.messages.push(message); return }
+    super.postMessage(message)
+  }
+}
+
+it('ends a hot swap waiting for dispose as soon as the worker is terminated', async () => {
+  const silent = new SilentDisposeWorker(); mocks.fork.mockReturnValue(silent)
+  const pool = new WorkerPool()
+  await pool.acquire({ modelPath: 'small' })
+  const swap = pool.acquire({ modelPath: 'large' })
+  swap.catch(() => {})
+  await vi.waitFor(() => expect(silent.messages.some(m => m.type === 'dispose')).toBe(true))
+  const terminated = Date.now()
+  pool.terminate('Live captions started')
+  await expect(swap).rejects.toThrow()
+  expect(Date.now() - terminated).toBeLessThan(250)
+  expect(silent.messages.filter(m => m.type === 'init').map(m => m.modelPath)).toEqual(['small'])
+})
+
+it('does not start a load for an acquire whose signal was aborted while it waited', async () => {
+  const pool = new WorkerPool()
+  await pool.acquire({ modelPath: 'small' })
+  worker.hold = true
+  const active = pool.sendRequest({ type: 'translate' }, 'translate', { modelPath: 'small' })
+  await vi.waitFor(() => expect(worker.messages.some(m => m.type === 'translate')).toBe(true))
+  const interruption = new AbortController()
+  const waiting = pool.acquire({ modelPath: 'large' }, undefined, interruption.signal)
+  interruption.abort(new Error('interrupted'))
+  await expect(waiting).rejects.toThrow()
+  worker.hold = false
+  worker.emit('message', { type: 'result', id: worker.messages.find(m => m.type === 'translate')!.id, text: 'small' })
+  expect(await active).toBe('small')
+  expect(worker.messages.filter(m => m.type === 'init').map(m => m.modelPath)).toEqual(['small'])
+  expect(pool.references).toBe(1)
+  await pool.release()
+})
+
+it('sends no cancellation and schedules no forced kill for a request already failed by terminate', async () => {
+  vi.useFakeTimers()
+  try {
+    const pool = new WorkerPool(), controller = new AbortController()
+    await pool.acquire({ modelPath: 'small' })
+    const old = worker; old.hold = true
+    const kill = vi.spyOn(old, 'kill')
+    const request = pool.sendRequest({ type: 'translate' }, 'translate', { modelPath: 'small' }, controller.signal)
+    const failed = expect(request).rejects.toBeInstanceOf(WorkerTerminatedError)
+    await vi.advanceTimersByTimeAsync(0)
+    pool.terminate('Live captions started')
+    controller.abort()
+    await failed
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(old.messages.some(m => m.type === 'cancel')).toBe(false)
+    expect(kill).toHaveBeenCalledTimes(1)
+  } finally { vi.useRealTimers() }
 })

@@ -234,6 +234,9 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
                 const interrupt = (): void => { large.interrupt?.('Live captions started during a large-model draft') }
                 preempt.addEventListener('abort', interrupt, { once: true })
                 try {
+                  // Captions may have arrived while the previous text model was
+                  // being released, before this listener existed.
+                  if (preempt.aborted) interrupt()
                   await large.initialize()
                   result = await translateWrittenDraft(m.text, draftWith(large, m.text), preempt)
                 } catch (error) {
@@ -267,6 +270,9 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     socket.on('error', () => socket.destroy())
     socket.on('close', () => {
       closed = true
+      // Nobody is waiting for the active page-text work, and a reconnecting
+      // client's captions wait for this queue to drain.
+      queue.preemptActive(new Error('Browser disconnected'))
       ctx.pipeline?.off('draft-stt-result', caption)
       ctx.pipeline?.off('interim-result', caption); ctx.pipeline?.off('ger-corrected', correction)
       // The socket is gone, so another client may connect now; its work waits for this.

@@ -132,7 +132,9 @@ Raw rows: `tests/results/cold-draft-baseline.jsonl`,
 - **`terminate` stops the shared worker for everyone.** Any other request queued
   on that worker at that moment, such as a page-text translation, is rejected
   with the reason and must be retried. In the measured sequence nothing else was
-  queued.
+  queued. `RETEST-COLD-DRAFT-QUEUE.md` later showed that the
+  companion's own queued requests never reach the pool before captions, and
+  fixed three sequences where captions or a reconnect still waited for 7B.
 - The draft text differed: before, 7B returned
   `明日は参加できませんかもしれませんが…`, which is ungrammatical; after, the small model
   with the Stage 4 repair returned a grammatical draft with the correct subject.
