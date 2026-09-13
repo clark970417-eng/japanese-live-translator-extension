@@ -12,7 +12,7 @@ import type { AppContext } from './app-context'
 import { HunyuanMT2Translator } from '../engines/translator/HunyuanMT2Translator'
 import { HunyuanMT15Translator } from '../engines/translator/HunyuanMT15Translator'
 import { translateWrittenDraft } from './draft-fidelity'
-import { DRAFT_ZH_JA_GLOSSARY } from './draft-glossary'
+import { selectDraftTerminology } from './draft-glossary'
 import { CompanionScheduler } from './companion-scheduler'
 
 /** How long a new browser connection waits for the current one to close before
@@ -72,9 +72,13 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       translator = undefined; translatorMode = undefined
       try { await stale?.dispose() } catch { /* its worker is already gone */ }
     }
-    const draftWith = (engine: HunyuanMT2Translator | HunyuanMT15Translator) =>
-      (text: string, signal?: AbortSignal): Promise<string> =>
-        engine.translate(text, 'zh', 'ja', { signal, previousSegments: [], glossary: DRAFT_ZH_JA_GLOSSARY })
+    /** Terminology is chosen from the whole comment, so a clause retranslated
+     * during repair keeps the meaning the full sentence established. */
+    const draftWith = (engine: HunyuanMT2Translator | HunyuanMT15Translator, comment: string) => {
+      const glossary = selectDraftTerminology(comment)
+      return (text: string, signal?: AbortSignal): Promise<string> =>
+        engine.translate(text, 'zh', 'ja', { signal, previousSegments: [], glossary })
+    }
     /** Answer a draft request later, on the caption model, behind any audio work
      * already queued. Scheduled as its own task: awaiting it from inside the
      * current task would deadlock the serial scheduler. */
@@ -85,7 +89,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
           if (closed) return
           const small = await translatorFor(mode)
           await small.initialize()
-          const draft = await translateWrittenDraft(text, draftWith(small), fallbackPreempt)
+          const draft = await translateWrittenDraft(text, draftWith(small, text), fallbackPreempt)
           send({ id, ok: true, result: { ...draft, fallbackModel: true } })
         } catch (error) {
           send({ id, ok: false, error: error instanceof Error ? error.message : String(error) })
@@ -231,7 +235,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
                 preempt.addEventListener('abort', interrupt, { once: true })
                 try {
                   await large.initialize()
-                  result = await translateWrittenDraft(m.text, draftWith(large), preempt)
+                  result = await translateWrittenDraft(m.text, draftWith(large, m.text), preempt)
                 } catch (error) {
                   if (!preempt.aborted) throw error
                   // The large model produced nothing before captions needed the
@@ -247,7 +251,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
                 const active = await translatorFor(isDraft ? (displacesCaptions ? captionMode : requestedMode) : requestedMode)
                 await active.initialize()
                 result = isDraft
-                  ? await translateWrittenDraft(m.text, draftWith(active), preempt)
+                  ? await translateWrittenDraft(m.text, draftWith(active, m.text), preempt)
                   : { text: await active.translate(m.text, from, to) }
               }
             } else throw new Error('Unsupported operation')

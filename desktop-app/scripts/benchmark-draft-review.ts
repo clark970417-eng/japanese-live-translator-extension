@@ -11,7 +11,7 @@ import { createHash } from 'crypto'
 import { HunyuanMT15Translator } from '../src/engines/translator/HunyuanMT15Translator'
 import { HunyuanMT2Translator } from '../src/engines/translator/HunyuanMT2Translator'
 import { translateWrittenDraft } from '../src/main/draft-fidelity'
-import { DRAFT_ZH_JA_GLOSSARY } from '../src/main/draft-glossary'
+import { DRAFT_ZH_JA_GLOSSARY, selectDraftTerminology } from '../src/main/draft-glossary'
 
 const env = process.env
 for (const key of ['COMPARE_PROFILE', 'REVIEW_MANIFEST', 'COMPARE_REPORT']) {
@@ -27,6 +27,8 @@ interface Row {
   mustNotContain?: string[]
   mustContainAny?: string[]
   mustNotContainAny?: string[]
+  alsoMustContain?: string[]
+  category?: string
   group?: string
   preserveEmoji?: string[]
   preserveLines?: number
@@ -62,7 +64,8 @@ app.whenReady().then(async () => {
           row.zh,
           (text, signal) => translator.translate(text, 'zh', 'ja', {
             signal, previousSegments: [],
-            glossary: env.COMPARE_GLOSSARY === 'none' ? undefined : DRAFT_ZH_JA_GLOSSARY
+            glossary: env.COMPARE_GLOSSARY === 'none' ? undefined
+              : env.COMPARE_GLOSSARY === 'static' ? DRAFT_ZH_JA_GLOSSARY : selectDraftTerminology(row.zh)
           })
         )
         draft = result.text
@@ -73,13 +76,13 @@ app.whenReady().then(async () => {
       }
       const anyMissing = row.mustContainAny && !row.mustContainAny.some(term => draft.includes(term))
         ? [`one of ${row.mustContainAny.join('|')}`] : []
-      const missing = [...(row.mustContain || []).filter(term => !draft.includes(term)), ...anyMissing]
+      const missing = [...[...(row.mustContain || []), ...(row.alsoMustContain || [])].filter(term => !draft.includes(term)), ...anyMissing]
       const forbidden = [...(row.mustNotContain || []), ...(row.mustNotContainAny || [])].filter(term => draft.includes(term))
       const lostEmoji = (row.preserveEmoji || []).filter(glyph => !draft.includes(glyph))
       const lines = draft.split('\n').filter(line => line.trim()).length
       const lineMismatch = row.preserveLines !== undefined && lines !== row.preserveLines
       emit({
-        type: 'trial', id: row.id, surface: row.surface, group: row.group, zh: row.zh, draft,
+        type: 'trial', id: row.id, surface: row.surface, group: row.group ?? row.category, zh: row.zh, draft,
         intent: row.intent, tone: row.tone,
         repaired, reviewWarning,
         missingRequired: missing, presentForbidden: forbidden, lostEmoji,
