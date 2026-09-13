@@ -1,0 +1,12 @@
+[
+  {"id": "thanks-normal", "condition": "speech", "text": "ご視聴ありがとうございました。", "rate": 180, "expect": "speech"},
+  {"id": "thanks-slow", "condition": "speech", "text": "ご視聴、ありがとうございました。", "rate": 150, "expect": "speech"},
+  {"id": "thanks-fast", "condition": "speech", "text": "ご視聴ありがとうございました！", "rate": 240, "expect": "speech"},
+  {"id": "thanks-quiet", "condition": "speech", "text": "ご視聴ありがとうございました。", "rate": 180, "filter": "volume=0.08", "expect": "speech"},
+  {"id": "thanks-over-music", "condition": "speech", "text": "ご視聴ありがとうございました。", "rate": 180, "music": 0.3, "expect": "speech"},
+  {"id": "watch-thanks-short", "condition": "speech", "text": "ご覧いただきありがとうございました。", "rate": 190, "expect": "speech"},
+  {"id": "music-chords", "condition": "music", "musicPattern": "chords", "seconds": 4.0, "expect": "silence"},
+  {"id": "music-rhythm", "condition": "music", "musicPattern": "rhythm", "seconds": 4.0, "expect": "silence"},
+  {"id": "music-melody", "condition": "music", "musicPattern": "melody", "seconds": 4.0, "expect": "silence"},
+  {"id": "music-full", "condition": "music", "musicPattern": "full", "seconds": 4.0, "expect": "silence"}
+]

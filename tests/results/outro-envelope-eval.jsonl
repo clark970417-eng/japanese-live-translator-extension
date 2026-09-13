@@ -1,0 +1,10 @@
+{"file": "thanks-normal.wav", "text": "ご視聴ありがとうございました。", "modulation": 0.814, "voicedFraction": 0.778, "glide": 0.776, "wordCoverage": 0.368, "wordProbMean": 0.999}
+{"file": "thanks-slow.wav", "text": "ご視聴ありがとうございました。", "modulation": 0.823, "voicedFraction": 0.713, "glide": 0.744, "wordCoverage": 0.421, "wordProbMean": 0.925}
+{"file": "thanks-fast.wav", "text": "ご視聴ありがとうございました。", "modulation": 0.626, "voicedFraction": 0.842, "glide": 0.825, "wordCoverage": 0.387, "wordProbMean": 0.996}
+{"file": "thanks-quiet.wav", "text": "ご視聴ありがとうございました。", "modulation": 0.814, "voicedFraction": 0.0, "glide": 0.0, "wordCoverage": 0.388, "wordProbMean": 0.999}
+{"file": "thanks-over-music.wav", "text": "ご視聴ありがとうございました。", "modulation": 0.792, "voicedFraction": 0.929, "glide": 0.604, "wordCoverage": 0.368, "wordProbMean": 0.999}
+{"file": "watch-thanks-short.wav", "text": "ご覧いただきありがとうございました。", "modulation": 0.813, "voicedFraction": 0.856, "glide": 0.766, "wordCoverage": 0.479, "wordProbMean": 0.997}
+{"file": "music-chords.wav", "text": "ご視聴ありがとうございました", "modulation": 0.187, "voicedFraction": 1.0, "glide": 0.208, "wordCoverage": 0.92, "wordProbMean": 0.912}
+{"file": "music-rhythm.wav", "text": "ご視聴ありがとうございました", "modulation": 0.741, "voicedFraction": 0.242, "glide": 0.362, "wordCoverage": 0.8, "wordProbMean": 0.864}
+{"file": "music-melody.wav", "text": "ご視聴ありがとうございました", "modulation": 0.06, "voicedFraction": 0.995, "glide": 0.112, "wordCoverage": 0.99, "wordProbMean": 0.88}
+{"file": "music-full.wav", "text": "ご視聴ありがとうございました", "modulation": 0.602, "voicedFraction": 1.0, "glide": 0.137, "wordCoverage": 0.595, "wordProbMean": 0.835}

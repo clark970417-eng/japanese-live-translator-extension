@@ -1,0 +1,10 @@
+{"file":"thanks-normal.wav","jobsSentToCompanion":4,"voicedSecondsAtOnsetThreshold":1.98,"maxProbability":1}
+{"file":"thanks-slow.wav","jobsSentToCompanion":5,"voicedSecondsAtOnsetThreshold":2.4,"maxProbability":1}
+{"file":"thanks-fast.wav","jobsSentToCompanion":4,"voicedSecondsAtOnsetThreshold":1.54,"maxProbability":1}
+{"file":"thanks-quiet.wav","jobsSentToCompanion":4,"voicedSecondsAtOnsetThreshold":1.98,"maxProbability":1}
+{"file":"thanks-over-music.wav","jobsSentToCompanion":4,"voicedSecondsAtOnsetThreshold":2.02,"maxProbability":1}
+{"file":"watch-thanks-short.wav","jobsSentToCompanion":5,"voicedSecondsAtOnsetThreshold":2.27,"maxProbability":1}
+{"file":"music-chords.wav","jobsSentToCompanion":0,"voicedSecondsAtOnsetThreshold":0.03,"maxProbability":0.403}
+{"file":"music-rhythm.wav","jobsSentToCompanion":0,"voicedSecondsAtOnsetThreshold":0,"maxProbability":0.037}
+{"file":"music-melody.wav","jobsSentToCompanion":0,"voicedSecondsAtOnsetThreshold":0.13,"maxProbability":0.72}
+{"file":"music-full.wav","jobsSentToCompanion":0,"voicedSecondsAtOnsetThreshold":0.03,"maxProbability":0.316}

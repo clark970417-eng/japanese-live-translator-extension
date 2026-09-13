@@ -67,6 +67,17 @@ for row in json.loads(manifest.read_text()):
              '-t', str(row['silenceSeconds']), '-c:a', 'pcm_s16le', str(target)])
     elif 'musicOnlySeconds' in row:
         music_bed(row['musicOnlySeconds'], target, 0.3)
+    elif 'musicPattern' in row:
+        # Synthetic music that is less stationary than a held chord. `melody`
+        # changes pitch every 0.25 s, close to a syllable rate, on purpose.
+        expressions = {
+            'chords': '0.2*sin(2*PI*if(lt(mod(t,2),1),261.6,220)*t)+0.2*sin(2*PI*if(lt(mod(t,2),1),329.6,277.2)*t)+0.2*sin(2*PI*if(lt(mod(t,2),1),392,329.6)*t)',
+            'rhythm': '0.45*(random(0)*2-1)*lt(mod(t,0.5),0.05)+0.5*sin(2*PI*60*t)*exp(-25*mod(t,0.5))',
+            'melody': '0.35*sin(2*PI*220*pow(2,floor(mod(t*4,8))/12)*t)',
+            'full': '0.15*sin(2*PI*if(lt(mod(t,2),1),261.6,220)*t)+0.15*sin(2*PI*if(lt(mod(t,2),1),329.6,277.2)*t)+0.25*sin(2*PI*440*pow(2,floor(mod(t*4,8))/12)*t)+0.3*(random(0)*2-1)*lt(mod(t,0.5),0.04)+0.35*sin(2*PI*55*t)*exp(-25*mod(t,0.5))'
+        }
+        run([args.ffmpeg, '-y', '-f', 'lavfi', '-i', f"aevalsrc=exprs='{expressions[row['musicPattern']]}':s={RATE}:d={row['seconds']}",
+             '-ac', '1', '-c:a', 'pcm_s16le', str(target)])
     else:
         speech = args.output / (row['id'] + '-speech.wav')
         speak(row['text'], row['rate'], speech)

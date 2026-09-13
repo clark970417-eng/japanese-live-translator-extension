@@ -1,0 +1,43 @@
+{
+  "declared": "2026-09-13, after calibration on the Stage 2 continuity clips, before any feature of tests/corpus/outro-context.json was computed",
+  "applies": "only to a transcript whose entire content is a known outro artifact",
+  "feature": "share of energy-envelope modulation power in 2-8 Hz over 0.5-25 Hz, envelope sampled every 10 ms",
+  "rule": "reject when the window is shorter than 1.0 s; otherwise reject only when the modulation share is below the threshold",
+  "minWindowSeconds": 1.0,
+  "modulationThreshold": 0.25,
+  "calibration": {
+    "speechAtLeastOneSecond": {
+      "min": 0.53,
+      "max": 0.809,
+      "clips": 6
+    },
+    "outroOnSilence": 0.0,
+    "outroOnSineChord": 0.003,
+    "rejectedFeatures": {
+      "pitchGlide": "0.0 on quiet speech, because quiet frames fall under the voicing threshold",
+      "wordCoverage": "hallucinations 0.96-0.99 overlap normal speech 0.941",
+      "wordProbabilityMean": "hallucinations 0.90-0.92 overlap an interjection at 0.409 and speech near 0.97"
+    }
+  },
+  "passCriteria": "on the frozen set: every spoken-thanks clip retained, every music-only outro hallucination rejected",
+  "secondMethod": {
+    "declared": "2026-09-13, after the envelope-modulation rule failed on the frozen set, calibrated only on the Stage 2 continuity clips, before any VAD result on tests/corpus/outro-context.json was computed",
+    "feature": "voiced seconds measured by the extension's own VAD stages: SpeechGain, Silero V5 with 64 samples of context, frames at probability >= 0.30",
+    "rule": "keep an outro-artifact transcript only when voiced seconds >= minVoicedSeconds; otherwise reject",
+    "minVoicedSeconds": 1.0,
+    "calibration": {
+      "speechClipsVoicedSeconds": {
+        "min": 0.22,
+        "maxShortClipsExcluded": "clips under 1 s carry no 15-mora phrase",
+        "fullSentences": {
+          "min": 2.94,
+          "max": 4.48
+        }
+      },
+      "silence": 0.0,
+      "sineChord": 0.0
+    },
+    "alsoRecorded": "whether the production VAD would send the audio to the companion at all",
+    "passCriteria": "same as the first method"
+  }
+}
