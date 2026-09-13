@@ -70,11 +70,23 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     let current: { segment?: string; id?: number } = {}
     let lastAudio: Float32Array | null = null
     const revisions = new Map<number, string>()
+    /** What the browser would show for each segment, without the timestamp. The
+     * pipeline can emit one result twice within milliseconds; repeating it for
+     * the same segment changes nothing on screen. The same words in another
+     * segment are a new caption and are always sent. */
+    const lastShown = new Map<string, string>()
     const captionFor = (segment: string | undefined, r: TranslationResult): void => {
       if (!segment) return
+      // Recorded before the repeat check: a later correction may name this timestamp.
       revisions.set(r.timestamp, segment)
       if (revisions.size > 100) revisions.delete(revisions.keys().next().value!)
-      send({ event: 'caption', segment, result: { text: r.sourceText, translated: r.translatedText, targetLanguage: r.targetLanguage, speakerLabel: r.speakerLabel, interim: !!r.isInterim, final: !r.isInterim, timestamp: r.timestamp } })
+      const result = { text: r.sourceText, translated: r.translatedText, targetLanguage: r.targetLanguage, speakerLabel: r.speakerLabel, interim: !!r.isInterim, final: !r.isInterim }
+      const shown = JSON.stringify(result)
+      if (lastShown.get(segment) === shown) return
+      lastShown.delete(segment)
+      lastShown.set(segment, shown)
+      if (lastShown.size > 100) lastShown.delete(lastShown.keys().next().value!)
+      send({ event: 'caption', segment, result: { ...result, timestamp: r.timestamp } })
     }
     const caption = (r: TranslationResult): void => captionFor(current.segment, r)
     // Bound accepted translation work. Backpressure keeps audio in the browser queue.
@@ -131,7 +143,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
             } else if (m.op === 'stop') {
               if (ownsSession && lastAudio) { const result = await pipeline.finalizeStreaming(lastAudio, 16000); if (result) caption(result); lastAudio = null }
               if (ownsSession) { await drainFinals(); await pipeline.stop(); ctx.logger?.endSession(); ctx.logger = null }
-              ownsSession = false; ctx.extensionConnected = false; current = {}; revisions.clear()
+              ownsSession = false; ctx.extensionConnected = false; current = {}; revisions.clear(); lastShown.clear()
               result = { stopped: true }
             } else if (m.op === 'init') {
               if (pipeline.active && !ownsSession) throw new Error('Stop desktop audio capture before starting browser capture.')

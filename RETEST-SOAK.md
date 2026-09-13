@@ -128,9 +128,10 @@ environment event.
 
 One observation the fixed metric surfaced: 1010 emissions across 477 utterances
 repeated a caption that already had the same Japanese *and* the same Chinese.
-The caption window updates in place, so a viewer sees no duplicate, but that is
-redundant work and traffic. Characterizing it needs a targeted run, not this
-soak.
+**Correction:** that metric compared captions across all decode windows of an
+utterance, and each window is its own segment, so legitimate window-to-window
+carry-over was counted. `RETEST-CAPTION-REPEATS.md` measures the redundant subset,
+repeats within the same segment, and removes it.
 
 ## Gate status
 
