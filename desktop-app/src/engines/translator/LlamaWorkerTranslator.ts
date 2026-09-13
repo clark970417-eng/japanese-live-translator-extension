@@ -2,7 +2,7 @@ import { join } from 'path'
 import type { TranslatorEngine, Language, TranslateContext } from '../types'
 import { getGGUFDir, downloadGGUF } from '../model-downloader'
 import type { WorkerInitOptions } from '../../main/worker-pool'
-import { workerPool } from '../../main/worker-pool'
+import { workerPool, type WorkerPool } from '../../main/worker-pool'
 import { createLogger } from '../../main/logger'
 
 export interface GGUFVariantConfig {
@@ -32,7 +32,12 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
   protected modelPath: string = ''
   private _log: ReturnType<typeof createLogger> | null = null
 
-  constructor(options?: { onProgress?: (message: string) => void; variant?: string; kvCacheQuant?: boolean }) {
+  /** The worker this engine runs in. Production shares one; a prototype may
+   * pass its own so its model never enters the shared worker's queue. */
+  protected pool: WorkerPool
+
+  constructor(options?: { onProgress?: (message: string) => void; variant?: string; kvCacheQuant?: boolean; pool?: WorkerPool }) {
+    this.pool = options?.pool ?? workerPool
     this.onProgress = options?.onProgress
     this.variant = options?.variant ?? 'Q4_K_M'
     this.kvCacheQuant = options?.kvCacheQuant ?? true
@@ -91,7 +96,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     const label = this.getModelSizeLabel()
     this.onProgress?.(`Starting ${label} worker...`)
 
-    await workerPool.acquire({
+    await this.pool.acquire({
       modelPath: this.modelPath,
       kvCacheQuant: this.kvCacheQuant,
       ...this.getExtraInitOptions()
@@ -120,7 +125,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     }
 
     const t0 = performance.now()
-    const result = await workerPool.sendRequest(
+    const result = await this.pool.sendRequest(
       { type: 'translate', text, from, to, context: this.serialContext(context) },
       'translate', this.workerOptions, context?.signal, context?.onPartial
     )
@@ -142,7 +147,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
       throw new Error(`[${this.id}-worker] Not initialized`)
     }
 
-    return workerPool.sendRequest(
+    return this.pool.sendRequest(
       { type: 'translate-incremental', text, previousOutput, from, to, context: this.serialContext(context) },
       'translate-incremental', this.workerOptions, context?.signal
     )
@@ -176,7 +181,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     }
 
     const t0 = performance.now()
-    const result = await workerPool.sendRequest(
+    const result = await this.pool.sendRequest(
       { type: 'translate-ssbd', text, previousOutput, from, to, context: this.serialContext(context) },
       'translate-ssbd', this.workerOptions, context?.signal
     )
@@ -213,7 +218,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     }
 
     const t0 = performance.now()
-    const result = await workerPool.sendRequest(
+    const result = await this.pool.sendRequest(
       { type: 'translate-simulmt', text, previousOutput, from, to, isRevision, context: this.serialContext(context) },
       'translate-simulmt', this.workerOptions, context?.signal
     )
@@ -226,7 +231,7 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
   /** Reset the persistent SimulMT session (e.g. on speech segment boundary) */
   resetSimulMtSession(): void {
     if (this.initialized) {
-      workerPool.sendFireAndForget({ type: 'simulmt-reset' }, this.modelPath)
+      this.pool.sendFireAndForget({ type: 'simulmt-reset' }, this.modelPath)
     }
   }
 
@@ -234,12 +239,12 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
    * finishing, and the next request respawns the worker. `dispose` still
    * releases this engine's reference afterwards. */
   interrupt(reason: string): void {
-    workerPool.terminate(reason)
+    this.pool.terminate(reason)
   }
 
   async dispose(): Promise<void> {
     if (this.initialized) {
-      await workerPool.release()
+      await this.pool.release()
       this.initialized = false
     }
     this.initPromise = null

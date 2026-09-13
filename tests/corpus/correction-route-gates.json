@@ -1,0 +1,29 @@
+{
+  "declared": "2026-09-13, before any measurement of the correction route",
+  "purpose": "Production gates for a Japanese-to-Traditional-Chinese route: HY-MT1.5 1.8B immediate captions plus optional Hy-MT2 7B final correction. All gates must pass; any failure keeps the route out of production.",
+  "deadlineMsAfterFinal": 2500,
+  "latency": {
+    "immediateFirstChineseMedianMaxRatio": 1.10,
+    "immediateFirstChineseP95MaxRatio": 1.20,
+    "immediateFinalDelayMedianMaxRatio": 1.10,
+    "immediateFinalDelayP95MaxRatio": 1.20,
+    "baseline": "1.8B-only run on the same corpus, same machine, same session, measured immediately before the route run"
+  },
+  "correction": {
+    "minShareLandedWithinDeadline": 0.80,
+    "counts": "only corrections whose text differs from the immediate translation"
+  },
+  "memory": {
+    "maxSwapoutPagesDuringRoute": 0,
+    "minSystemFreePercent": 20
+  },
+  "ordering": {
+    "maxStaleCorrectionsPublished": 0,
+    "rule": "a correction for a segment is published only while that segment is still the newest finalized caption"
+  },
+  "quality": {
+    "set": "tests/corpus/translation-holdout.json (frozen in RETEST-ACCURACY.md)",
+    "minAutomatedCheckGainOverImmediate": 3,
+    "requirement": "counting only corrections that land within the deadline; no correction may introduce a negation, speaker-intent or invented-content error that the immediate translation did not have"
+  }
+}
