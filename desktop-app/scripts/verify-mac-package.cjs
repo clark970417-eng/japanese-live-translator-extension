@@ -22,6 +22,11 @@ for (const match of html.matchAll(/(?:src|href)="(\.\/assets\/[^"?#]+)"/g)) {
 const version = JSON.parse(asar.extractFile(archive, 'package.json')).version
 assert.equal(version, JSON.parse(fs.readFileSync('package.json')).version)
 assert(fs.existsSync(path.join(resources, 'bridge-scripts/mlx-whisper-bridge.py')))
+const vadDir = path.join(resources, 'app.asar.unpacked/out/renderer/vad')
+for (const file of ['silero_vad_v5.onnx', 'vad.worklet.bundle.min.js', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) {
+  const asset = path.join(vadDir, file)
+  assert(fs.existsSync(asset) && fs.statSync(asset).size > 1024, `Missing packaged VAD asset: ${file}`)
+}
 const addon = path.join(resources, 'app.asar.unpacked/node_modules/@kutalia/whisper-node-addon/dist/mac-arm64/whisper.node')
 const dylibs = execFileSync('otool', ['-L', addon], {encoding:'utf8'})
 assert(!/\/(?:Users|home)\//.test(dylibs.split('\n').slice(1).join('\n')), 'Developer library path in native addon')

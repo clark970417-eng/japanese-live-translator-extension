@@ -94,13 +94,16 @@ if (fs.existsSync(vadSrc)) {
     }
   }
 
-  // Copy ONNX Runtime WASM files
+  // Copy ONNX Runtime's WASM binaries and their runtime-loaded ES modules.
+  // onnxruntime-web resolves the .mjs loader through wasmPaths at runtime, so
+  // bundling only the .wasm files leaves packaged VAD startup with
+  // net::ERR_FILE_NOT_FOUND.
   const ortDist = path.join(__dirname, '..', 'node_modules', 'onnxruntime-web', 'dist')
   if (fs.existsSync(ortDist)) {
     for (const file of fs.readdirSync(ortDist)) {
-      if (file.endsWith('.wasm')) {
+      if (file.endsWith('.wasm') || /^ort-wasm-simd-threaded(?:\.jsep)?\.mjs$/.test(file)) {
         fs.copyFileSync(path.join(ortDist, file), path.join(vadDest, file))
-        console.log(`[fix-whisper-addon] Copied ORT WASM: ${file}`)
+        console.log(`[fix-whisper-addon] Copied ORT runtime asset: ${file}`)
       }
     }
   }

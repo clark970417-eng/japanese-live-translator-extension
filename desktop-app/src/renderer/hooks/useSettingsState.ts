@@ -234,6 +234,7 @@ export function useSettingsState(): SettingsState {
   const handleStart = async (): Promise<void> => {
     if (session.isStarting) return
     session.setIsStarting(true)
+    let pipelineStarted = false
 
     try {
       session.setStatus('Starting pipeline...')
@@ -252,6 +253,7 @@ export function useSettingsState(): SettingsState {
         session.setIsStarting(false)
         return
       }
+      pipelineStarted = true
 
       // #721: cloud e2e pipelines consume a continuous 100ms PCM stream; cascade
       // pipelines use the VAD-segmented rolling buffer.
@@ -260,6 +262,15 @@ export function useSettingsState(): SettingsState {
       session.startSessionTimer()
       session.setStatus('Listening...')
     } catch (err) {
+      // Starting the engine succeeds before microphone/VAD capture begins. If
+      // capture setup fails, roll the engine back as well; otherwise its model
+      // worker remains active and can make browser draft translation fail when
+      // it tries to acquire the shared worker.
+      session.audio.stop()
+      if (pipelineStarted) {
+        try { await withIpcTimeout(window.api.pipelineStop(), 10_000, 'pipelineStopAfterCaptureFailure') }
+        catch (stopError) { console.warn('[settings] Could not roll back failed start:', stopError) }
+      }
       session.setStatus(friendlyError(err))
       session.setIsRunning(false)
       session.stopSessionTimer()
