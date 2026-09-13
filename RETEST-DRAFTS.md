@@ -159,3 +159,13 @@ case now reads `…無理に自分を追い込まないでくださいね。` wi
 changed. The gate above remains **not met** for the other failures listed, and
 that report records a new one: the bare `存檔` terminology entry turns a game save
 into a stream archive.
+
+## Follow-up: remaining defects
+
+`RETEST-DRAFTS-REMAINING.md` addresses the failures listed under Gate status:
+`存檔` is chosen from context, stage counters no longer become `一関`, kana handles
+keep their script, merged lines are repaired, the `返信をありがとう` register slip is
+raised within its sentence, and `不要停更` is a request. It measures a new frozen
+set and an unseen validation set, and lists the semantic errors that remain,
+including one omission it introduced. The gate remains **not met** until an
+independent native-speaker review.
