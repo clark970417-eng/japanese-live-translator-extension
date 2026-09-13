@@ -1,0 +1,45 @@
+[
+  {"id": "save-game-forgot", "category": "save-vs-archive", "zh": "我打到一半忘記存檔，結果全部重來了", "mustContainAny": ["セーブ"], "mustNotContainAny": ["アーカイブ", "配信"], "intent": "Forgot to save the game midway and had to start over."},
+  {"id": "save-game-anytime", "category": "save-vs-archive", "zh": "這個遊戲可以隨時存檔嗎", "mustContainAny": ["セーブ"], "mustNotContainAny": ["アーカイブ"], "intent": "Asks whether the game can be saved at any time."},
+  {"id": "save-game-point", "category": "save-vs-archive", "zh": "存檔點就在魔王房間前面", "mustContainAny": ["セーブ"], "mustNotContainAny": ["アーカイブ"], "intent": "The save point is right before the boss room."},
+  {"id": "archive-missed-live", "category": "save-vs-archive", "zh": "今天沒趕上直播，晚點看存檔", "mustContainAny": ["アーカイブ"], "mustNotContainAny": ["セーブ"], "intent": "Missed the live stream; will watch the archive later."},
+  {"id": "archive-how-long", "category": "save-vs-archive", "zh": "直播存檔會保留多久呢", "mustContainAny": ["アーカイブ"], "mustNotContainAny": ["セーブ"], "intent": "Asks how long the stream archive stays up."},
+  {"id": "archive-stream-context", "category": "save-vs-archive", "zh": "剛剛開台那段的存檔還看得到嗎", "mustContainAny": ["アーカイブ"], "mustNotContainAny": ["セーブ"], "intent": "Asks whether the archive of the part just streamed is still viewable."},
+  {"id": "save-progress-no-term", "category": "save-vs-archive", "zh": "我要先把遊戲進度存起來", "mustContainAny": ["セーブ", "保存"], "mustNotContainAny": ["アーカイブ"], "intent": "Game context without the word 存檔; must not become an archive."},
+
+  {"id": "name-sakura", "category": "names", "zh": "さくら今天的歌好好聽", "mustContainAny": ["さくら"], "mustNotContainAny": ["サクラ", "桜さん"], "intent": "A hiragana handle stays in hiragana."},
+  {"id": "name-miko", "category": "names", "zh": "謝謝みこ一直陪我們聊天", "mustContainAny": ["みこ"], "mustNotContainAny": ["ミコ", "巫女"], "intent": "A hiragana handle stays in hiragana."},
+  {"id": "name-katakana-yuki", "category": "names", "zh": "ユキ的新衣裝超可愛", "mustContainAny": ["ユキ"], "mustNotContainAny": ["ゆき", "雪"], "intent": "A katakana handle stays in katakana."},
+  {"id": "name-two-handles", "category": "names", "zh": "和さくら、ねね一起玩的那集最好笑", "mustContainAny": ["さくら"], "mustNotContainAny": ["サクラ", "ネネ"], "intent": "Two hiragana handles both stay as written.", "alsoMustContain": ["ねね"]},
+
+  {"id": "stage-last", "category": "stage-counter", "zh": "加油！只剩最後一關了", "mustContainAny": ["ステージ", "面"], "mustNotContainAny": ["一関", "関"], "intent": "Only the final stage remains."},
+  {"id": "stage-this", "category": "stage-counter", "zh": "這一關的魔王好難打", "mustContainAny": ["ステージ", "面"], "mustNotContainAny": ["関"], "intent": "This stage's boss is hard."},
+  {"id": "stage-third-gimmick", "category": "stage-counter", "zh": "第三關的機關要怎麼過", "mustContainAny": ["ステージ", "面"], "mustNotContainAny": ["三関"], "intent": "How to get past the gimmick in stage three."},
+  {"id": "stage-next", "category": "stage-counter", "zh": "下一關會更難嗎", "mustContainAny": ["ステージ", "面"], "mustNotContainAny": ["関"], "intent": "Will the next stage be harder?"},
+
+  {"id": "keep-updating-please", "category": "keep-updating", "zh": "拜託不要停更，我每天都在等更新", "mustContainAny": ["やめないで", "止めないで", "続けて"], "mustNotContainAny": ["更新停止しない"], "intent": "Please don't stop updating; waits every day."},
+  {"id": "keep-updating-emoji", "category": "keep-updating", "zh": "不要停更啦 🥺", "mustContainAny": ["やめないで", "止めないで", "続けて"], "mustNotContainAny": ["更新停止しない"], "preserveEmoji": ["🥺"], "intent": "Don't stop updating, pleading tone."},
+  {"id": "keep-updating-trap-statement", "category": "keep-updating", "zh": "系統停更了三天，現在恢復了", "mustNotContainAny": ["ないでください", "ないでね", "やめないで", "止めないで"], "intent": "A statement that updates stopped for three days; not a request."},
+
+  {"id": "register-thanks-reply", "category": "register", "zh": "謝謝你回覆我，問題已經解決了", "mustContainAny": ["ありがとうございます", "ありがとうございました"], "mustNotContainAny": ["返信をありがとう、", "ありがとう、こちら"], "intent": "Thanks for the reply; the problem is solved. Polite throughout."},
+  {"id": "register-effort", "category": "register", "zh": "謝謝你一直這麼努力", "mustContainAny": ["ありがとう"], "intent": "Thanks for always working so hard."},
+  {"id": "register-rest", "category": "register", "zh": "今天也辛苦了，好好休息喔", "mustContainAny": ["お疲れ"], "intent": "Good work today too; rest well."},
+  {"id": "register-birthday", "category": "register", "zh": "生日快樂！今年也會一直支持你", "mustContainAny": ["おめでとう"], "intent": "Happy birthday; will keep supporting you this year."},
+
+  {"id": "subject-writer-absent-reader-enjoy", "category": "subject", "zh": "我明天不會來，你們玩得開心點", "mustContainAny": ["楽しんで"], "mustNotContainAny": ["楽しみません"], "intent": "Writer will not come; readers should enjoy themselves."},
+  {"id": "subject-reader-no-apology", "category": "subject", "zh": "你不用跟我道歉啦", "mustContainAny": ["謝らなくて", "謝らないで", "謝る必要"], "mustNotContainAny": ["謝りません"], "intent": "The reader need not apologize."},
+  {"id": "subject-writer-effort", "category": "subject", "zh": "我會努力不讓你失望", "mustNotContainAny": ["ないでください", "ないでね"], "intent": "The writer will try not to disappoint; not a request."},
+  {"id": "subject-reader-dont-worry", "category": "subject", "zh": "別擔心我，我已經好多了", "mustContainAny": ["心配しないで", "心配しなくて", "心配いりません", "ご心配なく"], "intent": "Don't worry about me; I'm much better."},
+
+  {"id": "fidelity-not-angry-emoji", "category": "fidelity", "zh": "我沒有生氣喔 😊", "mustContainAny": ["怒っていない", "怒ってない", "怒っていません", "怒ってません"], "preserveEmoji": ["😊"], "intent": "Negation plus emoji: not angry."},
+  {"id": "fidelity-maybe-late-two-lines", "category": "fidelity", "zh": "週末可能會晚一點開台\n但一定會來", "mustContainAny": ["かもしれ"], "preserveLines": 2, "intent": "Might start late on the weekend, but will definitely come; two lines."},
+  {"id": "fidelity-two-emoji-lines", "category": "fidelity", "zh": "今天很開心 🎉\n下次見 👋", "preserveEmoji": ["🎉", "👋"], "preserveLines": 2, "intent": "Two lines, each with an emoji."},
+  {"id": "fidelity-not-sure", "category": "fidelity", "zh": "我還不確定能不能參加", "mustContainAny": ["わかりません", "分かりません", "まだ決", "未定"], "mustNotContainAny": ["参加します。"], "intent": "Not yet sure whether able to join."},
+  {"id": "fidelity-not-my-fault", "category": "fidelity", "zh": "這不是我的錯，是網路太卡了", "mustContainAny": ["せいではありません", "せいじゃない", "せいではない", "私のせいでは"], "intent": "Not my fault; the connection lagged."},
+
+  {"id": "trap-relationship", "category": "trap", "zh": "我們的關係很好", "mustNotContainAny": ["ステージ", "面"], "intent": "關 in 關係 is not a stage."},
+  {"id": "trap-light-switch", "category": "trap", "zh": "燈的開關在門旁邊", "mustNotContainAny": ["ステージ"], "intent": "開關 is a switch."},
+  {"id": "trap-bank-savings", "category": "trap", "zh": "銀行存款不夠了", "mustNotContainAny": ["アーカイブ", "セーブ"], "intent": "存款 is money saved, not a save file or archive."},
+  {"id": "trap-save-file-desktop", "category": "trap", "zh": "把檔案存到桌面就好", "mustNotContainAny": ["アーカイブ"], "intent": "Save a file to the desktop; not a stream archive."},
+  {"id": "trap-stream-room", "category": "trap", "zh": "直播間今天人好多", "mustNotContainAny": ["セーブ", "アーカイブ"], "intent": "The stream room is crowded; no save or archive."}
+]
