@@ -1,0 +1,429 @@
+[
+  {
+    "id": "v-save-before-boss",
+    "category": "save-vs-archive",
+    "zh": "打魔王之前記得先存檔喔",
+    "intent": "Remind the reader to save before the boss.",
+    "mustContainAny": [
+      "セーブ"
+    ],
+    "mustNotContainAny": [
+      "アーカイブ",
+      "配信"
+    ]
+  },
+  {
+    "id": "v-save-corrupted",
+    "category": "save-vs-archive",
+    "zh": "存檔壞掉了，三十個小時的進度都沒了",
+    "intent": "The save data broke; thirty hours of progress lost.",
+    "mustContainAny": [
+      "セーブ",
+      "データ"
+    ],
+    "mustNotContainAny": [
+      "アーカイブ",
+      "配信"
+    ]
+  },
+  {
+    "id": "v-save-slot",
+    "category": "save-vs-archive",
+    "zh": "第二個存檔欄位被覆蓋了",
+    "intent": "The second save slot was overwritten.",
+    "mustContainAny": [
+      "セーブ",
+      "スロット"
+    ],
+    "mustNotContainAny": [
+      "アーカイブ"
+    ]
+  },
+  {
+    "id": "v-archive-public",
+    "category": "save-vs-archive",
+    "zh": "昨天的直播存檔什麼時候會公開",
+    "intent": "When will yesterday's stream archive be public?",
+    "mustContainAny": [
+      "アーカイブ"
+    ],
+    "mustNotContainAny": [
+      "セーブ"
+    ]
+  },
+  {
+    "id": "v-archive-rewatch",
+    "category": "save-vs-archive",
+    "zh": "我已經把存檔重看三遍了",
+    "intent": "I have rewatched the archive three times.",
+    "mustContainAny": [
+      "アーカイブ"
+    ],
+    "mustNotContainAny": [
+      "セーブ"
+    ]
+  },
+  {
+    "id": "v-name-pekora",
+    "category": "names",
+    "zh": "ぺこら今天也辛苦了",
+    "intent": "Thanks for your hard work today too, Pekora (hiragana).",
+    "mustContainAny": [
+      "ぺこら"
+    ],
+    "mustNotContainAny": [
+      "ペコラ"
+    ]
+  },
+  {
+    "id": "v-name-luna-katakana",
+    "category": "names",
+    "zh": "謝謝ルナ的歌",
+    "intent": "Thanks for Luna's song (katakana).",
+    "mustContainAny": [
+      "ルナ"
+    ],
+    "mustNotContainAny": [
+      "るな"
+    ]
+  },
+  {
+    "id": "v-name-mio-question",
+    "category": "names",
+    "zh": "みお下次什麼時候開台",
+    "intent": "When will Mio stream next?",
+    "mustContainAny": [
+      "みお"
+    ],
+    "mustNotContainAny": [
+      "ミオ"
+    ]
+  },
+  {
+    "id": "v-name-with-kanji",
+    "category": "names",
+    "zh": "星街すいせい的新曲超好聽",
+    "intent": "Hoshimachi Suisei's new song is great.",
+    "mustContainAny": [
+      "すいせい"
+    ],
+    "mustNotContainAny": [
+      "スイセイ"
+    ]
+  },
+  {
+    "id": "v-stage-fifth",
+    "category": "stage-counter",
+    "zh": "第五關的魔王怎麼打",
+    "intent": "How to beat the stage 5 boss.",
+    "mustContainAny": [
+      "ステージ5",
+      "第5ステージ",
+      "5面",
+      "ステージ５"
+    ],
+    "mustNotContainAny": [
+      "関"
+    ]
+  },
+  {
+    "id": "v-stage-last-stuck",
+    "category": "stage-counter",
+    "zh": "最後一關卡了兩個小時",
+    "intent": "Stuck on the last stage for two hours.",
+    "mustContainAny": [
+      "最後のステージ",
+      "ラスト",
+      "最終"
+    ],
+    "mustNotContainAny": [
+      "一関"
+    ]
+  },
+  {
+    "id": "v-stage-that",
+    "category": "stage-counter",
+    "zh": "那關真的太難了吧",
+    "intent": "That stage is really too hard.",
+    "mustContainAny": [
+      "ステージ"
+    ],
+    "mustNotContainAny": [
+      "関"
+    ]
+  },
+  {
+    "id": "v-keep-updating-beg",
+    "category": "keep-updating",
+    "zh": "求求你別停更 😭",
+    "intent": "Begging the creator not to stop updating.",
+    "mustContainAny": [
+      "やめないで",
+      "止めないで",
+      "続けて"
+    ],
+    "mustNotContainAny": [
+      "停止しません",
+      "やめません"
+    ],
+    "preserveEmoji": [
+      "😭"
+    ]
+  },
+  {
+    "id": "v-keep-updating-hope",
+    "category": "keep-updating",
+    "zh": "希望你不要停更，一直做下去",
+    "intent": "Hope you won't stop updating and keep going.",
+    "mustContainAny": [
+      "やめないで",
+      "止めないで",
+      "続けて",
+      "続け"
+    ],
+    "mustNotContainAny": [
+      "停止しません"
+    ]
+  },
+  {
+    "id": "v-keep-updating-writer",
+    "category": "keep-updating",
+    "zh": "我這週會停更一次，下週恢復",
+    "intent": "The writer will pause updates once this week and resume next week.",
+    "mustContainAny": [
+      "休",
+      "停止",
+      "お休み"
+    ],
+    "mustNotContainAny": [
+      "やめないで",
+      "ないでください"
+    ]
+  },
+  {
+    "id": "v-register-thanks-understood",
+    "category": "register",
+    "zh": "謝謝你的回覆，我明白了",
+    "intent": "Thanks for the reply, I understand.",
+    "mustContainAny": [
+      "ありがとう"
+    ]
+  },
+  {
+    "id": "v-register-cheer-match",
+    "category": "register",
+    "zh": "明天的比賽加油，我會在直播看你的",
+    "intent": "Good luck in tomorrow's match; I will watch on stream.",
+    "mustContainAny": [
+      "頑張"
+    ]
+  },
+  {
+    "id": "v-register-good-night",
+    "category": "register",
+    "zh": "晚安，今天謝謝你陪我們",
+    "intent": "Good night, thanks for spending time with us today.",
+    "mustContainAny": [
+      "おやすみ"
+    ],
+    "alsoMustContain": [
+      "ありがとう"
+    ]
+  },
+  {
+    "id": "v-register-sorry-late",
+    "category": "register",
+    "zh": "抱歉這麼晚才回覆你",
+    "intent": "Sorry for replying so late.",
+    "mustContainAny": [
+      "すみません",
+      "ごめん",
+      "申し訳"
+    ]
+  },
+  {
+    "id": "v-subject-reader-no-rush",
+    "category": "subject",
+    "zh": "你慢慢來，不用急",
+    "intent": "Take your time, no need to hurry (reader).",
+    "mustContainAny": [
+      "急がなくて",
+      "焦らなくて",
+      "急がないで",
+      "急ぐ必要"
+    ],
+    "mustNotContainAny": [
+      "急ぎません"
+    ]
+  },
+  {
+    "id": "v-subject-writer-sleep",
+    "category": "subject",
+    "zh": "我先去睡了，你們繼續玩",
+    "intent": "The writer is going to sleep; the readers keep playing.",
+    "mustContainAny": [
+      "寝"
+    ],
+    "mustNotContainAny": [
+      "寝てください",
+      "寝てね"
+    ]
+  },
+  {
+    "id": "v-subject-reader-no-thanks",
+    "category": "subject",
+    "zh": "你不用謝我啦",
+    "intent": "The reader need not thank the writer.",
+    "mustContainAny": [
+      "なくて",
+      "ないで",
+      "いりません",
+      "いらない",
+      "必要はない",
+      "必要ありません"
+    ],
+    "mustNotContainAny": [
+      "感謝しません"
+    ]
+  },
+  {
+    "id": "v-subject-writer-not-watching",
+    "category": "subject",
+    "zh": "我今天不會看直播，大家玩得開心",
+    "intent": "The writer will not watch today; everyone have fun.",
+    "mustContainAny": [
+      "楽しんで"
+    ],
+    "mustNotContainAny": [
+      "見ないでください"
+    ]
+  },
+  {
+    "id": "v-fidelity-three-lines",
+    "category": "fidelity",
+    "zh": "今天辛苦了\n明天也會來看\n晚安 🌙",
+    "intent": "Three lines: good work today, will come tomorrow, good night.",
+    "mustContainAny": [
+      "おやすみ"
+    ],
+    "preserveLines": 3,
+    "preserveEmoji": [
+      "🌙"
+    ]
+  },
+  {
+    "id": "v-fidelity-cannot-forget",
+    "category": "fidelity",
+    "zh": "我不可能忘記今天的直播",
+    "intent": "I could never forget today's stream (impossibility, not uncertainty).",
+    "mustContainAny": [
+      "忘れ"
+    ],
+    "mustNotContainAny": [
+      "かもしれ"
+    ]
+  },
+  {
+    "id": "v-fidelity-rain-emoji",
+    "category": "fidelity",
+    "zh": "明天可能會下雨 ☔ 記得帶傘",
+    "intent": "It may rain tomorrow; remember an umbrella.",
+    "mustContainAny": [
+      "かもしれ",
+      "でしょう"
+    ],
+    "alsoMustContain": [
+      "傘"
+    ],
+    "preserveEmoji": [
+      "☔"
+    ]
+  },
+  {
+    "id": "v-fidelity-two-lines-negation",
+    "category": "fidelity",
+    "zh": "我沒有生氣\n只是有點累",
+    "intent": "Two lines: I am not angry, just a little tired.",
+    "mustContainAny": [
+      "怒って"
+    ],
+    "alsoMustContain": [
+      "疲れ"
+    ],
+    "preserveLines": 2
+  },
+  {
+    "id": "v-fidelity-already-subscribed",
+    "category": "fidelity",
+    "zh": "我已經訂閱了",
+    "intent": "I have already subscribed.",
+    "mustContainAny": [
+      "チャンネル登録",
+      "登録"
+    ]
+  },
+  {
+    "id": "v-trap-saved-money",
+    "category": "trap",
+    "zh": "這個月存了不少錢",
+    "intent": "Saved quite a lot of money this month.",
+    "mustContainAny": [
+      "お金",
+      "貯"
+    ],
+    "mustNotContainAny": [
+      "セーブ",
+      "アーカイブ"
+    ]
+  },
+  {
+    "id": "v-trap-document-save",
+    "category": "trap",
+    "zh": "記得把文件存檔再關電腦",
+    "intent": "Remember to save the document before shutting down the computer.",
+    "mustContainAny": [
+      "保存",
+      "セーブ"
+    ],
+    "mustNotContainAny": [
+      "アーカイブ",
+      "配信"
+    ]
+  },
+  {
+    "id": "v-trap-customs",
+    "category": "trap",
+    "zh": "過海關的時候要排很久",
+    "intent": "The customs line is long.",
+    "mustContainAny": [
+      "税関"
+    ],
+    "mustNotContainAny": [
+      "ステージ"
+    ]
+  },
+  {
+    "id": "v-trap-unrelated",
+    "category": "trap",
+    "zh": "他跟這件事沒有關係",
+    "intent": "He has nothing to do with this.",
+    "mustContainAny": [
+      "関係"
+    ],
+    "mustNotContainAny": [
+      "ステージ"
+    ]
+  },
+  {
+    "id": "v-trap-learn-streaming",
+    "category": "trap",
+    "zh": "我想學怎麼直播",
+    "intent": "I want to learn how to stream.",
+    "mustContainAny": [
+      "配信"
+    ],
+    "mustNotContainAny": [
+      "アーカイブ"
+    ]
+  }
+]
