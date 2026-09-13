@@ -54,6 +54,8 @@ const STAGE_TARGET: Record<string, string> = {
   那關: 'あのステージ', 下一關: '次のステージ', 上一關: '前のステージ'
 }
 
+const STOP_UPDATING_REQUEST = /(?:不要|別再|別|不准)停更/g
+
 /** Terminology for one written draft, chosen from what the comment says. */
 export function selectDraftTerminology(source: string): GlossaryEntry[] {
   const terms: GlossaryEntry[] = [...DRAFT_ZH_JA_GLOSSARY]
@@ -63,6 +65,15 @@ export function selectDraftTerminology(source: string): GlossaryEntry[] {
     if (archive > save) terms.push({ source: '存檔', target: 'アーカイブ' })
     else if (save > archive) terms.push({ source: '存檔點', target: 'セーブポイント' }, { source: '存檔', target: 'セーブ' })
   }
+
+  // Asking a creator not to stop updating is a request. With only the noun
+  // 更新停止 on offer the model has written it as a statement, 更新を停止しません,
+  // so a prohibition directly before 停更 gets the request form instead.
+  // Offering the noun as well gave the model two conflicting renderings, so the
+  // request form replaces it rather than joining it.
+  const requests = [...source.matchAll(STOP_UPDATING_REQUEST)]
+  if (requests.length) terms.splice(terms.findIndex(term => term.source === '停更'), 1)
+  for (const [match] of requests) terms.push({ source: match, target: '更新をやめないで' })
 
   const stages = [...source.matchAll(STAGE_COUNTER)]
   for (const [match, , number] of stages) {

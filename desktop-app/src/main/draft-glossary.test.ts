@@ -39,3 +39,10 @@ it('offers a compound before a word inside it', () => {
   const sources = selectDraftTerminology('直播存檔').map(entry => entry.source)
   expect(sources.indexOf('直播存檔')).toBeLessThan(sources.indexOf('直播'))
 })
+
+it('offers a request form only when 停更 follows a prohibition', () => {
+  expect(selectDraftTerminology('不要停更啦 🥺')).toContainEqual({ source: '不要停更', target: '更新をやめないで' })
+  expect(selectDraftTerminology('拜託別停更')).toContainEqual({ source: '別停更', target: '更新をやめないで' })
+  expect(target('不要停更啦 🥺', '停更')).toBeUndefined()
+  expect(selectDraftTerminology('系統停更了三天').map(term => term.target)).not.toContain('更新をやめないで')
+})
