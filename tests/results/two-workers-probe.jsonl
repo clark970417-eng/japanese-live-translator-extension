@@ -1,0 +1,4 @@
+{"type":"start","freePercent":70,"swapouts":6449199}
+{"type":"captions-small-only","median":794,"max":939,"n":8,"captionTreeMB":3180,"freePercent":47,"swapoutsDelta":0}
+{"type":"captions-while-large-generates","median":1607,"max":1806,"n":8,"combinedPeakMB":5396,"minFreePercent":13,"swapoutsDelta":101472}
+{"type":"end","freePercent":70,"swapoutsDelta":101472}

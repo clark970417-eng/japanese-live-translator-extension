@@ -114,6 +114,10 @@ export interface TranslatorEngine {
   /** Translate text from one language to another */
   translate(text: string, from: Language, to: Language, context?: TranslateContext): Promise<string>
 
+  /** Abandon a model load or generation in progress so more urgent work can
+   * use the hardware. Engines without shared local inference may omit it. */
+  interrupt?(reason: string): void
+
   /**
    * Incremental translation for SimulMT (Wait-k policy).
    * Translates partial source text while maintaining consistency with previous output.

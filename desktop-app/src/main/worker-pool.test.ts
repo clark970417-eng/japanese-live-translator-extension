@@ -179,3 +179,69 @@ it('frees queue capacity when obsolete waiting translations are cancelled', asyn
  expect(worker.messages.filter(m=>m.type==='translate')).toHaveLength(2)
  await pool.release()
 })
+
+/** A worker whose model load never finishes, like a large model still loading. */
+class LoadingWorker extends FakeWorker {
+  postMessage(message: Record<string, unknown>) {
+    if (message.type === 'init') { this.messages.push(message); return }
+    super.postMessage(message)
+  }
+}
+
+it('rejects a model load promptly when the worker is terminated mid-load', async () => {
+  const loading = new LoadingWorker(); mocks.fork.mockReturnValue(loading)
+  const pool = new WorkerPool()
+  const load = pool.acquire({ modelPath: 'large' })
+  load.catch(() => {})
+  await vi.waitFor(() => expect(loading.messages.some(m => m.type === 'init')).toBe(true))
+  const terminated = Date.now()
+  pool.terminate('Live captions started')
+  await expect(load).rejects.toThrow('Live captions started')
+  // No initialization timeout and no graceful-dispose grace period.
+  expect(Date.now() - terminated).toBeLessThan(250)
+  expect(pool.references).toBe(0)
+})
+
+it('rejects a load when the worker exits on its own instead of waiting for the timeout', async () => {
+  const loading = new LoadingWorker(); mocks.fork.mockReturnValue(loading)
+  const pool = new WorkerPool()
+  const load = pool.acquire({ modelPath: 'large' })
+  await vi.waitFor(() => expect(loading.messages.some(m => m.type === 'init')).toBe(true))
+  loading.emit('exit', 137)
+  await expect(load).rejects.toThrow('Worker process exited')
+})
+
+it('loads the next model in a fresh worker that a late exit from the terminated one cannot clear', async () => {
+  const loading = new LoadingWorker(); mocks.fork.mockReturnValue(loading)
+  const pool = new WorkerPool()
+  const large = pool.acquire({ modelPath: 'large' })
+  large.catch(() => {})
+  await vi.waitFor(() => expect(loading.messages.some(m => m.type === 'init')).toBe(true))
+  pool.terminate('Live captions started')
+  await expect(large).rejects.toThrow()
+
+  worker = new FakeWorker(); mocks.fork.mockReturnValue(worker)
+  await pool.acquire({ modelPath: 'small' })
+  loading.emit('exit', null)
+  expect(pool.loadedModelPath).toBe('small')
+  expect(await pool.sendRequest({ type: 'translate' }, 'translate', { modelPath: 'small' })).toBe('small')
+  expect(mocks.fork).toHaveBeenCalledTimes(2)
+  await pool.release()
+})
+
+it('rejects requests waiting on a terminated worker with the termination reason', async () => {
+  const pool = new WorkerPool()
+  await pool.acquire({ modelPath: 'a' })
+  worker.hold = true
+  const request = pool.sendRequest({ type: 'translate' }, 'translate', { modelPath: 'a' })
+  await vi.waitFor(() => expect(worker.messages.some(m => m.type === 'translate')).toBe(true))
+  pool.terminate('Live captions started')
+  await expect(request).rejects.toThrow('Live captions started')
+  expect(pool.isAlive).toBe(false)
+})
+
+it('treats terminate without a running worker as a no-op', () => {
+  const pool = new WorkerPool()
+  expect(() => pool.terminate('nothing running')).not.toThrow()
+  expect(mocks.fork).not.toHaveBeenCalled()
+})

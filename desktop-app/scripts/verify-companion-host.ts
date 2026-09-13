@@ -24,6 +24,7 @@ app.whenReady().then(async () => {
   store.set('sttEngine', 'mlx-whisper')
   store.set('sourceLanguage', 'ja')
   store.set('targetLanguage', 'zh')
+  store.set('draftTranslationEngine', env.DRAFT_ENGINE || 'offline-hymt2')
 
   const pipeline = new TranslationPipeline()
   pipeline.registerSTT('mlx-whisper', () => new MlxWhisperEngine({ language: 'ja' }))

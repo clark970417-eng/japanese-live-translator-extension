@@ -74,6 +74,10 @@ export class WorkerPool {
   private requestQueue = new SerialTaskQueue()
   private queuedRequests = 0
   private currentOptionsKey: string | null = null
+  /** Rejects the model load in progress, if any. A load waits for a `ready`
+   * message, so without this a worker that dies mid-load would hold the request
+   * queue until the initialization timeout. */
+  private abortInit: ((error: Error) => void) | null = null
 
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
     return this.requestQueue.run(operation)
@@ -226,6 +230,33 @@ export class WorkerPool {
     return this.worker !== null
   }
 
+  /**
+   * Stop the worker now, abandoning a model load or generation in progress.
+   * Unlike release, this does not wait for a graceful dispose: it exists so live
+   * captions never wait for a large model they did not ask for. Pending requests
+   * and any in-flight load reject, and the next request spawns a fresh process.
+   */
+  terminate(reason: string): void {
+    const worker = this.worker
+    if (!worker) return
+    log.warn(`Terminating worker: ${reason}`)
+    // Forget the process before it exits. A failed acquire would otherwise try a
+    // graceful dispose and wait out the grace period for a reply that a killed
+    // process never sends, and that wait is exactly what captions must not see.
+    this.worker = null
+    this.currentOptionsKey = null
+    this.currentModelPath = null
+    this.initPromise = null
+    const error = new Error(reason)
+    this.abortInit?.(error)
+    for (const [id, req] of this.pending) {
+      clearTimeout(req.timer)
+      req.reject(error)
+      this.pending.delete(id)
+    }
+    worker.kill()
+  }
+
   /** The model currently loaded in the worker */
   get loadedModelPath(): string | null {
     return this.currentModelPath
@@ -242,14 +273,19 @@ export class WorkerPool {
 
   private async spawnAndInit(options: WorkerInitOptions): Promise<void> {
     const workerPath = join(__dirname, 'slm-worker.js')
-    this.worker = utilityProcess.fork(workerPath)
+    const worker = utilityProcess.fork(workerPath)
+    this.worker = worker
 
-    this.worker.on('exit', (code) => {
+    worker.on('exit', (code) => {
       log.info(`Worker exited with code ${code}`)
+      // A terminated worker exits after it was already forgotten, possibly after
+      // a replacement started. Its exit must not clear the replacement's state.
+      if (this.worker !== worker) return
       this.worker = null
       this.currentOptionsKey = null
       this.currentModelPath = null
       this.initPromise = null
+      this.abortInit?.(new Error('Worker process exited'))
       // Reject all pending requests
       for (const [id, req] of this.pending) {
         clearTimeout(req.timer)
@@ -279,6 +315,7 @@ export class WorkerPool {
 
           const cleanup = (): void => {
             this.worker?.removeListener('message', initHandler)
+            if (this.abortInit === fail) this.abortInit = null
           }
 
           const timeout = setTimeout(() => {
@@ -287,6 +324,15 @@ export class WorkerPool {
             cleanup()
             reject(new Error('Worker initialization timed out'))
           }, WORKER_INIT_TIMEOUT_MS)
+
+          const fail = (error: Error): void => {
+            if (settled) return
+            settled = true
+            clearTimeout(timeout)
+            cleanup()
+            reject(error)
+          }
+          this.abortInit = fail
 
           const initHandler = (msg: WorkerMessage): void => {
             if (settled || !this.worker) return

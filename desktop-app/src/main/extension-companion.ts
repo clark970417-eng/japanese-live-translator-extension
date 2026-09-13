@@ -32,6 +32,41 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     let translator: HunyuanMT2Translator | HunyuanMT15Translator | undefined
     let translatorMode: string | undefined
     const send = (value: unknown): void => { if (!closed) socket.write(JSON.stringify(value) + '\n') }
+    type LocalMode = 'offline-hymt2' | 'offline-hymt15'
+    const modeOf = (value: unknown): LocalMode => value === 'offline-hymt2' ? 'offline-hymt2' : 'offline-hymt15'
+    const translatorFor = async (mode: LocalMode): Promise<HunyuanMT2Translator | HunyuanMT15Translator> => {
+      if (!translator || translatorMode !== mode) {
+        await translator?.dispose()
+        translator = mode === 'offline-hymt2' ? new HunyuanMT2Translator({ variant: '7B-Q4_K_M' }) : new HunyuanMT15Translator()
+        translatorMode = mode
+      }
+      return translator
+    }
+    const discardTranslator = async (): Promise<void> => {
+      const stale = translator
+      translator = undefined; translatorMode = undefined
+      try { await stale?.dispose() } catch { /* its worker is already gone */ }
+    }
+    const draftWith = (engine: HunyuanMT2Translator | HunyuanMT15Translator) =>
+      (text: string, signal?: AbortSignal): Promise<string> =>
+        engine.translate(text, 'zh', 'ja', { signal, previousSegments: [], glossary: DRAFT_ZH_JA_GLOSSARY })
+    /** Answer a draft request later, on the caption model, behind any audio work
+     * already queued. Scheduled as its own task: awaiting it from inside the
+     * current task would deadlock the serial scheduler. */
+    const deferDraft = (id: number | undefined, text: string, mode: LocalMode): void => {
+      pending++
+      void queue.run(false, async fallbackPreempt => {
+        try {
+          if (closed) return
+          const small = await translatorFor(mode)
+          await small.initialize()
+          const draft = await translateWrittenDraft(text, draftWith(small), fallbackPreempt)
+          send({ id, ok: true, result: { ...draft, fallbackModel: true } })
+        } catch (error) {
+          send({ id, ok: false, error: error instanceof Error ? error.message : String(error) })
+        } finally { pending-- }
+      }).catch(() => { socket.destroy() })
+    }
     let current: { segment?: string; id?: number } = {}
     let lastAudio: Float32Array | null = null
     const revisions = new Map<number, string>()
@@ -84,6 +119,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
         }
         pending++
         void queue.run(audioPriority, async preempt => {
+          let deferred = false
           try {
             if (closed) return
             const pipeline = ctx.pipeline
@@ -144,25 +180,40 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               // Drafts may use a more accurate model than the captions, but only
               // while no caption session is running. The shared worker unloads
               // one model to load another, and measuring that swap against live
-              // audio put caption round trips above 20 s. Preemption cannot help:
-              // the cost is in loading weights, not in generating tokens.
-              const draftModelAllowed = from === 'zh' && to === 'ja' && !pipeline.running
-              const requestedMode = (draftModelAllowed
-                ? store.get('draftTranslationEngine') : store.get('translationEngine')) === 'offline-hymt2'
-                ? 'offline-hymt2' : 'offline-hymt15'
-              if (!translator || translatorMode !== requestedMode) {
-                await translator?.dispose()
-                translator = requestedMode === 'offline-hymt2'
-                  ? new HunyuanMT2Translator({ variant: '7B-Q4_K_M' }) : new HunyuanMT15Translator()
-                translatorMode = requestedMode
+              // audio put caption round trips above 20 s.
+              const isDraft = from === 'zh' && to === 'ja'
+              const captionMode = modeOf(store.get('translationEngine'))
+              const requestedMode = isDraft && !pipeline.running ? modeOf(store.get('draftTranslationEngine')) : captionMode
+              // A draft on a model the captions do not use will occupy the shared
+              // worker with a load that captions would otherwise have to wait for.
+              const displacesCaptions = isDraft && requestedMode !== captionMode
+              if (displacesCaptions && !preempt.aborted) {
+                const large = await translatorFor(requestedMode)
+                const interrupt = (): void => { large.interrupt?.('Live captions started during a large-model draft') }
+                preempt.addEventListener('abort', interrupt, { once: true })
+                try {
+                  await large.initialize()
+                  result = await translateWrittenDraft(m.text, draftWith(large), preempt)
+                } catch (error) {
+                  if (!preempt.aborted) throw error
+                  // The large model produced nothing before captions needed the
+                  // hardware. Finish this draft on the caption model after them.
+                  deferDraft(m.id, m.text, captionMode)
+                  deferred = true
+                } finally {
+                  preempt.removeEventListener('abort', interrupt)
+                  // An interrupted engine points at a worker that no longer exists.
+                  if (preempt.aborted) await discardTranslator()
+                }
+              } else {
+                const active = await translatorFor(isDraft ? (displacesCaptions ? captionMode : requestedMode) : requestedMode)
+                await active.initialize()
+                result = isDraft
+                  ? await translateWrittenDraft(m.text, draftWith(active), preempt)
+                  : { text: await active.translate(m.text, from, to) }
               }
-              await translator.initialize()
-              const activeTranslator = translator
-              result = from === 'zh' && to === 'ja'
-                ? await translateWrittenDraft(m.text, (text, signal) => activeTranslator.translate(text, from, to, {signal, previousSegments: [], glossary: DRAFT_ZH_JA_GLOSSARY}), preempt)
-                : { text: await activeTranslator.translate(m.text, from, to) }
             } else throw new Error('Unsupported operation')
-            send({ id: m.id, ok: true, result })
+            if (!deferred) send({ id: m.id, ok: true, result })
           } catch (error) {
             if (m.op === 'init' && ownsSession) { ownsSession = false; ctx.extensionConnected = false }
             send({ id: m.id, ok: false, error: error instanceof Error ? error.message : String(error) })

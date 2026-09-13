@@ -1,0 +1,4 @@
+{"type":"configuration","trials":3,"skipDraft":true,"captionDelayMs":300,"draftEngine":"offline-hymt2","label":"no-draft-control"}
+{"type":"trial","trial":0,"draftMs":0,"draftOk":true,"initSentMs":301,"initDoneMs":2867,"initWaitMs":2566,"initOk":true,"firstDecodeWaitMs":2089,"maxDecodeWaitMs":2111,"firstCaptionAfterInitMs":2902,"firstChineseAfterInitMs":3357,"decodeErrors":[],"draftText":""}
+{"type":"trial","trial":1,"draftMs":0,"draftOk":true,"initSentMs":301,"initDoneMs":2740,"initWaitMs":2439,"initOk":true,"firstDecodeWaitMs":1964,"maxDecodeWaitMs":1987,"firstCaptionAfterInitMs":2775,"firstChineseAfterInitMs":3230,"decodeErrors":[],"draftText":""}
+{"type":"trial","trial":2,"draftMs":0,"draftOk":true,"initSentMs":301,"initDoneMs":2761,"initWaitMs":2460,"initOk":true,"firstDecodeWaitMs":1985,"maxDecodeWaitMs":2009,"firstCaptionAfterInitMs":2795,"firstChineseAfterInitMs":3251,"decodeErrors":[],"draftText":""}

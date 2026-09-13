@@ -230,6 +230,13 @@ export abstract class LlamaWorkerTranslator implements TranslatorEngine {
     }
   }
 
+  /** Stops the shared worker immediately. A load in progress rejects instead of
+   * finishing, and the next request respawns the worker. `dispose` still
+   * releases this engine's reference afterwards. */
+  interrupt(reason: string): void {
+    workerPool.terminate(reason)
+  }
+
   async dispose(): Promise<void> {
     if (this.initialized) {
       await workerPool.release()
