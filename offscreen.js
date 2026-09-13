@@ -2,10 +2,12 @@ import {SpeechResultFilter,cleanText} from './stream-core.mjs';
 import {Agreement,DecodeQueue,Measurements} from './streaming.mjs';
 import {DesktopWorker} from './desktop-worker.js';
 let active=null;
+const MAX_WORKER_RESTARTS=2;
+const restartDelay=attempt=>Math.min(1000,250*2**(attempt-1));
 const send=(s,type,extra={})=>{if(type==='speech-error')s.stopFailure=extra.error;return active===s?chrome.runtime.sendMessage({type,session:s.session,...extra}).catch(error=>{if(type==='speech-result'&&extra.final){s.stopFailure='最後字幕傳送失敗：'+error.message;send(s,'speech-error',{error:s.stopFailure});stop();}}):Promise.resolve();};
 function stop(){
  const s=active;active=null;if(!s)return;
- clearInterval(s.monitor);clearTimeout(s.timeout);clearTimeout(s.vadTimeout);clearTimeout(s.flushTimeout);
+ clearInterval(s.monitor);clearTimeout(s.timeout);clearTimeout(s.vadTimeout);clearTimeout(s.flushTimeout);clearTimeout(s.restartTimer);
  s.worker?.terminate();s.vad?.terminate();s.node?.disconnect();s.source?.disconnect();
  s.stream?.getTracks().forEach(t=>{t.onended=null;t.stop();});s.context?.close().catch(()=>{});
  s.stopResolve?.({ok:!s.stopFailure,error:s.stopFailure});
@@ -45,7 +47,7 @@ function resetAudio(s){
 }
 function decode(s,job){
  if(job.epoch!==s.epoch||(s.recording&&!s.desktop&&!job.final))return;
- if(!s.ready){if(s.recording){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}}return;}
+ if(!s.ready){if(s.recording||s.desktop){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}}return;}
  if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
  s.busy=job;s.started=performance.now();s.metrics.add('queueMs',Date.now()-job.audioEndAt);
@@ -68,14 +70,19 @@ function sample(s,data){
  s.vadQueue.push(data);drainVad(s);
 }
 function restartWorker(s,reason){
- if(active!==s)return;
- if(s.restarts++>=1){send(s,'speech-error',{error:reason+'，請重新開始'});stop();return;}
- clearTimeout(s.timeout);if(s.recording&&s.busy)s.queue.jobs.unshift(s.busy);s.worker?.terminate();s.ready=false;s.busy=null;if(!s.recording){s.receiving=false;resetAudio(s);}
- send(s,'model-status',{text:reason+'，正在重新載入…'});initializeWorker(s);
+ if(active!==s||s.restartTimer)return;
+ if(s.restarts>=MAX_WORKER_RESTARTS){send(s,'speech-error',{error:reason+'；自動復原已達上限，請按停止後再開始'});stop();return;}
+ const attempt=++s.restarts,delay=restartDelay(attempt);
+ clearTimeout(s.timeout);
+ if(s.busy&&(s.recording||s.desktop))s.queue.jobs.unshift(s.busy);
+ const failed=s.worker;s.worker=null;failed?.terminate();s.ready=false;s.busy=null;
+ if(!s.recording&&!s.desktop){s.receiving=false;resetAudio(s);}
+ send(s,'model-status',{text:`${reason}，${delay} 毫秒後進行第 ${attempt}/${MAX_WORKER_RESTARTS} 次復原…`});
+ s.restartTimer=setTimeout(()=>{s.restartTimer=null;if(active===s)initializeWorker(s);},delay);
 }
 function initializeWorker(s){
  const worker=s.worker=s.desktop?new DesktopWorker():new Worker('speech-worker.js?v=3.4.8',{type:'module'});
- worker.onerror=()=>restartWorker(s,'語音模型發生錯誤');
+ worker.onerror=()=>{if(active===s&&s.worker===worker)restartWorker(s,'語音模型發生錯誤');};
  s.timeout=setTimeout(()=>restartWorker(s,'模型載入逾時'),120000);
  worker.onmessage=async({data})=>{
   if(active!==s||s.worker!==worker)return;
@@ -126,7 +133,7 @@ function initializeVad(s){
  s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate,desktop:s.desktop});
 }
 async function start(m){
- stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
+ stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,restartTimer:null,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
  try{
   s.desktop=m.mode==='desktop';
   s.stream=await navigator.mediaDevices.getUserMedia({audio:{mandatory:{chromeMediaSource:'tab',chromeMediaSourceId:m.streamId}},video:false});

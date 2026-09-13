@@ -47,6 +47,7 @@ for(const mode of ['browser','desktop']) test(`recording retries retained audio 
  const job={id:1,utteranceId:1,final:true,epoch:1,audio:new Float32Array(16000).fill(.1),audioEndAt:Date.now(),speechAt:Date.now()-1000,voicedSeconds:1,sampleCount:16000};
  vad.onmessage({data:{type:'segment',job}});
  timers.filter(t=>t.ms===(mode==='desktop'?60000:15000)).at(-1).fn();
+ timers.filter(t=>t.ms===250).at(-1).fn();
  const replacement=workers.filter(w=>w.url.startsWith('speech')).at(-1);assert.notEqual(replacement,asr);
  capture.port.onmessage({data:new Float32Array(1024).fill(.1)});
  assert.equal(vad.sent.type,'audio');
