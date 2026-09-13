@@ -62,3 +62,19 @@ test('frequent chat cheers bypass both desktop inference and network translation
  assert(replies.every(r=>r.ok));assert.deepEqual([...new Set(replies.map(r=>r.text))],['漂亮！','加油！','可惜了！']);
  assert.equal(inference,0);assert.equal(network,0);
 });
+
+test('live desktop captions keep ordinary chat on the selected local HY-MT path',async()=>{
+ let listener;const nativeOps=[];let network=0;
+ const chrome={storage:{local:{get:async()=>({speechMode:'desktop',subtitleSettings:{captionMode:'record'}}),set:async()=>{}}},tabs:{sendMessage:async()=>{},onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async()=>({ok:true})}};
+ class NativeClient{request(op){nativeOps.push(op);return Promise.resolve(op==='translate'?{text:'這是一般聊天訊息'}:{model:'local'});}}
+ const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
+ const fetch=async()=>{network++;return {ok:true,json:async()=>[[['這是一般聊天訊息']]]};};
+ vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch});
+ const call=m=>new Promise(resolve=>listener(m,{},resolve));
+ assert.equal((await call({type:'subtitle-control',action:'start',tabId:7})).ok,true);
+ const translated=await call({type:'translate',text:'これは普通のチャットメッセージです',direction:'ja-zh'});
+ assert.equal(translated.text,'這是一般聊天訊息');
+ assert.deepEqual(nativeOps,['init','translate']);
+ assert.equal(network,0);
+ await call({type:'subtitle-control',action:'stop'});
+});

@@ -56,6 +56,11 @@
   let activeComposer;
   let activeControls;
   const cache = new Map();
+  const translationInFlight = new Map();
+  const translationQueue = [];
+  let activeTranslations = 0;
+  let translationOrder = 0;
+  const MAX_ACTIVE_TRANSLATIONS = 3;
   let enabled = false;
   let epoch = 0;
   let polling = false;
@@ -95,7 +100,37 @@
     }));
   }
 
-  async function translateNode(node, isTitle = false) {
+  function pumpTranslations() {
+    while (activeTranslations < MAX_ACTIVE_TRANSLATIONS && translationQueue.length) {
+      translationQueue.sort((a, b) => b.order - a.order);
+      const task = translationQueue.shift();
+      activeTranslations++;
+      message({type: 'translate', text: task.source, direction: 'ja-zh', priority: task.isTitle})
+        .then(result => {
+          cache.set(task.key, result);
+          task.resolve(result);
+        }, task.reject)
+        .finally(() => {
+          activeTranslations--;
+          translationInFlight.delete(task.key);
+          pumpTranslations();
+        });
+    }
+  }
+
+  function requestTranslation(source, isTitle, order) {
+    const key = `ja-zh:${source}`;
+    if (cache.has(key)) return Promise.resolve(cache.get(key));
+    if (translationInFlight.has(key)) return translationInFlight.get(key);
+    const pending = new Promise((resolve, reject) => {
+      translationQueue.push({key, source, isTitle, order: order ?? ++translationOrder, resolve, reject});
+      pumpTranslations();
+    });
+    translationInFlight.set(key, pending);
+    return pending;
+  }
+
+  async function translateNode(node, isTitle = false, order) {
     if (!enabled || !node?.isConnected || node.closest?.('.jtl-social-translation,.jtl-social-controls')) return;
     if (!isTitle) node = messageTextNode(node);
     const source = clean(node.innerText || node.textContent);
@@ -104,9 +139,7 @@
     translated.set(node, source);
     const currentEpoch = epoch;
     try {
-      const key = `ja-zh:${source}`;
-      const result = cache.has(key) ? cache.get(key) : await message({type: 'translate', text: source, direction: 'ja-zh', priority: isTitle});
-      cache.set(key, result);
+      const result = await requestTranslation(source, isTitle, order);
       if (!enabled || currentEpoch !== epoch || !node.isConnected || clean(node.innerText || node.textContent) !== source) return;
       const parent = node.parentElement;
       let line = parent?.querySelector(':scope > .jtl-social-translation');
@@ -252,8 +285,12 @@
   function scan() {
     if (window.top === window) installCaptionBox();
     if (!enabled) return;
-    if (window.top === window) config.title.forEach(selector => document.querySelectorAll(selector).forEach(node => translateNode(node, true)));
-    config.text.forEach(selector => document.querySelectorAll(selector).forEach(node => translateNode(node)));
+    if (window.top === window) config.title.forEach(selector => document.querySelectorAll(selector).forEach(node => translateNode(node, true, 1_000_000_000 + ++translationOrder)));
+    // Both sites restore large virtualized chat histories. Keep model work
+    // bounded and always let the newest visible messages enter the queue first.
+    const messages = [...new Set(config.text.flatMap(selector => [...document.querySelectorAll(selector)]))].slice(-20);
+    const batch = ++translationOrder * 1000;
+    for (let index = messages.length - 1; index >= 0; index--) translateNode(messages[index], false, batch + index);
     if (!isUsableComposer(activeComposer) || !activeControls?.isConnected) {
       let candidate;
       for (const selector of config.composer) {

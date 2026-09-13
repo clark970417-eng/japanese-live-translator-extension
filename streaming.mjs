@@ -115,7 +115,7 @@ export class Agreement {
  }
 }
 export class DecodeQueue {
- constructor({retainFinals=false,retainInterim=false}={}){this.jobs=[];this.dropped=0;this.retainFinals=retainFinals;this.retainInterim=retainInterim;}
+ constructor({retainFinals=false,retainInterim=false,coalesceFinals=false}={}){this.jobs=[];this.dropped=0;this.retainFinals=retainFinals;this.retainInterim=retainInterim;this.coalesceFinals=coalesceFinals;}
  clear(){this.jobs=[];}
  push(job){
   if(this.retainFinals){
@@ -125,6 +125,18 @@ export class DecodeQueue {
     this.jobs.push(job);return;
    }
    const finals=this.jobs.filter(x=>x.final&&x.id!==job.id);
+   // Native recognition has a sizeable fixed cost.  During rapid speech,
+   // combine waiting completed utterances into one <=20 s decode instead of
+   // building a minute-long FIFO.  The audio is retained in order and the
+   // resulting recording becomes one larger, complete subtitle row.
+   const previous=finals.at(-1);
+   if(this.coalesceFinals&&previous?.audio&&job.audio&&previous.audio.length+job.audio.length<=320000){
+    const audio=new Float32Array(previous.audio.length+job.audio.length);
+    audio.set(previous.audio);audio.set(job.audio,previous.audio.length);
+    finals[finals.length-1]={...job,audio,speechAt:Math.min(previous.speechAt??Infinity,job.speechAt??Infinity),
+     speechSeconds:(previous.speechSeconds||0)+(job.speechSeconds||0),voicedSeconds:(previous.voicedSeconds||0)+(job.voicedSeconds||0)};
+    this.jobs=[...finals];this.dropped++;return;
+   }
    if(finals.length>=60)throw new Error('辨識積壓超過上限，已停止收音以保護已記錄內容');
    const preview=this.jobs.find(x=>!x.final&&x.id>job.id);
    this.jobs=[...finals,job,...(preview?[preview]:[])];return;

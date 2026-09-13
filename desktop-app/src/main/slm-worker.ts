@@ -21,6 +21,7 @@ import { boundedTranslation, TranslationCancelledError } from './bounded-transla
 import type { Llama, LlamaModel, LlamaContext, LlamaContextSequence, Token } from 'node-llama-cpp'
 import { LANG_NAMES_EN, LANG_NAMES_ZH } from '../engines/language-names'
 import { formatGlossaryPrompt, selectApplicableGlossary } from '../engines/translator/glossary-utils'
+import { buildJaZhFidelityGuidance, finishJaZhTranslation } from '../engines/translator/ja-zh-fidelity'
 import { createLogger } from './logger'
 import { resetTranslationHistory, translationContextForModel } from './translation-session'
 
@@ -255,7 +256,8 @@ function buildTranslationPrompt(
         return `${contextSection}时态参考：未来无法参加用「明日は参加できません」，昨天未能参加用「昨日は参加できませんでした」。不要输出这些参考句。\n${glossary ? '参考下面的翻译：\n' + glossary + '\n\n' : ''}将以下文本翻译为日语，这是观众写给主播的留言，使用自然亲切、有礼貌的语气。保持留言者视角，不把个人计划改为邀请或命令。完整保留原意、时态、否定、称呼和表情。只输出译文，不要额外解释：\n\n${text}`
       }
       const terms = to === 'zh' && /配信|クリア/.test(text) ? '在直播或游戏语境中，配信译为直播，クリア译为通关。' : ''
-      return `${contextSection}将以下文本翻译为${targetZh}，用自然流畅的台湾繁体中文口语；完整保留原意、否定、数字、时态和说话者。未说完的内容不要补完，不添加原文没有的信息。${terms}只输出译文，不要额外解释：\n\n${text}`
+      const fidelity = to === 'zh' && from === 'ja' ? buildJaZhFidelityGuidance(text) : ''
+      return `${contextSection}将以下文本翻译为${targetZh}，用自然流畅的台湾繁体中文口语；完整保留原意、否定、数字、时态和说话者。未说完的内容不要补完，不添加原文没有的信息。${terms}${fidelity}只输出译文，不要额外解释：\n\n${text}`
     }
     return `${contextSection}Translate the following segment into ${toLang}, without additional explanation.\n\n${text}`
   }
@@ -274,6 +276,9 @@ function buildTranslationPrompt(
   // TranslateGemma: simple translation prompt
   return `${contextSection}Translate the following text from ${fromLang} to ${toLang}. Output only the translation, nothing else.\n\n${text}`
 }
+
+const finishTranslationResult = (source: string, from: string, to: string, response: string): string =>
+  from === 'ja' && to === 'zh' ? finishJaZhTranslation(source, response) : response.trim()
 
 /** Get the system prompt for LFM2 based on target language */
 function getLFM2SystemPrompt(to: string): string {
@@ -477,7 +482,9 @@ async function handleTranslate(
     const promptMs = performance.now() - t0
 
     const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
-    const { response, inferenceMs, contextMs } = await runInference(prompt, undefined, systemPrompt, text.length)
+    const inference = await runInference(prompt, undefined, systemPrompt, text.length)
+    const { inferenceMs, contextMs } = inference
+    const response = from === 'ja' && to === 'zh' ? finishJaZhTranslation(text, inference.response) : inference.response
     const memAfter = process.memoryUsage()
     const totalMs = performance.now() - t0
 
@@ -526,7 +533,9 @@ async function handleTranslateIncremental(
     const prompt = buildTranslationPrompt(text, from, to, translateContext)
     const promptMs = performance.now() - t0
     const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
-    const { response, inferenceMs, contextMs } = await runInference(prompt, previousOutput, systemPrompt, text.length)
+    const inference = await runInference(prompt, previousOutput, systemPrompt, text.length)
+    const { inferenceMs, contextMs } = inference
+    const response = from === 'ja' && to === 'zh' ? finishJaZhTranslation(text, inference.response) : inference.response
     const memAfter = process.memoryUsage()
     const totalMs = performance.now() - t0
 
@@ -590,7 +599,7 @@ async function handleTranslateSSBD(
     // throwing on every streaming update when speculative decoding is unavailable.
     if (context.sequencesLeft === 0) {
       const { response } = await runInference(prompt, undefined, systemPrompt, text.length)
-      process.parentPort!.postMessage({ type: 'result', id, text: response })
+      process.parentPort!.postMessage({ type: 'result', id, text: finishTranslationResult(text, from, to, response) })
       return
     }
 
@@ -602,7 +611,7 @@ async function handleTranslateSSBD(
       const { response, inferenceMs, contextMs } = await runInference(prompt, undefined, systemPrompt, text.length)
       const totalMs = performance.now() - t0
       logSSBDProfile(totalMs, promptMs, 0, inferenceMs, text.length, response.length, 0, 0, memBefore)
-      process.parentPort!.postMessage({ type: 'result', id, text: response })
+      process.parentPort!.postMessage({ type: 'result', id, text: finishTranslationResult(text, from, to, response) })
       return
     }
 
@@ -645,7 +654,7 @@ async function handleTranslateSSBD(
       process.parentPort!.postMessage({
         type: 'result',
         id,
-        text: response.trim()
+        text: finishTranslationResult(text, from, to, response)
       })
     } finally {
       ssbdSession.dispose?.()
@@ -663,7 +672,7 @@ async function handleTranslateSSBD(
       const systemPrompt = activeModelType === 'lfm2' ? getLFM2SystemPrompt(to) : undefined
       const prompt = buildTranslationPrompt(text, from, to, translateContext)
       const { response } = await runInference(prompt, undefined, systemPrompt, text.length)
-      process.parentPort!.postMessage({ type: 'result', id, text: response })
+      process.parentPort!.postMessage({ type: 'result', id, text: finishTranslationResult(text, from, to, response) })
     } catch (fallbackErr) {
       process.parentPort!.postMessage({
         type: 'error',
@@ -830,7 +839,7 @@ async function handleTranslateSimulMt(
     process.parentPort!.postMessage({
       type: 'result',
       id,
-      text: response.trim()
+      text: finishTranslationResult(text, from, to, response)
     })
   } catch (err) {
     // Reset session on error to avoid corrupted state

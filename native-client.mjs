@@ -24,7 +24,13 @@ export class NativeClient {
   if(this.pending.size>=16)return Promise.reject(new Error('Desktop queue is full'));
   this.connect();const id=++this.sequence;
   return new Promise((resolve,reject)=>{
-   const timer=setTimeout(()=>{this.close();},timeout);
+   // A slow recognition request must not tear down the shared native port:
+   // page translation and later audio use the same connection.  Forget only
+   // this request; a late host reply is safely ignored by the pending lookup.
+   const timer=setTimeout(()=>{
+    if(!this.pending.delete(id))return;
+    reject(new Error(`${op} timed out`));
+   },timeout);
    this.pending.set(id,{resolve,reject,timer,progress});
    try{this.port.postMessage({id,op,...fields});}catch(error){clearTimeout(timer);this.pending.delete(id);reject(error);}
   });

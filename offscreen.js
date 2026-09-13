@@ -47,6 +47,11 @@ function resetAudio(s){
 }
 function decode(s,job){
  if(job.epoch!==s.epoch||(s.recording&&!s.desktop&&!job.final))return;
+ // In desktop recording mode, a preview is useful only while the engine is
+ // idle.  Re-decoding growing partial audio behind accepted final utterances
+ // consumed the entire model and made both captions and chat fall behind.
+ if(s.recording&&s.desktop&&!job.final&&(s.busy||s.queue.jobs.length||Date.now()-(s.lastPreviewAt||0)<5000))return;
+ if(s.recording&&s.desktop&&!job.final)s.lastPreviewAt=Date.now();
  if(!s.ready){if(s.recording||s.desktop){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}}return;}
  if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
@@ -133,7 +138,7 @@ function initializeVad(s){
  s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate,desktop:s.desktop});
 }
 async function start(m){
- stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,restartTimer:null,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
+ stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,restartTimer:null,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop',coalesceFinals:Boolean(m.recording)&&m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
  try{
   s.desktop=m.mode==='desktop';
   s.stream=await navigator.mediaDevices.getUserMedia({audio:{mandatory:{chromeMediaSource:'tab',chromeMediaSourceId:m.streamId}},video:false});

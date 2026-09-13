@@ -3,25 +3,47 @@ if(window.__jtlV3)return;window.__jtlV3=true;
 let translated = new WeakMap();
 let websiteTextEnabled=false, textEpoch=0, contextInvalid=false;
 const cache = new Map();
+const inFlight = new Map();
+const translationQueue = [];
+let activeTranslations = 0, translationOrder = 0;
+let chatBatch = 0;
+const MAX_ACTIVE_TRANSLATIONS = 3;
+
+function pumpTranslations() {
+  while (activeTranslations < MAX_ACTIVE_TRANSLATIONS && translationQueue.length) {
+    translationQueue.sort((a, b) => b.order - a.order);
+    const task = translationQueue.shift();
+    activeTranslations++;
+    chrome.runtime.sendMessage({type: "translate", text: task.text, direction: task.direction, priority: task.priority}, reply => {
+      activeTranslations--;
+      inFlight.delete(task.key);
+      if (chrome.runtime.lastError) task.reject(chrome.runtime.lastError);
+      else if (!reply?.ok) task.reject(new Error(reply?.error || "翻譯失敗"));
+      else {
+        cache.set(task.key, reply.text);
+        task.resolve(reply.text);
+      }
+      pumpTranslations();
+    });
+  }
+}
 
 const hasJapanese = text => /[\u3040-\u30ff]/.test(text);
 const hasChinese = text => /[\u3400-\u9fff]/.test(text) && !hasJapanese(text);
 
-function requestTranslation(text, direction, priority = false) {
+function requestTranslation(text, direction, priority = false, queueOrder) {
   const key = `${direction}:${text}`;
   if (cache.has(key)) return Promise.resolve(cache.get(key));
-  return new Promise((resolve, reject) => chrome.runtime.sendMessage(
-    {type: "translate", text, direction, priority},
-    reply => {
-      if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
-      if (!reply?.ok) return reject(new Error(reply?.error || "翻譯失敗"));
-      cache.set(key, reply.text);
-      resolve(reply.text);
-    }
-  ));
+  if (inFlight.has(key)) return inFlight.get(key);
+  const promise = new Promise((resolve, reject) => {
+    translationQueue.push({key, text, direction, priority, resolve, reject, order: queueOrder ?? (++translationOrder + (priority ? 1000000 : 0))});
+    pumpTranslations();
+  });
+  inFlight.set(key, promise);
+  return promise;
 }
 
-async function translateElement(element, className, priority = false) {
+async function translateElement(element, className, priority = false, queueOrder) {
   if (!websiteTextEnabled || !element) return false;
   const epoch=textEpoch;
   const text = element.textContent.trim();
@@ -29,7 +51,7 @@ async function translateElement(element, className, priority = false) {
   if (translated.get(element) === text) return true;
   translated.set(element, text);
   try {
-    const result = await requestTranslation(text, "ja-zh", priority);
+    const result = await requestTranslation(text, "ja-zh", priority, queueOrder);
     if (!websiteTextEnabled || epoch!==textEpoch || !element.isConnected || element.textContent.trim() !== text || !result) return false;
     const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
     let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
@@ -59,7 +81,12 @@ function scan() {
     installCommentButtons();
     installSubtitleOverlay();
   }
-  document.querySelectorAll("#message.yt-live-chat-text-message-renderer, yt-live-chat-text-message-renderer #message").forEach(el => translateElement(el, "jtl-translation"));
+  // YouTube restores a large virtualized backlog after navigation. Translating
+  // all of it at once rate-limits the service and makes fresh chat wait behind
+  // stale messages. Keep the newest visible window and enqueue newest first.
+  const chat = [...document.querySelectorAll("#message.yt-live-chat-text-message-renderer, yt-live-chat-text-message-renderer #message")].slice(-20);
+  const batch = ++chatBatch;
+  for (let i = chat.length - 1; i >= 0; i--) translateElement(chat[i], "jtl-translation", false, batch * 1000 + i);
   installComposerButton();
 }
 

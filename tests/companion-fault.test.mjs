@@ -74,3 +74,14 @@ test('a desktop worker terminated for restart ignores its late reply',async()=>{
   assert.deepEqual(seen,[]);
  }finally{delete globalThis.chrome;}
 });
+
+test('one timed out request does not disconnect chat and later work',async()=>{
+ const {runtime,ports}=fakeRuntime();const client=new NativeClient(runtime);
+ const slow=client.request('decode',{segment:'slow'},5);
+ await assert.rejects(slow,/decode timed out/);
+ assert.equal(ports[0].disconnected,false);
+ const text=client.request('translate',{text:'こんにちは'});
+ const sent=ports[0].sent.at(-1);
+ ports[0].receive({id:sent.id,ok:true,result:{text:'你好'}});
+ assert.deepEqual(await text,{text:'你好'});
+});

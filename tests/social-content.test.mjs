@@ -24,7 +24,7 @@ function setup(hostname,japaneseOverride,composerDistractor){
   querySelector(){return null;},remove(){this.isConnected=false;}});
  const document={documentElement:{},body:{append(node){node.isConnected=true;if(node.className==='jtl-social-controls')controls.push(node);}},
   querySelectorAll(selector){
-   if(selector.includes('danmaku-content')||selector.includes('chat-message'))return [japanese];
+   if(selector.includes('danmaku-content')||selector.includes('chat-message'))return Array.isArray(japanese)?japanese:[japanese];
    if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea'))return [box];
    if(composerDistractor&&selector.includes('textarea:not([disabled])'))return [composerDistractor];
    return [];
@@ -36,6 +36,18 @@ function setup(hostname,japaneseOverride,composerDistractor){
  vm.runInNewContext(source,{window,document,location:{hostname},chrome,MutationObserver:class{observe(){}},setTimeout:fn=>{fn();return 1;},setInterval(){},Event:class{},InputEvent:class{}});
  return {requests,translationLines,controls,box};
 }
+
+test('social live chat limits restored history and starts newest messages first',async()=>{
+ const nodes=Array.from({length:40},(_,index)=>({textContent:`新しいコメント${index}です`,innerText:`新しいコメント${index}です`,isConnected:true,
+  querySelector(){return null;},querySelectorAll(){return [];},closest:()=>null,
+  parentElement:{querySelector(){return null;}},insertAdjacentElement(){}}));
+ const t=setup('live.bilibili.com',nodes);await settle();
+ const translated=t.requests.filter(request=>request.message.type==='translate');
+ assert.equal(translated.length,3);
+ assert.deepEqual(translated.map(request=>request.message.text),[
+  '新しいコメント39です','新しいコメント38です','新しいコメント37です'
+ ]);
+});
 
 test('Bilibili page scans cannot steal the button from the focused live composer',async()=>{
  const distractor={value:'',isConnected:true,focus(){},dispatchEvent(){},matches(){return false;},

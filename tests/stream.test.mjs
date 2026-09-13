@@ -45,3 +45,16 @@ test('desktop recording can start a waiting preview immediately when busy work f
  assert.equal(q.takeFresh(1300,3)?.id,2);
  assert.equal(q.jobs.length,0);
 });
+
+test('desktop recording coalesces waiting final audio without changing its order',()=>{
+ const q=new DecodeQueue({retainFinals:true,retainInterim:true,coalesceFinals:true});
+ const job=(id,value)=>({id,final:true,audio:new Float32Array(32000).fill(value),speechAt:id*100,audioEndAt:id*100+90,speechSeconds:1,voicedSeconds:1});
+ q.push(job(1,.1));q.push(job(2,.2));q.push(job(3,.3));
+ assert.equal(q.jobs.length,1);
+ assert.equal(q.jobs[0].id,3);
+ assert.equal(q.jobs[0].audio.length,96000);
+ assert.ok(Math.abs(q.jobs[0].audio[0]-.1)<1e-6);
+ assert.ok(Math.abs(q.jobs[0].audio[32000]-.2)<1e-6);
+ assert.ok(Math.abs(q.jobs[0].audio[64000]-.3)<1e-6);
+ assert.equal(q.jobs[0].speechSeconds,3);
+});

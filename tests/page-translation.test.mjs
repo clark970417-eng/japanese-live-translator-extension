@@ -93,3 +93,16 @@ test('turning website text off drops a result that is already in flight',async()
  t.requests.at(-1).reply({ok:true,text:'中途關閉'});await settle();
  assert.equal(node.lines.length,0);
 });
+
+test('a restored chat backlog is bounded and newest messages are translated first',async()=>{
+ const t=setup();await settle();
+ for(let i=0;i<40;i++)t.chat.push(t.makeNode(`新しいコメント${i}です`));
+ t.scan();await settle();
+ assert.equal(t.requests.length,3,'only a small number of translations may run concurrently');
+ assert.deepEqual(t.requests.map(r=>r.message.text),[
+  '新しいコメント39です','新しいコメント38です','新しいコメント37です'
+ ]);
+ t.requests[0].reply({ok:true,text:'最新'});await settle();
+ assert.equal(t.requests.length,4);
+ assert.equal(t.requests[3].message.text,'新しいコメント36です');
+});
