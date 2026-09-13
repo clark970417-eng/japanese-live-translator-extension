@@ -63,6 +63,8 @@ const flipKana = (text: string): string => text.replace(/[\u3041-\u3096\u30A1-\u
   return String.fromCharCode(code <= 0x3096 ? code + 0x60 : code - 0x60)
 })
 
+const POLITE_ENDING = /(?:です|ます|ました|でした|ません|ください)(?:よ|ね|よね)?[。！？!?]?$/
+
 /** Deterministic corrections that need no model call. Each restores a property
  * of the source the draft dropped; none rewrites meaning. */
 export function finishDraft(source: string, text: string): string {
@@ -75,6 +77,10 @@ export function finishDraft(source: string, text: string): string {
     const flipped = flipKana(run)
     if (flipped !== run && result.includes(flipped)) result = result.split(flipped).join(run)
   }
+  // One sentence keeps one register. A bare ありがとう opening a sentence whose
+  // last predicate is polite is raised to match it.
+  result = result.replace(/[^。！？!?\n]+[。！？!?]?/g, sentence =>
+    /ありがとう、/.test(sentence) && POLITE_ENDING.test(sentence) ? sentence.replace(/ありがとう、/g, 'ありがとうございます、') : sentence)
   return result
 }
 

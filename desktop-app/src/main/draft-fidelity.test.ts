@@ -162,3 +162,12 @@ it('abandons line repair at the deadline and when live audio preempts it', async
     expect(waiting).toHaveBeenCalledTimes(2)
   } finally { vi.useRealTimers() }
 })
+
+it.each([
+  ['返信をありがとう、問題はもう解決しました。', '返信をありがとうございます、問題はもう解決しました。'],
+  ['ありがとう、また来てね！', 'ありがとう、また来てね！'],
+  ['ありがとうございます、助かりました。', 'ありがとうございます、助かりました。'],
+  ['ありがとう、楽しかった。\n次も見ます。', 'ありがとう、楽しかった。\n次も見ます。']
+])('keeps one register within a sentence: %s', async (model, expected) => {
+  expect((await translateWrittenDraft('謝謝', vi.fn().mockResolvedValue(model))).text).toBe(expected)
+})
