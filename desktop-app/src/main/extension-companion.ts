@@ -1,5 +1,5 @@
 /** Private local adapter for the existing browser UI; uses the production pipeline. */
-import { createServer, type Server } from 'net'
+import { createServer, type Server, type Socket } from 'net'
 import { mkdirSync, chmodSync, existsSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -15,6 +15,10 @@ import { translateWrittenDraft } from './draft-fidelity'
 import { DRAFT_ZH_JA_GLOSSARY } from './draft-glossary'
 import { CompanionScheduler } from './companion-scheduler'
 
+/** How long a new browser connection waits for the current one to close before
+ * it is treated as a second client and refused. */
+const OWNER_RELEASE_GRACE_MS = 2000
+
 export async function startExtensionCompanion(ctx: AppContext, directory?: string): Promise<Server> {
   const dir = directory || join(homedir(), 'Library/Application Support/JapaneseLiveCaption')
   mkdirSync(dir, { recursive: true, mode: 0o700 })
@@ -22,9 +26,30 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
   const path = join(dir, 'desktop.sock')
   if (existsSync(path)) unlinkSync(path)
   let owned = false
+  /** The previous connection's teardown. A client reconnecting after the old
+   * socket closed is accepted at once, but starts no work until the session it
+   * replaces has stopped. Refusing it instead would spend the browser's only
+   * recovery attempt while that teardown was still running. */
+  let teardown: Promise<void> = Promise.resolve()
+  /** Connections waiting for the current owner to close. */
+  const waiting: Array<() => void> = []
   const server = createServer(socket => {
-    if (owned) { socket.end(); return }
+    if (!owned) { serve(socket); return }
+    // The owner may be a connection whose close has not been processed yet, such
+    // as a browser host that died and was restarted immediately. Adopt this
+    // client if the owner releases within the grace period; otherwise it is a
+    // genuine second client and is refused.
+    const adopt = (): void => { clearTimeout(refuse); if (!socket.destroyed) serve(socket) }
+    const refuse = setTimeout(() => {
+      const index = waiting.indexOf(adopt)
+      if (index >= 0) waiting.splice(index, 1)
+      socket.end()
+    }, OWNER_RELEASE_GRACE_MS)
+    waiting.push(adopt)
+  })
+  function serve(socket: Socket): void {
     owned = true
+    const previousTeardown = teardown
     let ownsSession = false
     socket.setEncoding('utf8')
     let buffer = '', pending = 0, closed = false
@@ -133,6 +158,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
         void queue.run(audioPriority, async preempt => {
           let deferred = false
           try {
+            await previousTeardown
             if (closed) return
             const pipeline = ctx.pipeline
             if (!pipeline) throw new Error('Desktop pipeline not ready')
@@ -239,9 +265,12 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       closed = true
       ctx.pipeline?.off('draft-stt-result', caption)
       ctx.pipeline?.off('interim-result', caption); ctx.pipeline?.off('ger-corrected', correction)
-      void queue.idle().then(async () => { try { if (ownsSession) { await ctx.pipeline?.stop(); ctx.logger?.endSession(); ctx.logger = null }; await drainFinals(); await translator?.dispose() } finally { owned = false; ctx.extensionConnected = false } })
+      // The socket is gone, so another client may connect now; its work waits for this.
+      owned = false
+      teardown = queue.idle().then(async () => { try { if (ownsSession) { await ctx.pipeline?.stop(); ctx.logger?.endSession(); ctx.logger = null }; await drainFinals(); await translator?.dispose() } finally { ctx.extensionConnected = false } }).catch(() => {})
+      waiting.shift()?.()
     })
-  })
+  }
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(path, () => { chmodSync(path, 0o600); resolve() }) })
   return server
 }

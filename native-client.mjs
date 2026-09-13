@@ -4,6 +4,9 @@ export class NativeClient {
   if(this.port)return;
   const port=this.port=this.runtime.connectNative('org.jtl.companion');
   port.onMessage.addListener(message=>{
+   // A replaced port can still deliver messages queued before its host died.
+   // They belong to the old session: never surface them or settle new work.
+   if(this.port!==port)return;
    if(message.event)this.onEvent?.(message);
    const job=this.pending.get(message.id);if(!job)return;
    if(message.event){job.progress?.(message);return;}
