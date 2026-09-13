@@ -55,10 +55,42 @@ export interface DraftFidelityResult {
   repaired?: boolean
 }
 
+/** A run of kana inside a Chinese comment is a name, a handle or quoted
+ * Japanese. Two or more characters, so a lone particle is not treated as one. */
+const KANA_RUN = /[\u3041-\u3096]{2,}|[\u30A1-\u30FA\u30FC]{2,}/g
+const flipKana = (text: string): string => text.replace(/[\u3041-\u3096\u30A1-\u30F6]/g, char => {
+  const code = char.charCodeAt(0)
+  return String.fromCharCode(code <= 0x3096 ? code + 0x60 : code - 0x60)
+})
+
+/** Deterministic corrections that need no model call. Each restores a property
+ * of the source the draft dropped; none rewrites meaning. */
+export function finishDraft(source: string, text: string): string {
+  let result = text
+  // A name written in hiragana or katakana keeps that script: さくら stays さくら
+  // even when the model wrote サクラ. Only an exact script-flipped copy of a
+  // source run is restored, so ordinary Japanese words are never touched.
+  for (const run of new Set(source.match(KANA_RUN) ?? [])) {
+    if (result.includes(run)) continue
+    const flipped = flipKana(run)
+    if (flipped !== run && result.includes(flipped)) result = result.split(flipped).join(run)
+  }
+  return result
+}
+
 /** `preempt` aborts only the optional repair, never the first translation, so a
  * requested draft is always produced. A preempted repair returns the completed
  * draft with the review warning. */
 export async function translateWrittenDraft(
+  source: string,
+  translate: (text: string, signal?: AbortSignal) => Promise<string>,
+  preempt?: AbortSignal
+): Promise<DraftFidelityResult> {
+  const result = await translateWrittenDraftCore(source, translate, preempt)
+  return { ...result, text: finishDraft(source, result.text) }
+}
+
+async function translateWrittenDraftCore(
   source: string,
   translate: (text: string, signal?: AbortSignal) => Promise<string>,
   preempt?: AbortSignal

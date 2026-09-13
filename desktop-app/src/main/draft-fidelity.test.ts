@@ -99,3 +99,17 @@ it.each(['どうぞゆっくり休んでください', '急いでね', '水を�
   expect(await translateWrittenDraft('今天很開心，請好好休息', translate)).toEqual({ text })
   expect(translate).toHaveBeenCalledTimes(1)
 })
+
+it.each([
+  ['さくら的那段配音超可愛', 'サクラのそのナレーション、本当に可愛いですね。', 'さくらのそのナレーション、本当に可愛いですね。'],
+  ['ユキ的新衣裝', 'ゆきの新しい衣装', 'ユキの新しい衣装'],
+  ['和みこ、ねね一起', 'ミコとネネと一緒に', 'みことねねと一緒に']
+])('restores a kana name to the script it was written in: %s', async (source, model, expected) => {
+  const translate = vi.fn().mockResolvedValue(model)
+  expect((await translateWrittenDraft(source, translate)).text).toBe(expected)
+})
+
+it('leaves ordinary Japanese words alone when no source name matches', async () => {
+  const translate = vi.fn().mockResolvedValue('サクラの花がきれいです。')
+  expect((await translateWrittenDraft('櫻花開了好漂亮', translate)).text).toBe('サクラの花がきれいです。')
+})
