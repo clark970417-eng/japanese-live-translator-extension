@@ -112,7 +112,10 @@ already filters out upstream.
 It still earns its place on any path without that VAD, and against non-speech
 audio that does trip Silero, which this set did not contain.
 
-## Recommendation, not implemented
+## Recommendation and implementation status
+
+The browser-evidence approach below is implemented and verified in
+`RETEST-OUTRO-EVIDENCE.md`. The desktop-only alternative remains unimplemented.
 
 Keep an outro-artifact transcript when the audio shows speech; reject it
 otherwise. Two ways to supply the evidence:

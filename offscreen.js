@@ -50,7 +50,7 @@ function decode(s,job){
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
  s.busy=job;s.started=performance.now();s.metrics.add('queueMs',Date.now()-job.audioEndAt);
  s.timeout=setTimeout(()=>restartWorker(s,'辨識逾時'),s.desktop?60000:15000);
- const audio=job.audio.slice();s.worker.postMessage({type:'decode',id:job.id,audio,segment:s.epoch+':'+job.id,utterance:s.epoch+':'+job.utteranceId,final:job.final,speechAt:job.speechAt,audioEndAt:job.audioEndAt},[audio.buffer]);
+ const audio=job.audio.slice();s.worker.postMessage({type:'decode',id:job.id,audio,segment:s.epoch+':'+job.id,utterance:s.epoch+':'+job.utteranceId,final:job.final,speechSeconds:job.speechSeconds,speechAt:job.speechAt,audioEndAt:job.audioEndAt},[audio.buffer]);
 }
 function drainVad(s){
  if(s.vadBusy||!s.vadReady)return;

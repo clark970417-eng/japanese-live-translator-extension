@@ -9,7 +9,8 @@ import type {
   TranslationResult,
   Language,
   SourceLanguage,
-  GlossaryEntry
+  GlossaryEntry,
+  SpeechEvidence
 } from '../engines/types'
 import { E2EStreamingAdapter } from './E2EStreamingAdapter'
 import { LocalAgreement } from './LocalAgreement'
@@ -594,10 +595,10 @@ export class TranslationPipeline extends EventEmitter {
 
   // --- Streaming (delegated to StreamingProcessor) ---
 
-  async processStreaming(audioBuffer: Float32Array, sampleRate: number): Promise<TranslationResult | null> {
+  async processStreaming(audioBuffer: Float32Array, sampleRate: number, evidence?: SpeechEvidence): Promise<TranslationResult | null> {
     if (this._state !== PipelineState.RUNNING || !this.engineManager.config) return null
     if (this.engineManager.config.mode !== 'cascade') return null
-    return this.streaming.processStreaming(audioBuffer, sampleRate)
+    return this.streaming.processStreaming(audioBuffer, sampleRate, evidence)
   }
 
   /** GPU-local translation and recognition competed in matched load tests.
@@ -607,15 +608,15 @@ export class TranslationPipeline extends EventEmitter {
       .includes(this.engineManager.config?.translatorEngineId || '') && !this.simulMtEnabled
   }
 
-  async prepareFinalStreaming(audioChunk: Float32Array, sampleRate: number) {
+  async prepareFinalStreaming(audioChunk: Float32Array, sampleRate: number, evidence?: SpeechEvidence) {
     if (!this.running || this.engineManager.config?.mode !== 'cascade') return null
-    return this.streaming.prepareFinalStreaming(audioChunk, sampleRate)
+    return this.streaming.prepareFinalStreaming(audioChunk, sampleRate, evidence)
   }
 
-  async finalizeStreaming(audioChunk: Float32Array, sampleRate: number): Promise<TranslationResult | null> {
+  async finalizeStreaming(audioChunk: Float32Array, sampleRate: number, evidence?: SpeechEvidence): Promise<TranslationResult | null> {
     if (!this.running || !this.engineManager.config) return null
     if (this.engineManager.config.mode !== 'cascade') return null
-    return this.streaming.finalizeStreaming(audioChunk, sampleRate)
+    return this.streaming.finalizeStreaming(audioChunk, sampleRate, evidence)
   }
 
   // --- E2E streaming (#719) ---

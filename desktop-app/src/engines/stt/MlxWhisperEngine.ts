@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto'
-import { isImplausibleTranscript, isOutroArtifact } from './transcript-guard'
+import { isImplausibleTranscript, isUnspokenOutro } from './transcript-guard'
 import { execFileSync } from 'child_process'
 import { join } from 'path'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
 import { tmpdir, homedir } from 'os'
-import type { STTEngine, STTResult, Language, SourceLanguage } from '../types'
+import type { STTEngine, STTResult, Language, SourceLanguage, SpeechEvidence } from '../types'
 import { ALL_LANGUAGES } from '../types'
 import { SubprocessBridge, type SpawnConfig, type InitResult, getEnrichedPath, resolveBridgeScript } from '../SubprocessBridge'
 import { MLX_MODULE_PROBE } from './mlx-module-probe'
@@ -86,7 +86,7 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
     await super.dispose()
   }
 
-  async processAudio(audioChunk: Float32Array, sampleRate: number): Promise<STTResult | null> {
+  async processAudio(audioChunk: Float32Array, sampleRate: number, evidence?: SpeechEvidence): Promise<STTResult | null> {
     if (!this.process) {
       if (!this.active || Date.now() < this.restartAfter) return null
       this.restartAfter = Date.now() + 5000
@@ -142,9 +142,10 @@ export class MlxWhisperEngine extends SubprocessBridge implements STTEngine {
       }
 
       // Music and silence decode to a stock outro with high confidence, so this
-      // cannot be filtered by no_speech_prob or amplitude. See transcript-guard.
-      if (isOutroArtifact(result.text as string)) {
-        this.log.warn('Rejected stock outro transcript from audio without speech')
+      // cannot be filtered by no_speech_prob or amplitude. It is kept only when
+      // the capture side detected enough speech in this chunk. See transcript-guard.
+      if (isUnspokenOutro(result.text as string, evidence)) {
+        this.log.warn(`Rejected stock outro transcript without speech evidence (${evidence ? evidence.speechSeconds.toFixed(2) + ' s voiced' : 'none'})`)
         return null
       }
       return {

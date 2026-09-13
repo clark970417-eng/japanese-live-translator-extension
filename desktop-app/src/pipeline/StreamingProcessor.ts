@@ -7,7 +7,7 @@ import type {
   SpeakerDiarizer,
   DiarizationResult
 } from '../engines/types'
-import type { STTEngine } from '../engines/types'
+import type { STTEngine, SpeechEvidence } from '../engines/types'
 import type { LocalAgreement } from './LocalAgreement'
 import type { ContextBuffer } from './ContextBuffer'
 import type { GERProcessor } from './GERProcessor'
@@ -165,7 +165,8 @@ export class StreamingProcessor {
 
   async processStreaming(
     audioBuffer: Float32Array,
-    sampleRate: number
+    sampleRate: number,
+    evidence?: SpeechEvidence
   ): Promise<TranslationResult | null> {
     const sttEngine = this.deps.getSTTEngine()
     if (!sttEngine) return null
@@ -192,7 +193,7 @@ export class StreamingProcessor {
       }
 
       const t0 = performance.now()
-      const sttResult = await sttEngine.processAudio(audioBuffer, sampleRate)
+      const sttResult = await sttEngine.processAudio(audioBuffer, sampleRate, evidence)
       if (!this.isCurrentGeneration(gen, utterance)) return null
       const sttMs = (performance.now() - t0).toFixed(0)
       if (!sttResult || !sttResult.text.trim()) {
@@ -345,10 +346,10 @@ export class StreamingProcessor {
   }
 
   /** Recognize now, then translate accepted sentences in order without holding STT. */
-  async prepareFinalStreaming(audioChunk: Float32Array, sampleRate: number): Promise<PreparedStreamingFinal | null> {
+  async prepareFinalStreaming(audioChunk: Float32Array, sampleRate: number, evidence?: SpeechEvidence): Promise<PreparedStreamingFinal | null> {
     // Persistent SimulMT sessions share mutable KV state; retain their serial boundary.
     if (this.deps.getSimulMtConfig().enabled && this.deps.getTranslator()?.translateSimulMt) {
-      const result = await this.finalizeStreamingSerial(audioChunk, sampleRate)
+      const result = await this.finalizeStreamingSerial(audioChunk, sampleRate, evidence)
       return result ? { sourceText: result.sourceText, completion: Promise.resolve(result) } : null
     }
     const stt = this.deps.getSTTEngine()
@@ -368,7 +369,7 @@ export class StreamingProcessor {
     if (this.translateDebounceTimer) { clearTimeout(this.translateDebounceTimer); this.translateDebounceTimer = null }
     let handedOff = false
     try {
-      const sttResult = await stt.processAudio(audioChunk, sampleRate)
+      const sttResult = await stt.processAudio(audioChunk, sampleRate, evidence)
       if (!this.isCurrentGeneration(gen, utterance) || finalGeneration !== this.finalGeneration) return null
       if (!sttResult?.text.trim()) {
         this.deps.agreement.reset()
@@ -432,14 +433,15 @@ export class StreamingProcessor {
     }
   }
 
-  async finalizeStreaming(audioChunk: Float32Array, sampleRate: number): Promise<TranslationResult | null> {
-    const prepared = await this.prepareFinalStreaming(audioChunk, sampleRate)
+  async finalizeStreaming(audioChunk: Float32Array, sampleRate: number, evidence?: SpeechEvidence): Promise<TranslationResult | null> {
+    const prepared = await this.prepareFinalStreaming(audioChunk, sampleRate, evidence)
     return prepared ? prepared.completion : null
   }
 
   private async finalizeStreamingSerial(
     audioChunk: Float32Array,
-    sampleRate: number
+    sampleRate: number,
+    evidence?: SpeechEvidence
   ): Promise<TranslationResult | null> {
     const sttEngine = this.deps.getSTTEngine()
     if (!sttEngine) return null
@@ -459,7 +461,7 @@ export class StreamingProcessor {
     if (this.translateDebounceTimer) { clearTimeout(this.translateDebounceTimer); this.translateDebounceTimer = null }
 
     try {
-      const sttResult = await sttEngine.processAudio(audioChunk, sampleRate)
+      const sttResult = await sttEngine.processAudio(audioChunk, sampleRate, evidence)
       if (!this.isCurrentGeneration(gen, utterance)) return null
       if (!sttResult || !sttResult.text.trim()) {
         this.deps.agreement.reset()

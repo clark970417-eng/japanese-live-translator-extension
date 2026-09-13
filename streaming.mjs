@@ -27,14 +27,14 @@ export class SpeechGain {
 }
 export class SpeechWindows {
  constructor(){this.reset();}
- reset(){this.pre=[];this.parts=[];this.samples=0;this.clock=0;this.onset=0;this.silent=0;this.voiced=0;this.active=false;this.id=0;this.lastEmission=0;this.overlap=false;this.utterance=0;}
+ reset(){this.pre=[];this.parts=[];this.samples=0;this.clock=0;this.onset=0;this.silent=0;this.voiced=0;this.confident=0;this.active=false;this.id=0;this.lastEmission=0;this.overlap=false;this.utterance=0;}
  finish(){
   if(!this.active)return null;
   this.active=false;
   if(this.voiced<3584){this.parts=[];this.samples=0;return null;}
   const audio=new Float32Array(this.samples);let offset=0;
   for(const part of this.parts){audio.set(part,offset);offset+=part.length;}
-  const job={id:this.id,utteranceId:this.utterance,utteranceEnd:true,audio,final:true,overlap:this.overlap,voicedSeconds:this.voiced/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
+  const job={id:this.id,utteranceId:this.utterance,utteranceEnd:true,audio,final:true,overlap:this.overlap,voicedSeconds:this.voiced/16000,speechSeconds:this.confident/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
   this.parts=[];this.samples=0;return job;
  }
  push(frame,probability,interval=.65){
@@ -45,23 +45,25 @@ export class SpeechWindows {
    this.pre.push(frame);while(this.pre.length>16)this.pre.shift();
    if(this.onset<1024)return null;
    this.active=true;this.id++;this.utterance++;this.parts=this.pre.slice();this.samples=this.parts.reduce((a,b)=>a+b.length,0);
-   this.start=this.clock-this.samples;this.speechStart=this.clock-this.onset;this.voiced=this.onset;this.silent=0;this.lastEmission=this.clock;this.overlap=false;
+   this.start=this.clock-this.samples;this.speechStart=this.clock-this.onset;this.voiced=this.onset;this.confident=this.onset;this.silent=0;this.lastEmission=this.clock;this.overlap=false;
    return null;
   }
   this.parts.push(frame);this.samples+=n;
   if(speech)this.voiced+=n;
+  // Speech at the onset probability, which the companion's outro check was calibrated on.
+  if(probability>=.30)this.confident+=n;
   this.silent=speech?0:this.silent+n;
   const ended=this.silent>=10240, cut=this.samples>=(this.maxSamples||80000);
   let job=null;
   if(this.voiced>=3584 && ((ended||cut) || (this.samples>=12800&&this.clock-this.lastEmission>=interval*16000))){
    const audio=new Float32Array(this.samples);let at=0;for(const part of this.parts){audio.set(part,at);at+=part.length;}
-   job={id:this.id,utteranceId:this.utterance,utteranceEnd:ended,audio,final:ended||cut,overlap:this.overlap,voicedSeconds:this.voiced/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
+   job={id:this.id,utteranceId:this.utterance,utteranceEnd:ended,audio,final:ended||cut,overlap:this.overlap,voicedSeconds:this.voiced/16000,speechSeconds:this.confident/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
    this.lastEmission=this.clock;
   }
   if(ended){this.active=false;this.parts=[];this.samples=0;this.pre=[];this.onset=0;}
   else if(cut){
    const keep=this.overlapFrames??32;this.parts=keep?this.parts.slice(-keep):[];this.samples=this.parts.reduce((a,b)=>a+b.length,0);
-   this.start=this.clock-this.samples;this.id++;this.overlap=true;this.voiced=0;this.speechStart=this.clock;
+   this.start=this.clock-this.samples;this.id++;this.overlap=true;this.voiced=0;this.confident=0;this.speechStart=this.clock;
   }
   return job;
  }

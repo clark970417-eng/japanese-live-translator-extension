@@ -44,3 +44,14 @@ it('recovers from an unexpected child exit but not an intentional stop', async (
   expect(await engine.processAudio(new Float32Array(16000),16000)).toBeNull()
   expect(state.initialize).toHaveBeenCalledTimes(2)
 })
+
+it('rejects a stock outro without speech evidence and keeps it when the chunk carried speech', async () => {
+  state.command.mockResolvedValue({ text: 'ご視聴ありがとうございました', language: 'ja' })
+  const engine = new MlxWhisperEngine()
+  const audio = new Float32Array(32000)
+  expect(await engine.processAudio(audio, 16000)).toBeNull()
+  expect(await engine.processAudio(audio, 16000, { speechSeconds: 0.13 })).toBeNull()
+  expect(await engine.processAudio(audio, 16000, { speechSeconds: 1.98 })).toMatchObject({ text: 'ご視聴ありがとうございました', language: 'ja' })
+  state.command.mockResolvedValue({ text: '今日も来てくれてありがとう', language: 'ja' })
+  expect(await engine.processAudio(audio, 16000, { speechSeconds: 0 })).toMatchObject({ text: '今日も来てくれてありがとう' })
+})

@@ -14,6 +14,8 @@ import { HunyuanMT15Translator } from '../engines/translator/HunyuanMT15Translat
 import { translateWrittenDraft } from './draft-fidelity'
 import { selectDraftTerminology } from './draft-glossary'
 import { CompanionScheduler } from './companion-scheduler'
+import { speechEvidenceFor } from '../engines/stt/transcript-guard'
+import type { SpeechEvidence } from '../engines/types'
 
 /** How long a new browser connection waits for the current one to close before
  * it is treated as a second client and refused. */
@@ -98,6 +100,10 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     }
     let current: { segment?: string; id?: number } = {}
     let lastAudio: Float32Array | null = null
+    /** The speech evidence that arrived with `lastAudio`. Always assigned and
+     * cleared together with it, so a finalized segment is judged only by what
+     * the browser measured for that segment. */
+    let lastEvidence: SpeechEvidence | undefined
     const revisions = new Map<number, string>()
     /** What the browser would show for each segment, without the timestamp. The
      * pipeline can emit one result twice within milliseconds; repeating it for
@@ -121,10 +127,10 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
     // Bound accepted translation work. Backpressure keeps audio in the browser queue.
     const finals = new Set<Promise<void>>()
     const drainFinals = async (): Promise<void> => { await Promise.all(finals) }
-    const prepareFinal = async (audio: Float32Array, segment: string): Promise<unknown> => {
+    const prepareFinal = async (audio: Float32Array, segment: string, evidence: SpeechEvidence | undefined): Promise<unknown> => {
       const pipeline = ctx.pipeline!
       if (finals.size >= 4) await Promise.race(finals)
-      const prepared = await pipeline.prepareFinalStreaming(audio, 16000)
+      const prepared = await pipeline.prepareFinalStreaming(audio, 16000, evidence)
       if (!prepared) return { text: '', translated: '' }
       const sourceText = prepared.sourceText
       let completion: Promise<void>
@@ -150,7 +156,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       for (;;) {
         const newline = buffer.indexOf('\n'); if (newline < 0) break
         const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1)
-        let m: { id?: number; op?: string; audio?: string; text?: string; direction?: string; segment?: string; final?: boolean }
+        let m: { id?: number; op?: string; audio?: string; text?: string; direction?: string; segment?: string; final?: boolean; speechSeconds?: unknown }
         try { m = JSON.parse(line) } catch { send({ ok: false, error: 'Invalid request' }); continue }
         if (!m || typeof m !== 'object') { send({ ok: false, error: 'Invalid request' }); continue }
         const audioPriority = ['decode', 'init', 'stop'].includes(m.op || '')
@@ -171,7 +177,8 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               ctx.mainWindow?.show(); ctx.mainWindow?.focus()
               result = { opened: true }
             } else if (m.op === 'stop') {
-              if (ownsSession && lastAudio) { const result = await pipeline.finalizeStreaming(lastAudio, 16000); if (result) caption(result); lastAudio = null }
+              if (ownsSession && lastAudio) { const result = await pipeline.finalizeStreaming(lastAudio, 16000, lastEvidence); if (result) caption(result) }
+              lastAudio = null; lastEvidence = undefined
               if (ownsSession) { await drainFinals(); await pipeline.stop(); ctx.logger?.endSession(); ctx.logger = null }
               ownsSession = false; ctx.extensionConnected = false; current = {}; revisions.clear(); lastShown.clear()
               result = { stopped: true }
@@ -196,20 +203,23 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               const audio = new Float32Array(bytes.length / 4)
               for (let i = 0; i < audio.length; i++) audio[i] = bytes.readFloatLE(i * 4)
               if (!audio.every(Number.isFinite)) throw new Error('Invalid audio samples')
+              // Optional: an older browser sends none, and invalid values count as none.
+              const evidence = speechEvidenceFor(m.speechSeconds, audio.length / 16000)
               if (lastAudio && current.segment && current.segment !== m.segment) {
-                if (pipeline.canOverlapFinalTranslation && typeof pipeline.prepareFinalStreaming === 'function') await prepareFinal(lastAudio, current.segment)
-                else { const prior = await pipeline.finalizeStreaming(lastAudio, 16000); if (prior) caption(prior) }
+                if (pipeline.canOverlapFinalTranslation && typeof pipeline.prepareFinalStreaming === 'function') await prepareFinal(lastAudio, current.segment, lastEvidence)
+                else { const prior = await pipeline.finalizeStreaming(lastAudio, 16000, lastEvidence); if (prior) caption(prior) }
               }
               current = { id: m.id, segment: m.segment }
               lastAudio = m.final ? null : audio
+              lastEvidence = m.final ? undefined : evidence
               let original = ''
               const source = (text: string): void => { original = text; send({ id: m.id, segment: m.segment, event: 'source', text }) }
               pipeline.on('source-result', source)
               try {
                 if (m.final && m.segment && pipeline.canOverlapFinalTranslation && typeof pipeline.prepareFinalStreaming === 'function') {
-                  result = await prepareFinal(audio, m.segment)
+                  result = await prepareFinal(audio, m.segment, evidence)
                 } else {
-                const translated = m.segment ? (m.final ? await pipeline.finalizeStreaming(audio, 16000) : await pipeline.processStreaming(audio, 16000)) : await pipeline.process(audio, 16000)
+                const translated = m.segment ? (m.final ? await pipeline.finalizeStreaming(audio, 16000, evidence) : await pipeline.processStreaming(audio, 16000, evidence)) : await pipeline.process(audio, 16000)
                 if (translated && m.final && m.segment) revisions.set(translated.timestamp, m.segment)
                 result = { text: translated?.sourceText || original, translated: translated?.translatedText || '', targetLanguage: translated?.targetLanguage }
                 }

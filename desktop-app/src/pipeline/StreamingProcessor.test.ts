@@ -375,3 +375,24 @@ it('publishes generated Chinese before completion and drops chunks after reset',
   expect(updates).toHaveLength(count)
  } finally {processor.reset();vi.useRealTimers()}
 })
+
+it('passes each chunk\'s speech evidence to recognition with that chunk only', async () => {
+  const emitter = new EventEmitter()
+  const seen: unknown[] = []
+  const deps = (simulMt: boolean) => ({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({ processAudio: async (_audio: Float32Array, _rate: number, evidence?: unknown) => { seen.push(evidence); return null } }),
+    getTranslator: () => ({ translate: async () => '', ...(simulMt && { translateSimulMt: async () => '' }) }),
+    getGlossary: () => [], getSimulMtConfig: () => ({ enabled: simulMt, waitK: 3 }),
+    resolveTargetLanguage: () => 'zh', incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  const processor = new StreamingProcessor(deps(false))
+  await processor.processStreaming(new Float32Array(16000), 16000, { speechSeconds: 0.5 })
+  await processor.processStreaming(new Float32Array(16000), 16000)
+  await processor.finalizeStreaming(new Float32Array(16000), 16000, { speechSeconds: 1.5 })
+  await processor.prepareFinalStreaming(new Float32Array(16000), 16000)
+  const serial = new StreamingProcessor(deps(true))
+  await serial.finalizeStreaming(new Float32Array(16000), 16000, { speechSeconds: 2 })
+  expect(seen).toEqual([{ speechSeconds: 0.5 }, undefined, { speechSeconds: 1.5 }, undefined, { speechSeconds: 2 }])
+  processor.reset(); serial.reset()
+})

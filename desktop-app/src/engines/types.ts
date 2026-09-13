@@ -75,6 +75,14 @@ export interface TranslationResult {
   tokenConfidences?: number[]
 }
 
+/** What the capture side measured about one audio chunk. It travels with that
+ * chunk as an argument and is never stored, so it cannot describe other audio. */
+export interface SpeechEvidence {
+  /** Seconds of the chunk that the browser's voice activity detector scored at
+   * or above its speech-onset probability. */
+  speechSeconds: number
+}
+
 /**
  * Speech-to-Text engine interface.
  * Implementations: WhisperLocalEngine
@@ -92,8 +100,9 @@ export interface STTEngine {
   /**
    * Process an audio chunk and return recognized text.
    * Returns null if no speech detected in the chunk.
+   * `evidence` describes this chunk only and must not be kept for another one.
    */
-  processAudio(audioChunk: Float32Array, sampleRate: number): Promise<STTResult | null>
+  processAudio(audioChunk: Float32Array, sampleRate: number, evidence?: SpeechEvidence): Promise<STTResult | null>
 
   /** Release resources */
   dispose(): Promise<void>
