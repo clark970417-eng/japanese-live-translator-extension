@@ -156,7 +156,7 @@ export const disclosureArrowStyle = (isOpen: boolean): React.CSSProperties => ({
 // --- Engine mode utilities ---
 
 /** API-based engine modes that require at least one API key */
-export const API_ENGINE_MODES: EngineMode[] = ['rotation', 'online', 'online-deepl', 'online-gemini']
+export const API_ENGINE_MODES: EngineMode[] = ['rotation', 'online', 'online-deepl', 'online-gemini', 'online-microsoft']
 
 /** LLM-based engine modes that support KV cache / SimulMT options */
 export const LLM_ENGINE_MODES: EngineMode[] = ['offline-hymt15', 'offline-hymt2', 'offline-hunyuan-mt']
@@ -172,6 +172,7 @@ export function getEngineDisplayName(mode: EngineMode): string {
     case 'online': return 'Google Translation'
     case 'online-deepl': return 'DeepL'
     case 'online-gemini': return 'Gemini 2.5 Flash'
+    case 'online-microsoft': return 'Microsoft Translator'
     case 'auto': return 'Auto'
     default: return mode
   }

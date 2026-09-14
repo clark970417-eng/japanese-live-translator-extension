@@ -412,6 +412,33 @@ export function TranslatorSettings({
                 style={inputStyle}
                 disabled={disabled}
               />
+              <div style={{ marginTop: '6px', padding: '8px', border: '1px solid #334155', borderRadius: '6px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '4px' }}>
+                  Use one provider directly
+                </div>
+                {([
+                  ['online', 'Google Cloud Translation', !!apiKey],
+                  ['online-deepl', 'DeepL', !!deeplApiKey],
+                  ['online-gemini', 'Gemini 2.5 Flash', !!geminiApiKey],
+                  ['online-microsoft', 'Microsoft Translator', !!(microsoftApiKey && microsoftRegion)]
+                ] as Array<[EngineMode, string, boolean]>).map(([mode, label, available]) => (
+                  <label key={mode} style={{ ...radioLabelStyle, opacity: available ? 1 : 0.5 }}>
+                    <input
+                      type="radio"
+                      name="engine"
+                      checked={engineMode === mode}
+                      onChange={() => onEngineModeChange(mode)}
+                      disabled={disabled || !available}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{label}</div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {available ? 'Use this provider only' : 'Add the required key above'}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
               <input
                 type="password"
                 value={openaiApiKey}

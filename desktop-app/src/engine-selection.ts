@@ -1,4 +1,4 @@
-export type EngineMode = 'auto' | 'rotation' | 'online' | 'online-deepl' | 'online-gemini' | 'offline-hymt15' | 'offline-hymt2' | 'offline-hunyuan-mt' | 'offline-apple'
+export type EngineMode = 'auto' | 'rotation' | 'online' | 'online-deepl' | 'online-gemini' | 'online-microsoft' | 'offline-hymt15' | 'offline-hymt2' | 'offline-hunyuan-mt' | 'offline-apple'
 export type SttEngineType = 'whisper-local' | 'mlx-whisper' | 'kotoba-whisper' | 'qwen3-asr' | 'sensevoice-sherpa' | 'apple-speech-transcriber'
 
 /** Resolve 'auto' engine mode to a concrete mode based on available keys and GPU */
@@ -79,6 +79,13 @@ export function buildEngineConfig(
       return { ...base, translatorEngineId: 'deepl-translate', deeplApiKey: apiKeys.deeplApiKey }
     case 'online-gemini':
       return { ...base, translatorEngineId: 'gemini-translate', geminiApiKey: apiKeys.geminiApiKey }
+    case 'online-microsoft':
+      return {
+        ...base,
+        translatorEngineId: 'microsoft-translate',
+        microsoftApiKey: apiKeys.microsoftApiKey,
+        microsoftRegion: apiKeys.microsoftRegion
+      }
     case 'offline-hymt2':
       return { ...base, translatorEngineId: 'hunyuan-mt-2' }
     case 'offline-hunyuan-mt':

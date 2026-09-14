@@ -312,6 +312,7 @@ function SettingsPanel(): React.JSX.Element {
         deeplApiKey={s.deeplApiKey}
         geminiApiKey={s.geminiApiKey}
         microsoftApiKey={s.microsoftApiKey}
+        microsoftRegion={s.microsoftRegion}
         status={s.status}
         sessionDuration={s.sessionDuration}
         onStart={s.handleStart}

@@ -11,6 +11,7 @@ interface SessionControlsProps {
   deeplApiKey: string
   geminiApiKey: string
   microsoftApiKey: string
+  microsoftRegion: string
   status: string
   sessionDuration: string
   onStart: () => void
@@ -33,6 +34,7 @@ export function SessionControls({
   deeplApiKey,
   geminiApiKey,
   microsoftApiKey,
+  microsoftRegion,
   status,
   sessionDuration,
   onStart,
@@ -58,6 +60,7 @@ export function SessionControls({
           (engineMode === 'online' && !apiKey) ||
           (engineMode === 'online-deepl' && !deeplApiKey) ||
           (engineMode === 'online-gemini' && !geminiApiKey) ||
+          (engineMode === 'online-microsoft' && (!microsoftApiKey || !microsoftRegion)) ||
           (engineMode === 'rotation' && !microsoftApiKey && !apiKey && !deeplApiKey && !geminiApiKey)
         ))}
       >

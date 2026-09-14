@@ -2,6 +2,7 @@ import React from 'react'
 import { Section } from './Section'
 import { buttonStyle, selectStyle, sliderLabelStyle } from './shared'
 import type { UseAudioCaptureReturn, AudioSource } from '../../hooks/useAudioCapture'
+import { MEDIA_FILE_ACCEPT } from '../../../media-formats'
 
 /** Audio source display labels */
 const AUDIO_SOURCE_OPTIONS: Array<{ value: AudioSource; label: string; description: string }> = [
@@ -33,7 +34,7 @@ export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNois
         Translate audio or video file
         <input
           type="file"
-          accept="audio/*,video/*,.m4a,.m4v,.mkv,.webm,.flac,.ogg,.opus,.wav,.mp3,.mp4,.aac"
+          accept={MEDIA_FILE_ACCEPT}
           disabled={disabled}
           style={{ display: 'none' }}
           onChange={(event) => {
@@ -44,7 +45,7 @@ export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNois
         />
       </label>
       <div style={{ fontSize: '11px', color: '#94a3b8', margin: '-4px 0 10px' }}>
-        MP3, M4A, WAV, FLAC, OGG, WebM and common video files
+        FFmpeg input: MP3, M4A, WAV, FLAC, OGG, WebM, MKV, MOV, AVI, MPEG, TS and more
       </div>
       {/* #501: Audio source selector */}
       <select

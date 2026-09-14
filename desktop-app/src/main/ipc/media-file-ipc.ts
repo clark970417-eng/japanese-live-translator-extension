@@ -1,20 +1,16 @@
 import { ipcMain } from 'electron'
 import { spawn } from 'node:child_process'
-import { extname, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import { stat } from 'node:fs/promises'
 import ffmpegPath from 'ffmpeg-static'
-
-const SUPPORTED_MEDIA_EXTENSIONS = new Set([
-  '.aac', '.aiff', '.flac', '.m4a', '.mka', '.mkv', '.mov', '.mp3', '.mp4',
-  '.oga', '.ogg', '.opus', '.wav', '.webm', '.wma'
-])
+import { isSupportedMediaFile } from '../../media-formats'
 const MAX_PCM_BYTES = 16_000 * 4 * 60 * 60 * 6 // Six hours of mono float32 PCM.
 
 export function registerMediaFileIpc(): void {
   ipcMain.handle('decode-media-file', async (_event, requestedPath: string) => {
     if (typeof requestedPath !== 'string' || requestedPath.length === 0) throw new Error('No media file was selected.')
     const inputPath = resolve(requestedPath)
-    if (!SUPPORTED_MEDIA_EXTENSIONS.has(extname(inputPath).toLowerCase())) throw new Error('Unsupported media file type.')
+    if (!isSupportedMediaFile(inputPath)) throw new Error('Unsupported media file type.')
     const info = await stat(inputPath)
     if (!info.isFile()) throw new Error('The selected media path is not a file.')
     return decodeWithFfmpeg(inputPath)

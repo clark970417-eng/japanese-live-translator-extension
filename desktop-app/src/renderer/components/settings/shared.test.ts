@@ -19,7 +19,7 @@ describe('EngineMode catalog (#702)', () => {
   })
 
   it('API_ENGINE_MODES still lists every online provider mode', () => {
-    expect(API_ENGINE_MODES).toEqual(['rotation', 'online', 'online-deepl', 'online-gemini'])
+    expect(API_ENGINE_MODES).toEqual(['rotation', 'online', 'online-deepl', 'online-gemini', 'online-microsoft'])
   })
 
   it('getEngineDisplayName returns the raw mode string for unknown legacy IDs', () => {
@@ -67,6 +67,17 @@ describe('buildEngineConfig (#702)', () => {
       microsoftApiKey: 'm',
       microsoftRegion: 'eastus'
     })
+  })
+
+  it('can select Microsoft Translator directly', () => {
+    expect(buildEngineConfig('online-microsoft', STT, ALL_KEYS)).toEqual({
+      mode: 'cascade',
+      sttEngineId: STT,
+      translatorEngineId: 'microsoft-translate',
+      microsoftApiKey: 'm',
+      microsoftRegion: 'eastus'
+    })
+    expect(getEngineDisplayName('online-microsoft')).toBe('Microsoft Translator')
   })
 
   it('omits absent API keys from the rotation config', () => {
