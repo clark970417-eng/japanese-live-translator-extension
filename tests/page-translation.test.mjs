@@ -5,7 +5,7 @@ import fs from 'node:fs';
 
 /** Live chat and comment translation with a recyclable node, as a virtualized
  * list gives us: the same element object is reused for a different message. */
-function setup(semanticOnly=false){
+function setup(semanticOnly=false,titleConfig=null){
  const chat=[], requests=[]; let change, navigate;
  const makeLine=()=>({className:'',textContent:'',dataset:{},children:[],isConnected:false,
   classList:{add(){},remove(){},toggle(){}},style:{setProperty(){}},
@@ -15,15 +15,17 @@ function setup(semanticOnly=false){
   const lines=[];
   const node={textContent:text,isConnected:true,lines,
    closest(){return node;},
-   parentElement:{querySelector:selector=>selector.includes('jtl-translation')?lines.find(l=>!l.removed):null},
+   parentElement:{querySelector:selector=>selector.includes('jtl-')?lines.find(l=>!l.removed):null},
    insertAdjacentElement(_,line){lines.push(line);}};
   return node;
  };
+ const title=titleConfig?makeNode(titleConfig.text):null;
  const document={documentElement:{},
-  querySelector:()=>null,
+  querySelector:selector=>selector===titleConfig?.selector?title:null,
   // Match the live-chat message selector only; the composer selector also
   // mentions yt-live-chat and must not receive these nodes.
   querySelectorAll:selector=>{
+   if(selector==='.jtl-title')return title?.lines.filter(line=>!line.removed)||[];
    if(!semanticOnly&&selector.includes('yt-live-chat-text-message-renderer'))return chat;
    if(semanticOnly&&selector==='[role="log"]')return [{querySelectorAll:()=>chat}];
    return [];
@@ -38,7 +40,7 @@ function setup(semanticOnly=false){
  vm.runInNewContext(fs.readFileSync(new URL('../content.js',import.meta.url),'utf8'),
   {chrome,window,document,MutationObserver:class{constructor(fn){scan=fn;}observe(){}},
    setInterval(){},setTimeout(fn){fn();return 0;},clearTimeout(){},console});
- return {chat,requests,makeNode,scan:()=>scan(),navigate:()=>navigate?.(),
+ return {chat,title,requests,makeNode,scan:()=>scan(),navigate:()=>navigate?.(),
   toggle:v=>change({websiteTextEnabled:{newValue:v}},'local')};
 }
 
@@ -117,4 +119,22 @@ test('YouTube live chat survives selector changes through its semantic log regio
  t.chat.push(node);t.scan();await settle();
  assert.equal(t.requests.length,1);
  assert.equal(t.requests[0].message.text,'新しい配信コメントです');
+});
+
+test('YouTube title translation supports the current alternate heading structure',async()=>{
+ const t=setup(false,{selector:'#above-the-fold #title h1',text:'雑談しながら配信します'});await settle();
+ assert.equal(t.requests.length,1);
+ assert.equal(t.requests[0].message.text,'雑談しながら配信します');
+ t.requests[0].reply({ok:true,text:'一邊聊天一邊直播'});await settle();
+ assert.equal(t.title.lines[0].textContent,'中：一邊聊天一邊直播');
+});
+
+test('a title node rebuilt while translation is pending can be retried',async()=>{
+ const t=setup(false,{selector:'ytd-watch-metadata h1 yt-formatted-string',text:'新しい配信です'});await settle();
+ assert.equal(t.requests.length,1);
+ t.title.isConnected=false;
+ t.requests[0].reply({ok:true,text:'新的直播'});await settle();
+ t.title.isConnected=true;t.scan();await settle();
+ assert.equal(t.requests.length,1,'the cached result should be reused without a second network request');
+ assert.equal(t.title.lines[0].textContent,'中：新的直播');
 });

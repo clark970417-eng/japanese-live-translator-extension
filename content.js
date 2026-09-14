@@ -61,7 +61,7 @@ async function translateElement(element, className, priority = false, queueOrder
   translated.set(element, text);
   try {
     const result = await requestTranslation(text, "ja-zh", priority, queueOrder);
-    if (!websiteTextEnabled || epoch!==textEpoch || !element.isConnected || element.textContent.trim() !== text || !result) return false;
+    if (!websiteTextEnabled || epoch!==textEpoch || !element.isConnected || element.textContent.trim() !== text || !result) {translated.delete(element);return false;}
     const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
     let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
     if (!line) {
@@ -82,7 +82,12 @@ function scan() {
   if (window.top === window) installSubtitleOverlay();
   if (!websiteTextEnabled) return;
   if (window.top === window) {
-    const title = document.querySelector("ytd-watch-metadata h1 yt-formatted-string");
+    const title = [
+      "ytd-watch-metadata h1 yt-formatted-string",
+      "ytd-watch-metadata #title h1",
+      "#above-the-fold #title h1",
+      "h1.ytd-watch-metadata"
+    ].map(selector=>document.querySelector(selector)).find(element=>hasJapanese(element?.textContent||""));
     const titleLines = [...document.querySelectorAll(".jtl-title")];
     titleLines.slice(1).forEach(line => line.remove());
     titleLines.forEach(line => { if (!/[\u3400-\u9fff]/.test(line.textContent.replace(/^中[：:]\s*/, ""))) line.remove(); });

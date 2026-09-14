@@ -70,7 +70,13 @@ async function translate(text,direction,priority=false){
  return textMemo.run(direction+':'+priority+':'+text,async()=>{
   const phrase=phraseTranslation(text,direction);if(phrase)return phrase;
   if(direction==='zh-ja')return (await makeDraft(text)).draft;
-  if(priority){try{return await styledTranslation(text,direction);}catch(_error){}}
+  if(priority){
+   try{return await styledTranslation(text,direction);}catch(_error){}
+   // Static page text (especially the title) must not wait behind the live
+   // desktop audio queue. Use the independent text endpoint, then fall back
+   // to the selected local engine when the network is unavailable.
+   try{return validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW')),'ja-zh',text);}catch(_error){}
+  }
   return translateCaption(text);
  });
 }
