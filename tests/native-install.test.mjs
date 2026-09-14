@@ -17,3 +17,9 @@ test('native installer preserves another browser extension origin',async()=>{
  const manifest=JSON.parse(await readFile(target,'utf8'));
  assert.deepEqual(manifest.allowed_origins,[`chrome-extension://${oldId}/`,`chrome-extension://${nextId}/`]);
 });
+
+test('relay imports without the optional OpenCC package',()=>{
+ const code="import importlib.util; s=importlib.util.spec_from_file_location('relay','desktop/relay.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); assert m.OpenCC is None";
+ const result=spawnSync('python3',['-I','-c',code],{cwd:process.cwd(),encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);
+});

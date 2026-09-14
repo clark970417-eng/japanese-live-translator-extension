@@ -7,12 +7,17 @@ import sys
 import time
 import threading
 from pathlib import Path
-from opencc import OpenCC
+try:
+    from opencc import OpenCC
+except ImportError:
+    # The Electron pipeline already emits Traditional Chinese. Native messaging
+    # transport must still start when the system Python has no optional OpenCC.
+    OpenCC = None
 
 SUPPORT = Path.home() / 'Library/Application Support/JapaneseLiveCaption'
 
 def main():
-    traditional = OpenCC('s2twp')
+    traditional = OpenCC('s2twp') if OpenCC else None
     connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     path = str(SUPPORT / 'desktop.sock')
     try:
@@ -65,9 +70,9 @@ def main():
                 result = reply.get('result')
                 if isinstance(result, dict):
                     if isinstance(result.get('translated'), str):
-                        result['translated'] = traditional.convert(result['translated'])
+                        result['translated'] = traditional.convert(result['translated']) if traditional else result['translated']
                     if not reply.get('event') and directions.get(reply.get('id')) == 'ja-zh' and isinstance(result.get('text'), str) and 'translated' not in result:
-                        result['text'] = traditional.convert(result['text'])
+                        result['text'] = traditional.convert(result['text']) if traditional else result['text']
                 if not reply.get('event'):
                     directions.pop(reply.get('id'), None)
                 data = json.dumps(reply, ensure_ascii=False).encode()
