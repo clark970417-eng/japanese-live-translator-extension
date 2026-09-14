@@ -10,7 +10,7 @@ Reference: upstream `3d333e6296240d17dfc72207eac7fd7a7499a663`.
 | TTS | Kokoro voice automatically follows the translation language; output device remains selectable | Fixes the upstream English-default voice mismatch |
 | Virtual microphone | TTS can target a virtual output device; native PortAudio route remains available on supported macOS/Windows versions | Feature parity; third-party virtual audio driver is still required |
 | Translation engines | Adds HY-MT2 7B while retaining local, Apple and BYOK cloud choices; engine startup errors are contained and local failure can fall back to configured Google | Broader local engine choice |
-| Updates and releases | Tagged releases build and publish macOS arm64 and Windows x64 updater artifacts | Produces updater metadata instead of draft DMG-only releases |
+| Updates and releases | Tagged releases test, build and publish macOS arm64 updater artifacts | Produces updater metadata instead of draft DMG-only releases |
 
 Verification performed on the fork:
 
