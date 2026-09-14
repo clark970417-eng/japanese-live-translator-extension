@@ -34,6 +34,20 @@ for browser in ["Google/Chrome", "com.operasoftware.OperaGX"]:
     folder = Path.home() / "Library/Application Support" / browser / "NativeMessagingHosts"
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / "org.jtl.companion.json"
+    # Chrome and Opera assign different IDs to the same unpacked extension.
+    # Preserve valid origins registered by the other browser instead of making
+    # the latest installation silently revoke an already working browser.
+    try:
+        previous = json.loads(target.read_text())
+        origins = previous.get("allowed_origins", [])
+        if isinstance(origins, list):
+            manifest["allowed_origins"] = sorted(set(
+                manifest["allowed_origins"] + [origin for origin in origins
+                                               if isinstance(origin, str)
+                                               and re.fullmatch(r"chrome-extension://[a-p]{32}/", origin)]
+            ))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
     target.write_text(json.dumps(manifest, indent=2) + "\n")
     os.chmod(target, 0o600)
     print(target)
