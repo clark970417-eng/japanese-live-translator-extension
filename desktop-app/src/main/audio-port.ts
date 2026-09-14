@@ -32,10 +32,34 @@ export function setupAudioPort(ctx: AppContext): void {
     let processingAudio = false
     let processingStreaming = false
     let processingFinalize = false
+    // Keep one latest rolling window while STT is busy. Older windows are
+    // superseded because every window already contains the latest speech.
+    let pendingStreaming: Float32Array | null = null
     // #721: realtime chunks are serialized through the shared dispatcher, the
     // same instance the IPC transport uses, so audio and turn-boundary hints
     // keep a single global order regardless of which transport carries them.
     const realtime = getRealtimeAudioDispatcher()
+
+    const processLatestStreaming = (chunk: Float32Array): void => {
+      if (!ctx.pipeline?.running) return
+      if (processingStreaming) {
+        pendingStreaming = chunk
+        return
+      }
+      processingStreaming = true
+      const t0 = performance.now()
+      ctx.pipeline.processStreaming(chunk, SAMPLE_RATE).then((result) => {
+        const elapsed = (performance.now() - t0).toFixed(0)
+        if (result) log.info(`streaming (port): ${elapsed}ms, ${(chunk.length / SAMPLE_RATE).toFixed(1)}s audio`)
+      }).catch((err) => {
+        log.error('Streaming pipeline error (port):', err)
+      }).finally(() => {
+        processingStreaming = false
+        const latest = pendingStreaming
+        pendingStreaming = null
+        if (latest && !processingFinalize) processLatestStreaming(latest)
+      })
+    }
 
     // Main process receives audio on port1
     port1.on('message', (event) => {
@@ -87,19 +111,12 @@ export function setupAudioPort(ctx: AppContext): void {
           processingAudio = false
         })
       } else if (type === 'process-audio-streaming') {
-        if (processingStreaming) return
-        processingStreaming = true
-        const t0 = performance.now()
-        ctx.pipeline.processStreaming(chunk, SAMPLE_RATE).then((result) => {
-          const elapsed = (performance.now() - t0).toFixed(0)
-          if (result) log.info(`streaming (port): ${elapsed}ms, ${(chunk.length / SAMPLE_RATE).toFixed(1)}s audio`)
-        }).catch((err) => {
-          log.error('Streaming pipeline error (port):', err)
-        }).finally(() => {
-          processingStreaming = false
-        })
+        processLatestStreaming(chunk)
       } else if (type === 'finalize-streaming') {
         if (processingFinalize) return
+        // A completed VAD segment is authoritative. Do not let an obsolete
+        // rolling-window request run after its final result.
+        pendingStreaming = null
         processingFinalize = true
         const t0 = performance.now()
         ctx.pipeline.finalizeStreaming(chunk, SAMPLE_RATE).then((result) => {

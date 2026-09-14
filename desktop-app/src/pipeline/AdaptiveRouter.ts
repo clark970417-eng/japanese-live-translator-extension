@@ -18,6 +18,8 @@ export interface AdaptiveRoutingConfig {
   rarityWeight: number
   /** Glossary match weight in complexity score (0.0-1.0, default 0.2) */
   glossaryWeight: number
+  /** Low STT confidence routes a non-trivial final sentence to quality review. */
+  confidenceThreshold: number
 }
 
 export const DEFAULT_ROUTING_CONFIG: AdaptiveRoutingConfig = {
@@ -25,7 +27,8 @@ export const DEFAULT_ROUTING_CONFIG: AdaptiveRoutingConfig = {
   shortThreshold: 10,
   longThreshold: 50,
   rarityWeight: 0.3,
-  glossaryWeight: 0.2
+  glossaryWeight: 0.2,
+  confidenceThreshold: 0.72
 }
 
 /** Result of a complexity analysis */
@@ -38,6 +41,7 @@ export interface ComplexityScore {
   rarityScore: number
   /** Whether glossary terms were found in the text */
   hasGlossaryTerms: boolean
+  recognitionConfidence?: number
   /** Decided routing tier */
   tier: RoutingTier
 }
@@ -193,7 +197,7 @@ export class AdaptiveRouter {
   /**
    * Score the complexity of input text.
    */
-  scoreComplexity(text: string): ComplexityScore {
+  scoreComplexity(text: string, recognitionConfidence?: number): ComplexityScore {
     const tokens = AdaptiveRouter.tokenize(text)
     const tokenCount = tokens.length
     const rarityScore = AdaptiveRouter.calculateRarityScore(tokens)
@@ -212,7 +216,11 @@ export class AdaptiveRouter {
 
     // Determine tier based on thresholds
     let tier: RoutingTier
-    if (tokenCount < this.config.shortThreshold) {
+    const needsConfidenceReview = recognitionConfidence !== undefined &&
+      recognitionConfidence < this.config.confidenceThreshold && tokenCount >= 6
+    if (needsConfidenceReview) {
+      tier = 'quality'
+    } else if (tokenCount < this.config.shortThreshold) {
       // Short sentences always go fast regardless of complexity
       tier = 'fast'
     } else if (tokenCount >= this.config.longThreshold) {
@@ -223,7 +231,7 @@ export class AdaptiveRouter {
       tier = score >= 0.5 ? 'quality' : 'fast'
     }
 
-    return { score, tokenCount, rarityScore, hasGlossaryTerms, tier }
+    return { score, tokenCount, rarityScore, hasGlossaryTerms, recognitionConfidence, tier }
   }
 
   /**
@@ -235,9 +243,10 @@ export class AdaptiveRouter {
     text: string,
     from: Language,
     to: Language,
-    context?: TranslateContext
+    context?: TranslateContext,
+    recognitionConfidence?: number
   ): Promise<{ translated: string; complexity: ComplexityScore; engineId: string; latencyMs: number }> {
-    const complexity = this.scoreComplexity(text)
+    const complexity = this.scoreComplexity(text, recognitionConfidence)
     const engine = this.selectEngine(complexity.tier)
 
     if (!engine) {

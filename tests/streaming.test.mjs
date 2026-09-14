@@ -21,6 +21,11 @@ test('non-speech never emits, including loud non-speech; short speech ends promp
  for(let i=0;i<20;i++){const j=w.push(frame,.01);if(j)jobs.push(j);}
  assert.ok(jobs.at(-1).final);assert.ok(jobs.at(-1).voicedSeconds>=.4);
 });
+test('first rolling hypothesis is eligible near 650ms after speech starts',()=>{
+ const w=new SpeechWindows(),frame=new Float32Array(512).fill(.2);let first=null;
+ for(let i=0;i<30&&!first;i++)first=w.push(frame,.9,.55);
+ assert.ok(first);assert.equal(first.final,false);assert.ok(first.audio.length/16000<.85);
+});
 test('continuous speech bounded with real overlapping samples and increasing times',()=>{
  const w=new SpeechWindows(),jobs=[];
  for(let i=0;i<600;i++){const j=w.push(new Float32Array(512).fill(i),.9);if(j)jobs.push(j);}

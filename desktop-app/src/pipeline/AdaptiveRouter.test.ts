@@ -150,6 +150,16 @@ describe('AdaptiveRouter', () => {
         expect(result.score).toBeLessThanOrEqual(1)
       }
     })
+
+    it('sends a low-confidence final sentence to quality review', () => {
+      const result = router.scoreComplexity('これは今日の配信についての大切なお知らせです', 0.5)
+      expect(result.tier).toBe('quality')
+      expect(result.recognitionConfidence).toBe(0.5)
+    })
+
+    it('keeps tiny low-confidence fragments on the fast engine', () => {
+      expect(router.scoreComplexity('あー', 0.2).tier).toBe('fast')
+    })
   })
 
   // --- Threshold Configuration ---

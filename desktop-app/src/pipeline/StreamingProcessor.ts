@@ -35,7 +35,7 @@ export interface StreamingDeps {
   getGlossary(): GlossaryEntry[]
   getCachedTranslation?(text: string, from: Language, to: Language): string | undefined
   canReuseInterimTranslation?(): boolean
-  translateFinal?(text: string, from: Language, to: Language): Promise<string>
+  translateFinal?(text: string, from: Language, to: Language, recognitionConfidence?: number): Promise<string>
   getSimulMtConfig(): { enabled: boolean; waitK: number }
   resolveTargetLanguage(detectedLang: Language): Language
   /** Notify that processing count changed */
@@ -393,7 +393,7 @@ export class StreamingProcessor {
         if (!valid()) return null
         try {
           const translatedText = reused || (translator ? this.deps.translateFinal
-            ? await this.deps.translateFinal(sourceText, sttResult.language, targetLanguage)
+            ? await this.deps.translateFinal(sourceText, sttResult.language, targetLanguage, sttResult.confidence)
             : await translator.translate(sourceText, sttResult.language, targetLanguage,
               this.deps.contextBuffer.getContext(glossary.length ? glossary : undefined)) : '')
           if (!valid()) return null
@@ -502,7 +502,7 @@ export class StreamingProcessor {
       } else if (translator && agreement.confirmedText.trim()) {
         translatedText = (this.deps.canReuseInterimTranslation?.() !== false && this.lastTranslatedSource === agreement.confirmedText && this.lastTranslatedConfirmed)
           ? this.lastTranslatedConfirmed
-          : this.deps.translateFinal ? await this.deps.translateFinal(agreement.confirmedText, sttResult.language, targetLang) : await translator.translate(
+          : this.deps.translateFinal ? await this.deps.translateFinal(agreement.confirmedText, sttResult.language, targetLang, sttResult.confidence) : await translator.translate(
           agreement.confirmedText,
           sttResult.language,
           targetLang,

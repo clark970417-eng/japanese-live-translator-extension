@@ -53,9 +53,9 @@ export class SpeechWindows {
   // Speech at the onset probability, which the companion's outro check was calibrated on.
   if(probability>=.30)this.confident+=n;
   this.silent=speech?0:this.silent+n;
-  const ended=this.silent>=10240, cut=this.samples>=(this.maxSamples||80000);
+  const ended=this.silent>=9216, cut=this.samples>=(this.maxSamples||80000);
   let job=null;
-  if(this.voiced>=3584 && ((ended||cut) || (this.samples>=12800&&this.clock-this.lastEmission>=interval*16000))){
+  if(this.voiced>=3200 && ((ended||cut) || (this.samples>=10400&&this.clock-this.lastEmission>=interval*16000))){
    const audio=new Float32Array(this.samples);let at=0;for(const part of this.parts){audio.set(part,at);at+=part.length;}
    job={id:this.id,utteranceId:this.utterance,utteranceEnd:ended,audio,final:ended||cut,overlap:this.overlap,voicedSeconds:this.voiced/16000,speechSeconds:this.confident/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
    this.lastEmission=this.clock;

@@ -133,8 +133,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       const prepared = await pipeline.prepareFinalStreaming(audio, 16000, evidence)
       if (!prepared) return { text: '', translated: '' }
       const sourceText = prepared.sourceText
-      let completion: Promise<void>
-      completion = prepared.completion.then(result => {
+      const completion: Promise<void> = prepared.completion.then(result => {
         if (result) captionFor(segment, result)
         else send({ event: 'caption', segment, result: { text: sourceText, translated: '', final: true, error: 'Translation did not complete' } })
       }).catch(error => {

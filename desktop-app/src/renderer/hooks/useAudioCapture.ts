@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MicVAD } from '@ricky0123/vad-web'
 import { RealtimeChunker } from './realtimeChunker'
+import { getAdaptiveStreamingDelay } from './adaptiveStreamingCadence'
 
 export interface AudioDevice {
   deviceId: string
@@ -130,7 +131,8 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
   const rollingBufferRef = useRef<Float32Array[]>([])
   const rollingBufferIndexRef = useRef(0)
   const rollingBufferFullRef = useRef(false)
-  const streamingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const speechStartedAtRef = useRef(0)
   // Previous chunk tail for overlap to prevent word boundary cutting (#506)
   const prevChunkTailRef = useRef<Float32Array | null>(null)
 
@@ -205,8 +207,11 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
 
   const startStreamingTimer = useCallback(() => {
     if (streamingTimerRef.current) return
-    streamingTimerRef.current = setInterval(() => {
-      if (!isSpeakingRef.current) return
+    const tick = (): void => {
+      if (!isSpeakingRef.current) {
+        streamingTimerRef.current = null
+        return
+      }
       const buffer = getRollingBuffer()
       if (buffer) {
         // Prepend overlap from previous chunk tail to prevent word boundary cutting (#506)
@@ -228,12 +233,15 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
         console.log(`[audio-capture] Streaming chunk: ${output.length} samples (${(output.length / SAMPLE_RATE).toFixed(1)}s)`)
         streamingCallbackRef.current?.(output)
       }
-    }, effectiveInterval)
+      const elapsed = performance.now() - speechStartedAtRef.current
+      streamingTimerRef.current = setTimeout(tick, getAdaptiveStreamingDelay(effectiveInterval, elapsed))
+    }
+    streamingTimerRef.current = setTimeout(tick, getAdaptiveStreamingDelay(effectiveInterval, 0))
   }, [getRollingBuffer, effectiveInterval])
 
   const stopStreamingTimer = useCallback(() => {
     if (streamingTimerRef.current) {
-      clearInterval(streamingTimerRef.current)
+      clearTimeout(streamingTimerRef.current)
       streamingTimerRef.current = null
     }
   }, [])
@@ -353,7 +361,7 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
         // Override with more sensitive thresholds for real-time translation
         positiveSpeechThreshold: 0.25,
         negativeSpeechThreshold: 0.1,
-        redemptionMs: 800,
+        redemptionMs: 600,
         minSpeechMs: 250,
         // AudioWorklet runs audio processing off the main thread (replaces deprecated ScriptProcessor)
         processorType: 'AudioWorklet',
@@ -403,6 +411,7 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
           // audio is 16kHz Float32Array from VAD
           console.log(`[audio-capture] VAD speech segment: ${audio.length} samples (${(audio.length / SAMPLE_RATE).toFixed(1)}s)`)
           isSpeakingRef.current = false
+          stopStreamingTimer()
 
           // #721: In realtime mode the stream is never gated by VAD; the segment
           // end is only a turn-boundary hint for the cloud e2e session.
@@ -435,10 +444,13 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
           rollingBufferIndexRef.current = 0
           rollingBufferFullRef.current = false
           prevChunkTailRef.current = null
+          speechStartedAtRef.current = performance.now()
+          startStreamingTimer()
         },
         onVADMisfire: () => {
           console.log('[audio-capture] VAD misfire (speech too short)')
           isSpeakingRef.current = false
+          stopStreamingTimer()
           if (captureModeRef.current === 'realtime') return
           rollingBufferRef.current = []
           rollingBufferIndexRef.current = 0
@@ -449,11 +461,6 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
 
       vadRef.current = vad
       vad.start()
-      // #721: the 800ms rolling-buffer resend is cascade-only; realtime mode
-      // streams continuous 100ms chunks from onFrameProcessed instead.
-      if (captureMode === 'cascade') {
-        startStreamingTimer()
-      }
       setIsCapturing(true)
       console.log(`[audio-capture] VAD started (${captureMode} mode)`)
     } catch (err) {
@@ -490,7 +497,7 @@ export function useAudioCapture(noiseSuppression?: NoiseSuppressionProcessor, st
   useEffect(() => {
     return () => {
       if (streamingTimerRef.current) {
-        clearInterval(streamingTimerRef.current)
+        clearTimeout(streamingTimerRef.current)
         streamingTimerRef.current = null
       }
       if (vadRef.current) {

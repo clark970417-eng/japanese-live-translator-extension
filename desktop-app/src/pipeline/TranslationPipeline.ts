@@ -144,13 +144,13 @@ export class TranslationPipeline extends EventEmitter {
         return this.translationCache.get(text, from, to)
       },
       canReuseInterimTranslation: () => !this.adaptiveRouter.getConfig().enabled,
-      translateFinal: async (text, from, to) => {
+      translateFinal: async (text, from, to, recognitionConfidence) => {
         const glossaryVersion = this.glossary
         const cached = this.translationCache.get(text, from, to)
         if (cached !== undefined) return cached
         const context = this.contextBuffer.getContext(this.glossary.length ? this.glossary : undefined)
         const translated = this.adaptiveRouter.getConfig().enabled && this.adaptiveRouter.isReady
-          ? (await this.adaptiveRouter.translate(text, from, to, context)).translated
+          ? (await this.adaptiveRouter.translate(text, from, to, context, recognitionConfidence)).translated
           : await this.engineManager.translator!.translate(text, from, to, context)
         if (glossaryVersion === this.glossary) this.translationCache.set(text, from, to, translated)
         return translated
