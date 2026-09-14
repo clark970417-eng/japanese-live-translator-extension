@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 contextBridge.exposeInMainWorld('api', {
   // Pipeline control
@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   processAudio: (audioData: number[]) => ipcRenderer.invoke('process-audio', audioData),
   processAudioStreaming: (audioData: number[]) => ipcRenderer.invoke('process-audio-streaming', audioData),
   finalizeStreaming: (audioData: number[]) => ipcRenderer.invoke('finalize-streaming', audioData),
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  decodeMediaFile: (path: string) => ipcRenderer.invoke('decode-media-file', path),
   // Cloud realtime e2e streaming (#721)
   pushRealtimeAudio: (audioData: number[]) => ipcRenderer.invoke('push-realtime-audio', audioData),
   speechBoundary: (boundary: 'start' | 'end') => ipcRenderer.invoke('speech-boundary', boundary),

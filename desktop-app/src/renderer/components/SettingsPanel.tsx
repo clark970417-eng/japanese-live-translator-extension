@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSettingsState } from '../hooks/useSettingsState'
-import { decodeAudioFile, splitAudioNearSilence } from '../audio-file'
+import { decodeAudioFileWithFallback, splitAudioNearSilence } from '../audio-file'
 import { Onboarding } from './Onboarding'
 import {
   AudioSettings,
@@ -32,7 +32,7 @@ function SettingsPanel(): React.JSX.Element {
     let started = false
     try {
       s.setStatus(`Decoding ${file.name}...`)
-      const audio = await decodeAudioFile(file)
+      const audio = await decodeAudioFileWithFallback(file)
       const segments = splitAudioNearSilence(audio)
       if (segments.length === 0) throw new Error('The file contains no usable audio.')
       started = await s.handleStart({ captureAudio: false })

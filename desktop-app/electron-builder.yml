@@ -15,6 +15,7 @@ extraResources:
       - '*.py'
       - 'bin/**'
 asarUnpack:
+  - 'node_modules/ffmpeg-static/**'
   - 'node_modules/@kutalia/whisper-node-addon/**'
   - 'node_modules/node-llama-cpp/**'
   - 'out/renderer/vad/**'

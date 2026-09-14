@@ -32,6 +32,20 @@ export async function decodeAudioFile(file: File): Promise<Float32Array> {
   }
 }
 
+/** Decode with Chromium first, then use bundled FFmpeg for unsupported containers/codecs. */
+export async function decodeAudioFileWithFallback(file: File): Promise<Float32Array> {
+  try {
+    return await decodeAudioFile(file)
+  } catch (browserError) {
+    const path = window.api.getPathForFile(file)
+    if (!path) throw browserError
+    const bytes = await window.api.decodeMediaFile(path)
+    const aligned = bytes.byteLength - (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT)
+    if (aligned === 0) throw new Error('FFmpeg decoded no usable audio.')
+    return new Float32Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + aligned))
+  }
+}
+
 /**
  * Split long recordings near quiet points so recognition does not cut words at
  * rigid boundaries. Segments remain short enough for every local STT engine.
