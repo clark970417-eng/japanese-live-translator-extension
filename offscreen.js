@@ -47,11 +47,6 @@ function resetAudio(s){
 }
 function decode(s,job){
  if(job.epoch!==s.epoch||(s.recording&&!s.desktop&&!job.final))return;
- // In desktop recording mode, a preview is useful only while the engine is
- // idle.  Re-decoding growing partial audio behind accepted final utterances
- // consumed the entire model and made both captions and chat fall behind.
- if(s.recording&&s.desktop&&!job.final&&(s.busy||s.queue.jobs.length||Date.now()-(s.lastPreviewAt||0)<5000))return;
- if(s.recording&&s.desktop&&!job.final)s.lastPreviewAt=Date.now();
  if(!s.ready){if(s.recording||s.desktop){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}}return;}
  if(s.busy){try{s.queue.push(job);}catch(error){send(s,'speech-error',{error:error.message});stop();}return;}
  if(!s.recording&&Date.now()-job.audioEndAt>4000){s.expired++;return;}
@@ -79,7 +74,7 @@ function restartWorker(s,reason){
  if(s.restarts>=MAX_WORKER_RESTARTS){send(s,'speech-error',{error:reason+'；自動復原已達上限，請按停止後再開始'});stop();return;}
  const attempt=++s.restarts,delay=restartDelay(attempt);
  clearTimeout(s.timeout);
- if(s.busy&&(s.recording||s.desktop))s.queue.jobs.unshift(s.busy);
+ if(s.busy&&(s.recording||s.desktop))s.queue.retry(s.busy);
  const failed=s.worker;s.worker=null;failed?.terminate();s.ready=false;s.busy=null;
  if(!s.recording&&!s.desktop){s.receiving=false;resetAudio(s);}
  send(s,'model-status',{text:`${reason}，${delay} 毫秒後進行第 ${attempt}/${MAX_WORKER_RESTARTS} 次復原…`});

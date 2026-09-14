@@ -46,6 +46,16 @@ test('desktop recording can start a waiting preview immediately when busy work f
  assert.equal(q.jobs.length,0);
 });
 
+test('desktop recovery keeps finals ordered and discards an obsolete interrupted preview',()=>{
+ const q=new DecodeQueue({retainFinals:true,retainInterim:true});
+ q.push({id:2,final:true,sampleCount:160});
+ q.push({id:3,final:false,sampleCount:200});
+ q.retry({id:1,final:false,sampleCount:100});
+ assert.deepEqual(q.jobs.map(x=>[x.id,x.final]),[[2,true],[3,false]]);
+ q.retry({id:0,final:true,sampleCount:80});
+ assert.deepEqual(q.jobs.map(x=>[x.id,x.final]),[[0,true],[2,true],[3,false]]);
+});
+
 test('desktop recording coalesces waiting final audio without changing its order',()=>{
  const q=new DecodeQueue({retainFinals:true,retainInterim:true,coalesceFinals:true});
  const job=(id,value)=>({id,final:true,audio:new Float32Array(32000).fill(value),speechAt:id*100,audioEndAt:id*100+90,speechSeconds:1,voicedSeconds:1});

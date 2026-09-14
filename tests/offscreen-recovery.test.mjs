@@ -60,3 +60,38 @@ test('two separated desktop deaths recover with backoff, a third stops, and manu
  const stopped=await h.call({type:'offscreen-stop'});
  assert.equal(stopped.ok,true);
 });
+
+test('desktop recovery runs accepted finals and the newest preview before an interrupted stale preview',async()=>{
+ const h=harness();
+ await h.call({type:'offscreen-start',session:'ordering',streamId:'test',recording:true,mode:'desktop'});
+ const vad=h.workers.find(w=>w.url.startsWith('vad'));
+ vad.onmessage({data:{type:'ready'}});
+ const ready=worker=>worker.onmessage({data:{type:'ready',model:'local',dtype:'q4'}});
+ const job=(id,final,sampleCount)=>({id,utteranceId:id,final,utteranceEnd:final,epoch:0,audio:new Float32Array(16000).fill(.1),audioEndAt:Date.now(),speechAt:Date.now()-500,speechSeconds:1,voicedSeconds:1,sampleCount});
+
+ ready(h.speech[0]);
+ vad.onmessage({data:{type:'segment',job:job(1,false,100)}});
+ vad.onmessage({data:{type:'segment',job:job(2,true,160)}});
+ vad.onmessage({data:{type:'segment',job:job(3,false,200)}});
+ h.speech[0].onmessage({data:{type:'error',error:'預覽期間中斷'}});
+ h.fire(250);ready(h.speech[1]);
+ assert.equal(h.speech[1].posts.at(-1).id,2,'accepted final is not blocked by the stale preview');
+ await h.speech[1].onmessage({data:{type:'result',id:2,text:'完成した文'}});
+ assert.equal(h.speech[1].posts.at(-1).id,3,'the newest rolling preview follows the final');
+ assert.equal(h.speech[1].posts.some(post=>post.id===1),false,'obsolete interrupted preview is not decoded');
+ await h.call({type:'offscreen-stop'});
+});
+
+test('desktop recovery retries an interrupted preview when no newer work exists',async()=>{
+ const h=harness();
+ await h.call({type:'offscreen-start',session:'preview-retry',streamId:'test',recording:true,mode:'desktop'});
+ const vad=h.workers.find(w=>w.url.startsWith('vad'));
+ vad.onmessage({data:{type:'ready'}});
+ const job={id:1,utteranceId:1,final:false,epoch:0,audio:new Float32Array(16000).fill(.1),audioEndAt:Date.now(),speechAt:Date.now()-500,speechSeconds:1,voicedSeconds:1,sampleCount:16000};
+ h.speech[0].onmessage({data:{type:'ready',model:'local',dtype:'q4'}});
+ vad.onmessage({data:{type:'segment',job}});
+ h.speech[0].onmessage({data:{type:'error',error:'預覽期間中斷'}});
+ h.fire(250);h.speech[1].onmessage({data:{type:'ready',model:'local',dtype:'q4'}});
+ assert.equal(h.speech[1].posts.at(-1).id,1,'the still-useful preview is retried');
+ await h.call({type:'offscreen-stop'});
+});

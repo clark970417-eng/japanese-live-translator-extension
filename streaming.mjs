@@ -146,6 +146,13 @@ export class DecodeQueue {
   // Keep one final and the newest revision. Never accumulate an unbounded delay.
   while(!this.retainFinals&&this.jobs.length>2){this.jobs.shift();this.dropped++;}
  }
+ retry(job){
+  // A completed job was already accepted before later queued work, so retry it
+  // at the front without coalescing or changing its order. A rolling preview,
+  // however, must pass through push() so a newer preview/final can supersede it.
+  if(this.retainFinals&&job.final){this.jobs=[job,...this.jobs.filter(x=>x.id!==job.id)];return;}
+  this.push(job);
+ }
  shift(){return this.jobs.shift();}
  takeFresh(now,epoch){
   while(this.jobs.length){const job=this.shift();if(job.epoch===epoch&&(this.retainFinals||now-job.audioEndAt<=4000))return job;this.dropped++;}
