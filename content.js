@@ -31,6 +31,15 @@ function pumpTranslations() {
 const hasJapanese = text => /[\u3040-\u30ff]/.test(text);
 const hasChinese = text => /[\u3400-\u9fff]/.test(text) && !hasJapanese(text);
 
+function smallestJapaneseLeaves(region) {
+  if (!region?.querySelectorAll) return [];
+  return [...region.querySelectorAll('span,p,div,yt-formatted-string')].filter(element => {
+    if (element.closest?.('#author-name,[id*="author" i],[class*="author" i],a')) return false;
+    const text = (element.textContent || '').trim();
+    return text && hasJapanese(text) && ![...(element.children || [])].some(child => hasJapanese(child.textContent || ''));
+  });
+}
+
 function requestTranslation(text, direction, priority = false, queueOrder) {
   const key = `${direction}:${text}`;
   if (cache.has(key)) return Promise.resolve(cache.get(key));
@@ -84,7 +93,9 @@ function scan() {
   // YouTube restores a large virtualized backlog after navigation. Translating
   // all of it at once rate-limits the service and makes fresh chat wait behind
   // stale messages. Keep the newest visible window and enqueue newest first.
-  const chat = [...document.querySelectorAll("#message.yt-live-chat-text-message-renderer, yt-live-chat-text-message-renderer #message")].slice(-20);
+  const selectedChat = [...document.querySelectorAll("#message.yt-live-chat-text-message-renderer, yt-live-chat-text-message-renderer #message")];
+  const semanticChat = [...document.querySelectorAll('[role="log"]')].flatMap(smallestJapaneseLeaves);
+  const chat = [...new Set([...selectedChat, ...semanticChat])].slice(-20);
   const batch = ++chatBatch;
   for (let i = chat.length - 1; i >= 0; i--) translateElement(chat[i], "jtl-translation", false, batch * 1000 + i);
   installComposerButton();

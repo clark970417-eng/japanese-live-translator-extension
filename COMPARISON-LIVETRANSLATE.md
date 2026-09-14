@@ -248,3 +248,20 @@ explicit non-goals in the handoff.
 No universal claim is made. The fork is faster on this corpus, equal on
 recognition, better on non-speech audio, and unproven on translation quality and
 long-session stability.
+
+## September 14: 3.9.3 follow-up
+
+The latest sequential replay again favors the fork on 19 paired trials with
+valid timing: first Chinese median/p95 was 1245/2103 ms against upstream
+3917/10725 ms, and final delay was 850/1587 ms against 8115/11436 ms. Both
+recognition transcripts remain at 8.17% CER. The twentieth upstream latency row
+is excluded because its monotonic clock jumped by about sixteen minutes during
+one short file. Full conditions, raw paths and the recovery run are documented
+in [RETEST-3.9.3.md](RETEST-3.9.3.md).
+
+The older feature table above is historical. Versions 3.9.0–3.9.2 subsequently
+added file import with bundled FFmpeg fallback, speaker labels, TTS, CoreAudio
+virtual-microphone routing, global shortcuts, additional engine settings and a
+GitHub update channel. These features are available in the desktop application;
+the compact Opera popup intentionally exposes the controls needed for browser
+captions and page translation.

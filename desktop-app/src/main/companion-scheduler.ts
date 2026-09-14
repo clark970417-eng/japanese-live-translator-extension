@@ -7,6 +7,11 @@
  * the previous behavior.
  */
 export class CompanionScheduler {
+  /** A live utterance normally produces at most six rolling decode windows.
+   * Let two complete utterances clear before page text receives a slot. This
+   * prevents a multi-second page translation from landing between the interim
+   * and final decode while still bounding page-text starvation. */
+  private static readonly MAX_AUDIO_STREAK = 12
   private high: Array<(preempt: AbortSignal) => Promise<void>> = []
   private normal: Array<(preempt: AbortSignal) => Promise<void>> = []
   private active = false
@@ -43,7 +48,7 @@ export class CompanionScheduler {
     this.active = true
     try {
       while (this.high.length || this.normal.length) {
-        const useHigh = this.high.length > 0 && (this.highStreak < 4 || !this.normal.length)
+        const useHigh = this.high.length > 0 && (this.highStreak < CompanionScheduler.MAX_AUDIO_STREAK || !this.normal.length)
         const task = (useHigh ? this.high : this.normal).shift()!
         this.highStreak = useHigh ? this.highStreak + 1 : 0
         const preemption = new AbortController()

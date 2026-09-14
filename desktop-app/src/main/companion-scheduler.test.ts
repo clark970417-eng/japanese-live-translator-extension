@@ -20,7 +20,7 @@ it('does not starve text under sustained audio, and recovers from failed work', 
   const order: string[] = []
   let release!: () => void
   const active = queue.run(false, () => new Promise<void>(resolve => { release = resolve }))
-  const tasks = Array.from({length: 8}, (_, n) => queue.run(true, async () => { order.push('audio' + n) }))
+  const tasks = Array.from({length: 16}, (_, n) => queue.run(true, async () => { order.push('audio' + n) }))
   tasks.push(queue.run(false, async () => { order.push('text') }))
   const failure = queue.run(false, async () => { throw new Error('expected') }).catch(error => error.message)
   let idle = false
@@ -28,7 +28,7 @@ it('does not starve text under sustained audio, and recovers from failed work', 
   expect(idle).toBe(false)
   release()
   await Promise.all([active, ...tasks, drained])
-  expect(order.indexOf('text')).toBe(4)
+  expect(order.indexOf('text')).toBe(12)
   expect(await failure).toBe('expected')
   await queue.run(true, async () => { order.push('recovered') })
   expect(order.at(-1)).toBe('recovered')

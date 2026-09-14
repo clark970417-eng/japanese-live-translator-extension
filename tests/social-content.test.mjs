@@ -6,11 +6,11 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../social-content.js',import.meta.url),'utf8');
 const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 
-function setup(hostname,japaneseOverride,composerDistractor){
+function setup(hostname,japaneseOverride,composerDistractor,semanticOnly=false){
  const requests=[];
  const translationLines=[];
  const controls=[];
- const japanese=japaneseOverride||{textContent:'配信ありがとう',innerText:'配信ありがとう',isConnected:true,
+ const japanese=japaneseOverride||{textContent:'配信ありがとう',innerText:'配信ありがとう',children:[],isConnected:true,
   querySelector(){return null;},querySelectorAll(){return [];},
   closest:selector=>selector.includes('.jtl-social-')?null:null,
   parentElement:{querySelector:()=>translationLines.find(x=>x.isConnected)},
@@ -24,7 +24,8 @@ function setup(hostname,japaneseOverride,composerDistractor){
   querySelector(){return null;},remove(){this.isConnected=false;}});
  const document={documentElement:{},body:{append(node){node.isConnected=true;if(node.className==='jtl-social-controls')controls.push(node);}},
   querySelectorAll(selector){
-   if(selector.includes('danmaku-content')||selector.includes('chat-message'))return Array.isArray(japanese)?japanese:[japanese];
+   if(!semanticOnly&&(selector.includes('danmaku-content')||selector.includes('chat-message')))return Array.isArray(japanese)?japanese:[japanese];
+   if(semanticOnly&&selector.includes('[role="log"]'))return [{querySelectorAll:()=>Array.isArray(japanese)?japanese:[japanese]}];
    if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea'))return [box];
    if(composerDistractor&&selector.includes('textarea:not([disabled])'))return [composerDistractor];
    return [];
@@ -47,6 +48,14 @@ test('social live chat limits restored history and starts newest messages first'
  assert.deepEqual(translated.map(request=>request.message.text),[
   '新しいコメント39です','新しいコメント38です','新しいコメント37です'
  ]);
+});
+
+test('semantic live region keeps chat translation working after site selectors change',async()=>{
+ const t=setup('www.tiktok.com',null,null,true);await settle();
+ const request=t.requests.find(x=>x.message.type==='translate');
+ assert.equal(request.message.text,'配信ありがとう');
+ request.reply({ok:true,text:'謝謝直播'});await settle();
+ assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
 });
 
 test('Bilibili page scans cannot steal the button from the focused live composer',async()=>{

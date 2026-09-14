@@ -68,6 +68,31 @@ function residentMB(pid) {
   } catch { return null }
 }
 
+/** Kill Electron's launcher and every process it spawned. On macOS, killing
+ * node_modules/.bin/electron alone leaves Electron.app and model workers
+ * orphaned, which invalidates the restart and memory-pressure measurements. */
+function stopHost(processHandle) {
+  const rootPid = processHandle?.pid
+  if (!rootPid) return
+  try {
+    const rows = execFileSync('ps', ['-ax', '-o', 'pid=,ppid='], { encoding: 'utf8' }).trim().split('\n')
+      .map(line => line.trim().split(/\s+/).map(Number))
+    const descendants = new Set([rootPid])
+    let changed = true
+    while (changed) {
+      changed = false
+      for (const [child, parent] of rows) {
+        if (descendants.has(parent) && !descendants.has(child)) { descendants.add(child); changed = true }
+      }
+    }
+    for (const pid of [...descendants].reverse()) {
+      try { process.kill(pid, 'SIGKILL') } catch { /* Already exited. */ }
+    }
+  } catch {
+    try { processHandle.kill('SIGKILL') } catch { /* Already exited. */ }
+  }
+}
+
 let host = null
 function startHost() {
   rmSync(socketPath, { force: true })
@@ -103,8 +128,8 @@ let captions = []
 const request = (op, fields = {}) => new Promise((resolve, reject) => {
   if (!socket || socket.destroyed) return reject(new Error('socket closed'))
   const id = ++sequence
-  pending.set(id, resolve)
-  setTimeout(() => { if (pending.delete(id)) reject(new Error('request timed out: ' + op)) }, 120000)
+  const timer = setTimeout(() => { if (pending.delete(id)) reject(new Error('request timed out: ' + op)) }, 120000)
+  pending.set(id, { resolve, timer })
   socket.write(JSON.stringify({ id, op, ...fields }) + '\n')
 })
 
@@ -118,10 +143,10 @@ async function openSocket() {
     while ((newline = buffer.indexOf('\n')) >= 0) {
       const message = JSON.parse(buffer.slice(0, newline))
       buffer = buffer.slice(newline + 1)
-      if (message.event === 'caption') { captions.push({ at: Date.now(), ...message.result }); continue }
+      if (message.event === 'caption') { captions.push({ at: Date.now(), segment: message.segment, ...message.result }); continue }
       if (message.event) continue
       const job = pending.get(message.id)
-      if (job) { pending.delete(message.id); job(message) }
+      if (job) { pending.delete(message.id); clearTimeout(job.timer); job.resolve(message) }
     }
   })
   socket.on('error', () => {})
@@ -187,7 +212,7 @@ try {
     if (captions.some(caption => !caption.text)) stats.blank++
     if (!final?.result?.text) stats.missingFinal++
     const pairs = captions.filter(caption => caption.text)
-      .map(caption => `${caption.text}\u0000${caption.translated || ''}`)
+      .map(caption => `${caption.segment || ''}\u0000${caption.text}\u0000${caption.translated || ''}`)
     stats.duplicates += pairs.length - new Set(pairs).size
 
     // A pause, then a non-speech control every fourth cycle.
@@ -228,7 +253,7 @@ try {
     if (stats.restarts === 0 && elapsed > third || stats.restarts === 1 && elapsed > third * 2) {
       emit({ type: 'restarting-host', cycle, rssMB: residentMB(host.pid) })
       socket?.destroy()
-      host.kill('SIGKILL')
+      stopHost(host)
       await sleep(3000)
       startHost()
       const back = await waitForSocket()
@@ -267,6 +292,6 @@ try {
 } finally {
   try { await request('stop') } catch {}
   socket?.destroy()
-  host?.kill('SIGKILL')
+  stopHost(host)
   rmSync(companionDir, { recursive: true, force: true })
 }

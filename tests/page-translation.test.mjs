@@ -5,7 +5,7 @@ import fs from 'node:fs';
 
 /** Live chat and comment translation with a recyclable node, as a virtualized
  * list gives us: the same element object is reused for a different message. */
-function setup(){
+function setup(semanticOnly=false){
  const chat=[], requests=[]; let change, navigate;
  const makeLine=()=>({className:'',textContent:'',dataset:{},children:[],isConnected:false,
   classList:{add(){},remove(){},toggle(){}},style:{setProperty(){}},
@@ -23,7 +23,11 @@ function setup(){
   querySelector:()=>null,
   // Match the live-chat message selector only; the composer selector also
   // mentions yt-live-chat and must not receive these nodes.
-  querySelectorAll:selector=>selector.includes('yt-live-chat-text-message-renderer')?chat:[],
+  querySelectorAll:selector=>{
+   if(!semanticOnly&&selector.includes('yt-live-chat-text-message-renderer'))return chat;
+   if(semanticOnly&&selector==='[role="log"]')return [{querySelectorAll:()=>chat}];
+   return [];
+  },
   createElement:()=>makeLine(),
   addEventListener:(name,fn)=>{if(name==='yt-navigate-start')navigate=fn;}};
  const window={};window.top=window;
@@ -105,4 +109,12 @@ test('a restored chat backlog is bounded and newest messages are translated firs
  t.requests[0].reply({ok:true,text:'最新'});await settle();
  assert.equal(t.requests.length,4);
  assert.equal(t.requests[3].message.text,'新しいコメント36です');
+});
+
+test('YouTube live chat survives selector changes through its semantic log region',async()=>{
+ const t=setup(true);await settle();
+ const node=t.makeNode('新しい配信コメントです');node.children=[];node.querySelectorAll=()=>[];node.closest=()=>null;
+ t.chat.push(node);t.scan();await settle();
+ assert.equal(t.requests.length,1);
+ assert.equal(t.requests[0].message.text,'新しい配信コメントです');
 });

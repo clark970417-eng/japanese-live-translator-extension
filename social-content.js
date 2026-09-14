@@ -288,7 +288,19 @@
     if (window.top === window) config.title.forEach(selector => document.querySelectorAll(selector).forEach(node => translateNode(node, true, 1_000_000_000 + ++translationOrder)));
     // Both sites restore large virtualized chat histories. Keep model work
     // bounded and always let the newest visible messages enter the queue first.
-    const messages = [...new Set(config.text.flatMap(selector => [...document.querySelectorAll(selector)]))].slice(-20);
+    // Hashed classes change frequently on both sites. ARIA live regions are a
+    // stable semantic contract, so scan their smallest Japanese leaves as a
+    // fallback when product-specific selectors no longer match.
+    const semanticMessages = [...document.querySelectorAll('[role="log"], [aria-live="polite"], [aria-live="assertive"]')]
+      .flatMap(region => [...region.querySelectorAll('span,p,div')])
+      .filter(element => {
+        const text = clean(element.innerText || element.textContent);
+        return text && hasJapanese(text) && ![...element.children].some(child => hasJapanese(clean(child.innerText || child.textContent)));
+      });
+    const messages = [...new Set([
+      ...config.text.flatMap(selector => [...document.querySelectorAll(selector)]),
+      ...semanticMessages
+    ])].slice(-20);
     const batch = ++translationOrder * 1000;
     for (let index = messages.length - 1; index >= 0; index--) translateNode(messages[index], false, batch + index);
     if (!isUsableComposer(activeComposer) || !activeControls?.isConnected) {
