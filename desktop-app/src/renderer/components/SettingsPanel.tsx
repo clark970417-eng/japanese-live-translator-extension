@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSettingsState } from '../hooks/useSettingsState'
+import { decodeAudioFile, splitAudioNearSilence } from '../audio-file'
 import { Onboarding } from './Onboarding'
 import {
   AudioSettings,
@@ -26,6 +27,27 @@ function SettingsPanel(): React.JSX.Element {
   const [gerEnabled, setGerEnabled] = useState(false)
   useEffect(() => { window.api.getSettings().then(v => setGerEnabled(!!v.gerEnabled)) }, [])
   const disabled = s.isRunning || s.isStarting
+
+  const handleTranslateFile = async (file: File): Promise<void> => {
+    let started = false
+    try {
+      s.setStatus(`Decoding ${file.name}...`)
+      const audio = await decodeAudioFile(file)
+      const segments = splitAudioNearSilence(audio)
+      if (segments.length === 0) throw new Error('The file contains no usable audio.')
+      started = await s.handleStart({ captureAudio: false })
+      if (!started) return
+      for (let i = 0; i < segments.length; i++) {
+        s.setStatus(`Translating ${file.name}: ${i + 1} / ${segments.length}`)
+        await window.api.processAudio(Array.from(segments[i]))
+      }
+      s.setStatus(`Finished ${file.name}`)
+    } catch (error) {
+      s.setStatus(`File translation failed: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      if (started) await s.handleStop()
+    }
+  }
 
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingChecked, setOnboardingChecked] = useState(false)
@@ -104,6 +126,7 @@ function SettingsPanel(): React.JSX.Element {
           s.setStreamingIntervalMs(v)
           window.api.saveSettings({ streamingIntervalMs: v })
         }}
+        onTranslateFile={handleTranslateFile}
       />
 
       {/* Current config summary — always visible */}

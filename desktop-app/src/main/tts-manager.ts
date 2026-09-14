@@ -56,7 +56,7 @@ export class TTSManager {
 
   /** Set the voice to use */
   setVoice(voiceId: string): void {
-    this.currentVoice = voiceId
+    this.currentVoice = voiceId === 'auto' ? null : voiceId
     this.engine?.setVoice(voiceId)
   }
 

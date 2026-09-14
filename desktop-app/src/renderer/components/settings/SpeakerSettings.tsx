@@ -10,7 +10,7 @@ interface SpeakerSettingsProps {
 
 /**
  * Speaker diarization settings panel (#549).
- * Experimental: requires FluidAudio CLI bridge (macOS only).
+ * Uses the bundled FluidAudio bridge on macOS.
  */
 export function SpeakerSettings({
   speakerDiarizationEnabled,
@@ -44,17 +44,6 @@ export function SpeakerSettings({
         Identifies speakers via FluidAudio (CoreML). Color-coded labels appear on subtitles.
         Downloads about 32 MB of model data. Speaker labels are estimates.
       </div>
-      {speakerDiarizationEnabled && (
-        <div style={{ marginTop: '6px', fontSize: '11px', color: '#f59e0b' }}>
-          Requires{' '}
-          <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>fluid-audio-bridge</span>
-          {' '}CLI (
-          <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>
-            cd scripts/fluid-audio &amp;&amp; swift build -c release &amp;&amp; cp .build/release/fluid-audio-bridge /opt/homebrew/bin/
-          </span>
-          ).
-        </div>
-      )}
     </Section>
   )
 }

@@ -1,5 +1,5 @@
 import Foundation
-import FluidAudio
+@preconcurrency import FluidAudio
 
 /// JSON-over-stdio bridge for FluidAudio speaker diarization.
 ///
@@ -60,7 +60,7 @@ final class DiarizationBridge {
 
         do {
             let config = OfflineDiarizerConfig(
-                clusteringThreshold: Float(threshold)
+                clusteringThreshold: threshold
             )
             let mgr = OfflineDiarizerManager(config: config)
             try await mgr.prepareModels()
@@ -99,7 +99,7 @@ final class DiarizationBridge {
 
             var speakerDurations: [String: Double] = [:]
             for segment in result.segments {
-                let dur = segment.endTimeSeconds - segment.startTimeSeconds
+                let dur = Double(segment.endTimeSeconds - segment.startTimeSeconds)
                 speakerDurations[segment.speakerId, default: 0] += dur
             }
 

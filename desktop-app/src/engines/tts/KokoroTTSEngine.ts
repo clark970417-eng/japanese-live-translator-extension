@@ -136,7 +136,7 @@ export class KokoroTTSEngine implements TTSEngine {
 
   /** Update the voice to use for synthesis */
   setVoice(voiceId: string): void {
-    this.voiceOverride = voiceId
+    this.voiceOverride = voiceId === 'auto' ? undefined : voiceId
     log.info(`TTS voice changed to: ${voiceId}`)
   }
 

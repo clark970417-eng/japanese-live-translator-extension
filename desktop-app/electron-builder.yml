@@ -13,6 +13,7 @@ extraResources:
     to: 'bridge-scripts/'
     filter:
       - '*.py'
+      - 'bin/**'
 asarUnpack:
   - 'node_modules/@kutalia/whisper-node-addon/**'
   - 'node_modules/node-llama-cpp/**'

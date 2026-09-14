@@ -1,6 +1,6 @@
 import React from 'react'
 import { Section } from './Section'
-import { selectStyle, sliderLabelStyle } from './shared'
+import { buttonStyle, selectStyle, sliderLabelStyle } from './shared'
 import type { UseAudioCaptureReturn, AudioSource } from '../../hooks/useAudioCapture'
 
 /** Audio source display labels */
@@ -21,13 +21,31 @@ interface AudioSettingsProps {
   /** #606: Streaming chunk interval in ms */
   streamingIntervalMs: number
   onStreamingIntervalChange: (ms: number) => void
+  onTranslateFile: (file: File) => Promise<void>
 }
 
-export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNoiseSuppressionChange, platform, streamingIntervalMs, onStreamingIntervalChange }: AudioSettingsProps): React.JSX.Element {
+export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNoiseSuppressionChange, platform, streamingIntervalMs, onStreamingIntervalChange, onTranslateFile }: AudioSettingsProps): React.JSX.Element {
   const showMicSelector = audio.audioSource !== 'system'
 
   return (
     <Section label="Audio Input">
+      <label style={{ ...buttonStyle, display: 'block', textAlign: 'center', marginBottom: '10px', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer' }}>
+        Translate audio or video file
+        <input
+          type="file"
+          accept="audio/*,video/*,.m4a,.m4v,.mkv,.webm,.flac,.ogg,.opus,.wav,.mp3,.mp4,.aac"
+          disabled={disabled}
+          style={{ display: 'none' }}
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) void onTranslateFile(file)
+          }}
+        />
+      </label>
+      <div style={{ fontSize: '11px', color: '#94a3b8', margin: '-4px 0 10px' }}>
+        MP3, M4A, WAV, FLAC, OGG, WebM and common video files
+      </div>
       {/* #501: Audio source selector */}
       <select
         value={audio.audioSource}

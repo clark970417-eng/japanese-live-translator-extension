@@ -162,7 +162,7 @@ export interface SettingsState {
 
   // Actions
   handleSaveSettings: () => Promise<void>
-  handleStart: () => Promise<void>
+  handleStart: (options?: { captureAudio?: boolean }) => Promise<boolean>
   handleStop: () => Promise<void>
   handleResume: () => Promise<void>
   handleDismissResume: () => void
@@ -231,8 +231,8 @@ export function useSettingsState(): SettingsState {
     catch (error) { session.setStatus(`Could not save settings: ${String(error)}`) }
   }
 
-  const handleStart = async (): Promise<void> => {
-    if (session.isStarting) return
+  const handleStart = async (options?: { captureAudio?: boolean }): Promise<boolean> => {
+    if (session.isStarting) return false
     session.setIsStarting(true)
     let pipelineStarted = false
 
@@ -243,24 +243,29 @@ export function useSettingsState(): SettingsState {
 
       const resolvedMode = resolveEngineMode(engine.engineMode, apiKeys, engine.gpuInfo)
       const config = buildEngineConfig(resolvedMode, language.sttEngine, apiKeys, {
-        cloudRealtimeEnabled: engine.cloudRealtimeEnabled,
-        geminiLiveEnabled: engine.geminiLiveEnabled
+        // File import is a finite cascade job. Realtime cloud engines only accept
+        // a live PCM stream and would otherwise return no result for the file.
+        cloudRealtimeEnabled: options?.captureAudio === false ? false : engine.cloudRealtimeEnabled,
+        geminiLiveEnabled: options?.captureAudio === false ? false : engine.geminiLiveEnabled
       })
 
       const result = await withIpcTimeout(window.api.pipelineStart(config), 120_000, 'pipelineStart')
       if (result.error) {
         session.setStatus(`Error: ${result.error}`)
         session.setIsStarting(false)
-        return
+        return false
       }
       pipelineStarted = true
 
       // #721: cloud e2e pipelines consume a continuous 100ms PCM stream; cascade
       // pipelines use the VAD-segmented rolling buffer.
-      await session.audio.start({ captureMode: config.mode === 'e2e' ? 'realtime' : 'cascade' })
+      if (options?.captureAudio !== false) {
+        await session.audio.start({ captureMode: config.mode === 'e2e' ? 'realtime' : 'cascade' })
+      }
       session.setIsRunning(true)
       session.startSessionTimer()
-      session.setStatus('Listening...')
+      session.setStatus(options?.captureAudio === false ? 'Ready to process audio file...' : 'Listening...')
+      return true
     } catch (err) {
       // Starting the engine succeeds before microphone/VAD capture begins. If
       // capture setup fails, roll the engine back as well; otherwise its model
@@ -274,6 +279,7 @@ export function useSettingsState(): SettingsState {
       session.setStatus(friendlyError(err))
       session.setIsRunning(false)
       session.stopSessionTimer()
+      return false
     } finally {
       session.setIsStarting(false)
     }

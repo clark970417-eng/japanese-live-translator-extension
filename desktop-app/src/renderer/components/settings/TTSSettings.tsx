@@ -46,7 +46,7 @@ interface TTSSettingsProps {
 
 export function TTSSettings({ disabled }: TTSSettingsProps): React.JSX.Element {
   const [enabled, setEnabled] = useState(false)
-  const [voice, setVoice] = useState('af_heart')
+  const [voice, setVoice] = useState('auto')
   const [volume, setVolume] = useState(0.8)
   const [outputDevice, setOutputDevice] = useState('')
   const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([])
@@ -150,6 +150,7 @@ export function TTSSettings({ disabled }: TTSSettingsProps): React.JSX.Element {
             disabled={disabled}
             aria-label="TTS voice"
           >
+            <option value="auto">Automatic for translation language</option>
             {ALL_VOICES.map((group) => (
               <optgroup key={group.group} label={group.group}>
                 {group.voices.map((v) => (

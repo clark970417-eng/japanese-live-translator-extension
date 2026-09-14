@@ -1,6 +1,7 @@
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { app } from 'electron'
 import type { SpeakerDiarizer, DiarizationResult } from '../types'
 import {
   FLUID_AUDIO_DIARIZE_TIMEOUT_MS,
@@ -13,10 +14,14 @@ import type { SpawnConfig, InitResult } from '../SubprocessBridge'
  * Well-known paths where the fluid-audio-bridge binary may be installed.
  * Users build from scripts/fluid-audio/ and place the binary in their PATH.
  */
-const FLUID_AUDIO_PATHS = [
-  '/opt/homebrew/bin/fluid-audio-bridge',
-  '/usr/local/bin/fluid-audio-bridge'
-]
+function fluidAudioPaths(): string[] {
+  return [
+    ...(app.isPackaged ? [join(process.resourcesPath, 'bridge-scripts', 'bin', 'fluid-audio-bridge')] : []),
+    join(app.getAppPath(), 'resources', 'bin', 'fluid-audio-bridge'),
+    '/opt/homebrew/bin/fluid-audio-bridge',
+    '/usr/local/bin/fluid-audio-bridge'
+  ]
+}
 
 /**
  * FluidAudio speaker diarization engine (CoreML native, macOS only).
@@ -70,9 +75,7 @@ export class FluidAudioDiarizer extends SubprocessBridge implements SpeakerDiari
     const binaryPath = findFluidAudioBinary()
     if (!binaryPath) {
       throw new Error(
-        'fluid-audio-bridge binary not found. Build from scripts/fluid-audio: ' +
-        'cd scripts/fluid-audio && swift build -c release && ' +
-        'cp .build/release/fluid-audio-bridge /opt/homebrew/bin/'
+        'The bundled speaker-identification component is missing. Reinstall the app.'
       )
     }
 
@@ -100,9 +103,7 @@ export class FluidAudioDiarizer extends SubprocessBridge implements SpeakerDiari
 
   protected getSpawnError(): Error {
     return new Error(
-      'Failed to start fluid-audio-bridge. ' +
-      'Build from scripts/fluid-audio: cd scripts/fluid-audio && swift build -c release && ' +
-      'cp .build/release/fluid-audio-bridge /opt/homebrew/bin/'
+      'Failed to start the bundled speaker-identification component. Reinstall the app.'
     )
   }
 
@@ -144,7 +145,7 @@ export class FluidAudioDiarizer extends SubprocessBridge implements SpeakerDiari
 
 /** Find the fluid-audio-bridge binary in well-known paths */
 function findFluidAudioBinary(): string | null {
-  for (const p of FLUID_AUDIO_PATHS) {
+  for (const p of fluidAudioPaths()) {
     if (existsSync(p)) return p
   }
   return null

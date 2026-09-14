@@ -216,7 +216,7 @@ export const store = new Store<AppSettings>({
     showConfidenceIndicator: true,
     audioSource: 'microphone',
     ttsEnabled: false,
-    ttsVoice: 'af_heart',
+    ttsVoice: 'auto',
     ttsOutputDevice: '',
     ttsVolume: 0.8,
     virtualMicEnabled: false,

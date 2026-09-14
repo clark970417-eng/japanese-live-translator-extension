@@ -115,7 +115,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       // Recorded before the repeat check: a later correction may name this timestamp.
       revisions.set(r.timestamp, segment)
       if (revisions.size > 100) revisions.delete(revisions.keys().next().value!)
-      const result = { text: r.sourceText, translated: r.translatedText, targetLanguage: r.targetLanguage, speakerLabel: r.speakerLabel, interim: !!r.isInterim, final: !r.isInterim }
+      const result = { text: r.sourceText, translated: r.translatedText, targetLanguage: r.targetLanguage, speakerLabel: r.speakerLabel, speakerIndex: r.speakerIndex, interim: !!r.isInterim, final: !r.isInterim }
       const shown = JSON.stringify(result)
       if (lastShown.get(segment) === shown) return
       lastShown.delete(segment)
