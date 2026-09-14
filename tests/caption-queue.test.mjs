@@ -37,11 +37,12 @@ test('single-caption mode renders one pair with the same style tokens',async()=>
  t.panel.render([row(9)]);
  assert.equal(t.root.children[0].children.length,1);
  t.panel.apply({fontSize:30,japaneseColor:'#ffcc00',chineseColor:'#00ccff',outlineWidth:3,
-  showOutline:true,backgroundColor:'#000000',backgroundOpacity:40,captionOpacity:80});
+  showOutline:true,outlineColor:'#ff00aa',backgroundColor:'#000000',backgroundOpacity:40,captionOpacity:80});
  assert.equal(t.styles['--jtl-size'],'30px');
  assert.equal(t.styles['--jtl-ja'],'#ffcc00');
  assert.equal(t.styles['--jtl-zh'],'#00ccff');
  assert.equal(t.styles['--jtl-outline'],'3px');
+ assert.equal(t.styles['--jtl-outline-color'],'#ff00aa');
  assert.equal(t.styles['--jtl-bg'],'rgba(0,0,0,0.4)');
  assert.equal(t.styles.opacity,'0.8');
 });
@@ -55,6 +56,8 @@ test('caption text outline can be fully disabled without removing its background
  t.panel.apply({showOutline:true,outlineWidth:3});
  assert.equal(t.styles['--jtl-outline'],'3px');
  assert.equal(t.styles['--jtl-stroke'],'.4px');
+ t.panel.apply({showOutline:true,outlineColor:'invalid',outlineWidth:2});
+ assert.equal(t.styles['--jtl-outline-color'],'#000000');
  t.panel.apply({showOutline:true,outlineWidth:0});
  assert.equal(t.styles['--jtl-outline'],'0px');
  assert.equal(t.styles['--jtl-stroke'],'0px');
