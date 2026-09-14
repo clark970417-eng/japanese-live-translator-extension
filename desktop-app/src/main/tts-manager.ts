@@ -3,6 +3,7 @@ import type { TranslationResult } from '../engines/types'
 import type { VirtualMicManager } from './virtual-mic-manager'
 import { KokoroTTSEngine } from '../engines/tts/KokoroTTSEngine'
 import { createLogger } from './logger'
+import { store } from './store'
 
 const log = createLogger('tts-manager')
 
@@ -111,7 +112,8 @@ export class TTSManager {
       mainWindow?.webContents.send('tts-audio', {
         audio: Array.from(ttsResult.audio),
         sampleRate: ttsResult.sampleRate,
-        volume: this.volume
+        volume: this.volume,
+        outputDevice: store.get('ttsOutputDevice')
       })
 
       // Also route audio to virtual mic for meeting sharing (#515)

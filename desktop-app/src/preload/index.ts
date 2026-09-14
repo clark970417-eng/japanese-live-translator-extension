@@ -160,8 +160,8 @@ contextBridge.exposeInMainWorld('api', {
   ttsSetVolume: (volume: number) => ipcRenderer.invoke('tts-set-volume', volume),
   ttsSetOutputDevice: (deviceId: string) => ipcRenderer.invoke('tts-set-output-device', deviceId),
   ttsGetSettings: () => ipcRenderer.invoke('tts-get-settings'),
-  onTtsAudio: (callback: (data: { audio: number[]; sampleRate: number; volume: number }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: { audio: number[]; sampleRate: number; volume: number }): void => callback(data)
+  onTtsAudio: (callback: (data: { audio: number[]; sampleRate: number; volume: number; outputDevice: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { audio: number[]; sampleRate: number; volume: number; outputDevice: string }): void => callback(data)
     ipcRenderer.on('tts-audio', handler)
     return () => ipcRenderer.off('tts-audio', handler)
   },

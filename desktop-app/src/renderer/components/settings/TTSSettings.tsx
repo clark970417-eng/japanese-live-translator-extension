@@ -76,10 +76,10 @@ export function TTSSettings({ disabled }: TTSSettingsProps): React.JSX.Element {
   // Set up TTS audio playback listener
   useEffect(() => {
     const cleanup = window.api.onTtsAudio((data) => {
-      playTtsAudio(data.audio, data.sampleRate, data.volume, outputDevice)
+      playTtsAudio(data.audio, data.sampleRate, data.volume, data.outputDevice)
     })
     return cleanup
-  }, [outputDevice])
+  }, [])
 
   const handleToggle = useCallback(async (checked: boolean) => {
     setLoading(true)

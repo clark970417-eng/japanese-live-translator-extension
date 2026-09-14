@@ -1,228 +1,100 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Section } from './Section'
-import { selectStyle, sliderLabelStyle, errorContainerStyle, warningContainerStyle } from './shared'
+import { selectStyle, errorContainerStyle, warningContainerStyle } from './shared'
 
-interface VirtualDevice {
-  id: number
-  name: string
-  maxOutputChannels: number
-  defaultSampleRate: number
+interface VirtualMicSettingsProps { disabled: boolean }
+
+const VIRTUAL_DEVICE_PATTERNS = [
+  'blackhole', 'soundflower', 'loopback', 'virtual cable', 'vb-cable',
+  'vb-audio', 'voicemeeter', 'roc virtual', 'existential audio'
+]
+
+export function isVirtualAudioDevice(label: string): boolean {
+  const normalized = label.toLowerCase()
+  return VIRTUAL_DEVICE_PATTERNS.some((pattern) => normalized.includes(pattern))
 }
 
-interface VirtualMicSettingsProps {
-  disabled: boolean
-}
-
-/**
- * Virtual Microphone settings panel (#515).
- * Routes TTS audio to a virtual audio device (e.g. BlackHole) so that
- * meeting apps (Zoom, Teams, Meet) can capture the translated speech.
- */
+/** Route TTS through Chromium/CoreAudio, avoiding unsafe native PortAudio on macOS 26. */
 export function VirtualMicSettings({ disabled }: VirtualMicSettingsProps): React.JSX.Element {
-  const [enabled, setEnabled] = useState(false)
-  const [devices, setDevices] = useState<VirtualDevice[]>([])
-  const [activeDeviceId, setActiveDeviceId] = useState<number | null>(null)
-  const [activeDeviceName, setActiveDeviceName] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [activeDeviceId, setActiveDeviceId] = useState('')
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load status on mount
+  const loadDevices = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [allDevices, settings] = await Promise.all([
+        navigator.mediaDevices.enumerateDevices(), window.api.ttsGetSettings()
+      ])
+      const virtualDevices = allDevices.filter(
+        (device) => device.kind === 'audiooutput' && isVirtualAudioDevice(device.label)
+      )
+      setDevices(virtualDevices)
+      setActiveDeviceId(virtualDevices.some((d) => d.deviceId === settings.outputDevice) ? settings.outputDevice : '')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      setError(`Unable to enumerate virtual audio devices: ${message}`)
+    } finally { setLoading(false) }
+  }, [])
+
   useEffect(() => {
-    window.api.virtualMicGetStatus().then((status) => {
-      setEnabled(status.enabled)
-      setActiveDeviceId(status.activeDeviceId)
-      setActiveDeviceName(status.activeDeviceName)
-      setDevices(status.availableDevices)
-    }).catch((err: unknown) => {
-      const e = err instanceof Error ? err : new Error(String(err))
-      console.warn('[virtual-mic] Failed to get status:', e.message)
-    })
-  }, [])
+    void loadDevices()
+    navigator.mediaDevices.addEventListener?.('devicechange', loadDevices)
+    return () => navigator.mediaDevices.removeEventListener?.('devicechange', loadDevices)
+  }, [loadDevices])
 
-  const refreshDevices = useCallback(() => {
-    window.api.virtualMicRefreshDevices().then((devs) => {
-      setDevices(devs)
-    }).catch((err: unknown) => {
-      const e = err instanceof Error ? err : new Error(String(err))
-      console.warn('[virtual-mic] Failed to refresh devices:', e.message)
-    })
-  }, [])
-
-  const handleEnable = useCallback(async (deviceId: number) => {
+  const selectDevice = useCallback(async (deviceId: string) => {
     setLoading(true)
     setError(null)
     try {
-      const result = await window.api.virtualMicEnable(deviceId)
-      if (result.error) {
-        setError(result.error)
-        setEnabled(false)
-      } else {
-        setEnabled(true)
-        setActiveDeviceId(deviceId)
-        const device = devices.find((d) => d.id === deviceId)
-        setActiveDeviceName(device?.name ?? null)
-      }
+      await window.api.ttsSetOutputDevice(deviceId)
+      setActiveDeviceId(deviceId)
     } catch (err: unknown) {
-      const e = err instanceof Error ? err : new Error(String(err))
-      console.warn('[virtual-mic] Failed to enable:', e.message)
-      setEnabled(false)
-      setError(`Failed to enable virtual mic: ${e.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [devices])
-
-  const handleDisable = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      await window.api.virtualMicDisable()
-      setEnabled(false)
-      setActiveDeviceId(null)
-      setActiveDeviceName(null)
-    } catch (err: unknown) {
-      const e = err instanceof Error ? err : new Error(String(err))
-      console.warn('[virtual-mic] Failed to disable:', e.message)
-      setError(`Failed to disable virtual mic: ${e.message}`)
-    } finally {
-      setLoading(false)
-    }
+      const message = err instanceof Error ? err.message : String(err)
+      setError(`Unable to route translated speech: ${message}`)
+    } finally { setLoading(false) }
   }, [])
 
-  const handleToggle = useCallback(async (checked: boolean) => {
-    if (checked) {
-      // Enable with the first available device, or the previously active one
-      const targetId = activeDeviceId ?? devices[0]?.id
-      if (targetId == null) {
-        setError('No virtual audio device found. Install BlackHole or a similar virtual audio driver.')
-        return
-      }
-      await handleEnable(targetId)
-    } else {
-      await handleDisable()
-    }
-  }, [activeDeviceId, devices, handleEnable, handleDisable])
-
-  const handleDeviceChange = useCallback(async (deviceIdStr: string) => {
-    const deviceId = parseInt(deviceIdStr, 10)
-    if (isNaN(deviceId)) return
-    await handleEnable(deviceId)
-  }, [handleEnable])
-
-  const noDevices = devices.length === 0
+  const enabled = activeDeviceId !== ''
+  const activeDevice = devices.find((device) => device.deviceId === activeDeviceId)
 
   return (
-    <Section label="Virtual Microphone (Meeting Sharing)" helpText="Routes translated speech to a virtual audio device. Requires BlackHole (free) to be installed.">
-      {/* Enable/disable toggle */}
-      <label style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '13px',
-        color: '#94a3b8',
-        cursor: disabled || loading ? 'default' : 'pointer',
-        marginBottom: '8px'
-      }}>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => handleToggle(e.target.checked)}
-          disabled={disabled || loading || noDevices}
-          aria-label="Enable virtual microphone output"
-        />
-        <span>
-          {loading
-            ? 'Connecting...'
-            : enabled
-              ? `Routing TTS to: ${activeDeviceName ?? 'virtual device'}`
-              : 'Route translated speech to virtual microphone'
-          }
-        </span>
+    <Section label="Virtual Microphone (Meeting Sharing)" helpText="Routes translated speech directly to BlackHole through macOS CoreAudio.">
+      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#94a3b8', cursor: disabled || loading ? 'default' : 'pointer', marginBottom: '8px' }}>
+        <input type="checkbox" checked={enabled}
+          onChange={(event) => void selectDevice(event.target.checked ? (devices[0]?.deviceId ?? '') : '')}
+          disabled={disabled || loading || devices.length === 0} aria-label="Enable virtual microphone output" />
+        <span>{loading ? 'Detecting virtual audio devices...' : enabled
+          ? `Virtual microphone ready: ${activeDevice?.label ?? 'virtual device'}`
+          : 'Route translated speech to a virtual microphone'}</span>
       </label>
 
-      {/* Error message */}
-      {error && (
-        <div role="alert" style={errorContainerStyle}>
-          {error}
-        </div>
+      {error && <div role="alert" style={errorContainerStyle}>{error}</div>}
+
+      {devices.length > 1 && (
+        <select value={activeDeviceId} onChange={(event) => void selectDevice(event.target.value)}
+          style={{ ...selectStyle, marginBottom: '8px' }} disabled={disabled || loading} aria-label="Virtual audio device">
+          <option value="">Disabled</option>
+          {devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}
+        </select>
       )}
 
-      {/* Device selector — shown when enabled or when devices exist */}
-      {enabled && devices.length > 1 && (
-        <>
-          <div style={sliderLabelStyle}>Virtual Audio Device</div>
-          <select
-            value={activeDeviceId ?? ''}
-            onChange={(e) => handleDeviceChange(e.target.value)}
-            style={{ ...selectStyle, marginBottom: '8px' }}
-            disabled={disabled || loading}
-            aria-label="Virtual audio device"
-          >
-            {devices.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({d.defaultSampleRate / 1000}kHz)
-              </option>
-            ))}
-          </select>
-        </>
-      )}
+      {enabled && <div style={{ fontSize: '12px', color: '#4ade80', marginBottom: '6px' }}>
+        ● Ready — select &quot;{activeDevice?.label ?? 'BlackHole 2ch'}&quot; as the microphone in Discord, OBS, Zoom or Meet.
+      </div>}
 
-      {/* Status indicator */}
-      {enabled && (
-        <div style={{
-          fontSize: '12px',
-          color: '#4ade80',
-          marginBottom: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}>
-          <span style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: '#4ade80',
-            display: 'inline-block'
-          }} />
-          Active — select &quot;{activeDeviceName}&quot; as microphone in Zoom/Teams/Meet
-        </div>
-      )}
+      {!loading && devices.length === 0 && <div style={warningContainerStyle}>
+        No virtual output is visible. Allow microphone access, then press Refresh Devices.
+      </div>}
 
-      {/* No devices warning */}
-      {noDevices && (
-        <div style={warningContainerStyle}>
-          No virtual audio device detected. Install{' '}
-          <a
-            href="https://existential.audio/blackhole/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#93c5fd', textDecoration: 'underline' }}
-          >BlackHole</a>{' '}
-          (free, open-source) to enable this feature.
-        </div>
-      )}
-
-      {/* Refresh button */}
-      <button
-        onClick={refreshDevices}
-        disabled={disabled || loading}
-        style={{
-          fontSize: '12px',
-          color: '#94a3b8',
-          background: 'transparent',
-          border: '1px solid #334155',
-          borderRadius: '4px',
-          padding: '4px 10px',
-          cursor: disabled || loading ? 'default' : 'pointer',
-          marginBottom: '6px'
-        }}
-      >
+      <button onClick={() => void loadDevices()} disabled={disabled || loading}
+        style={{ fontSize: '12px', color: '#94a3b8', background: 'transparent', border: '1px solid #334155', borderRadius: '4px', padding: '4px 10px', cursor: disabled || loading ? 'default' : 'pointer', marginBottom: '6px' }}>
         Refresh Devices
       </button>
-
       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-        Routes translated TTS audio to a virtual audio device so meeting participants
-        can hear translations. Requires a virtual audio driver like BlackHole (2ch).
+        Uses Chromium audio routing instead of PortAudio, including on macOS 26.
       </div>
     </Section>
   )

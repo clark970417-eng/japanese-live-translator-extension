@@ -73,7 +73,7 @@ export interface ElectronAPI {
   ttsSetVolume: (volume: number) => Promise<void>
   ttsSetOutputDevice: (deviceId: string) => Promise<void>
   ttsGetSettings: () => Promise<{ enabled: boolean; voice: string; outputDevice: string; volume: number }>
-  onTtsAudio: (callback: (data: { audio: number[]; sampleRate: number; volume: number }) => void) => (() => void)
+  onTtsAudio: (callback: (data: { audio: number[]; sampleRate: number; volume: number; outputDevice: string }) => void) => (() => void)
 
   // Virtual Mic (#515)
   virtualMicGetStatus: () => Promise<{
