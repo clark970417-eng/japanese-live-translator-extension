@@ -56,10 +56,28 @@ first and rejected the second. Raw data is in
 `tests/results/stage10-fork-393.jsonl` and
 `tests/results/stage10-upstream-393match.jsonl`.
 
+## Installed application and Opera smoke run
+
+The signed 3.9.3 application in `/Applications` was configured for the intended
+low-latency path: MLX Whisper, HY-MT1.5 and an 800 ms streaming interval. The
+companion handshake reported `mlx-whisper + hunyuan-mt-15`. Three installed-app
+contention trials completed with Chinese-to-Japanese page work running beside
+Japanese-to-Chinese captions. The median audio-window round trip was 1417 ms
+and the maximum was 1885 ms. No caption was blank or reordered. Both silence
+and music controls produced no text, Stop emitted no late captions, and a new
+request after Stop succeeded.
+
+Opera GX now loads extension version 3.9.3 from this repository. Its service
+worker is active and the YouTube, TikTok and Bilibili permissions are present.
+The selector fallbacks are covered by the extension test suite; posting a live
+chat message was intentionally not part of the smoke run.
+
+Raw installed-app results are in `tests/results/installed-393-smoke.jsonl`.
+
 ## Remaining limits
 
 One fork utterance still had a 7.6-second final-delay outlier. Translation
-quality is not scored by the Japanese recognition references, and live website
-DOM behavior still needs an installed Opera smoke run after reload. The evidence
-supports better latency on this corpus, not universal superiority for every
-voice, stream or optional engine.
+quality is not scored by the Japanese recognition references. Live-site markup
+can change after release even with semantic selector fallbacks. The evidence
+supports better latency on this corpus and the tested Apple M5/Opera setup, not
+universal superiority for every voice, stream, computer or optional engine.
