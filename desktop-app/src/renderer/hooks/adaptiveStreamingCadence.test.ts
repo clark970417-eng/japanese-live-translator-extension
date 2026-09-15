@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { getAdaptiveStreamingDelay } from './adaptiveStreamingCadence'
 
 describe('getAdaptiveStreamingDelay', () => {
-  it('gets the first hypothesis out within 600ms', () => {
-    expect(getAdaptiveStreamingDelay(800, 0)).toBe(600)
+  it('gets the first hypothesis out within 500ms', () => {
+    expect(getAdaptiveStreamingDelay(800, 0)).toBe(500)
   })
 
   it('uses the selected cadence for an ordinary utterance', () => {

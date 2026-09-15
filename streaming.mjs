@@ -45,7 +45,11 @@ export class SpeechWindows {
    this.pre.push(frame);while(this.pre.length>16)this.pre.shift();
    if(this.onset<1024)return null;
    this.active=true;this.id++;this.utterance++;this.parts=this.pre.slice();this.samples=this.parts.reduce((a,b)=>a+b.length,0);
-   this.start=this.clock-this.samples;this.speechStart=this.clock-this.onset;this.voiced=this.onset;this.confident=this.onset;this.silent=0;this.lastEmission=this.clock;this.overlap=false;
+   this.start=this.clock-this.samples;this.speechStart=this.clock-this.onset;this.voiced=this.onset;this.confident=this.onset;this.silent=0;
+   // The first cadence starts at acoustic onset, not after VAD activation.
+   // Otherwise the two-frame onset confirmation is added to the configured
+   // preview delay and a nominal 500 ms preview arrives closer to 600 ms.
+   this.lastEmission=this.speechStart;this.overlap=false;
    return null;
   }
   this.parts.push(frame);this.samples+=n;
@@ -54,8 +58,14 @@ export class SpeechWindows {
   if(probability>=.30)this.confident+=n;
   this.silent=speech?0:this.silent+n;
   const ended=this.silent>=9216, cut=this.samples>=(this.maxSamples||80000);
+  const speechSamples=this.clock-this.speechStart;
+  // Clear speech can produce a useful rolling hypothesis at 500 ms. Keep the
+  // former 650 ms guard for weak/noisy input, where an early Whisper pass tends
+  // to create unstable one-token captions.
+  const confidentRatio=this.voiced?this.confident/this.voiced:0;
+  const previewReady=speechSamples>=(confidentRatio>=.75?8000:10400);
   let job=null;
-  if(this.voiced>=3200 && ((ended||cut) || (this.samples>=10400&&this.clock-this.lastEmission>=interval*16000))){
+  if(this.voiced>=3200 && ((ended||cut) || (previewReady&&this.clock-this.lastEmission>=interval*16000))){
    const audio=new Float32Array(this.samples);let at=0;for(const part of this.parts){audio.set(part,at);at+=part.length;}
    job={id:this.id,utteranceId:this.utterance,utteranceEnd:ended,audio,final:ended||cut,overlap:this.overlap,voicedSeconds:this.voiced/16000,speechSeconds:this.confident/16000,sampleCount:this.clock,startSample:this.start,endSample:this.clock,speechStartSample:this.speechStart};
    this.lastEmission=this.clock;

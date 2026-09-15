@@ -21,10 +21,13 @@ test('non-speech never emits, including loud non-speech; short speech ends promp
  for(let i=0;i<20;i++){const j=w.push(frame,.01);if(j)jobs.push(j);}
  assert.ok(jobs.at(-1).final);assert.ok(jobs.at(-1).voicedSeconds>=.4);
 });
-test('first rolling hypothesis is eligible near 650ms after speech starts',()=>{
- const w=new SpeechWindows(),frame=new Float32Array(512).fill(.2);let first=null;
- for(let i=0;i<30&&!first;i++)first=w.push(frame,.9,.55);
- assert.ok(first);assert.equal(first.final,false);assert.ok(first.audio.length/16000<.85);
+test('clear speech gets a rolling hypothesis near 500ms while weak speech keeps the accuracy guard',()=>{
+ const frame=new Float32Array(512).fill(.2),clear=new SpeechWindows();let first=null,frames=0;
+ for(;frames<30&&!first;frames++)first=clear.push(frame,.9,.5);
+ assert.ok(first);assert.equal(first.final,false);assert.ok(frames*512/16000<=.55);
+ const weak=new SpeechWindows();let guarded=null,weakFrames=0;
+ for(;weakFrames<30&&!guarded;weakFrames++)guarded=weak.push(frame,weakFrames<2?.9:.2,.5);
+ assert.ok(guarded);assert.ok(weakFrames*512/16000>=.64);
 });
 test('continuous speech bounded with real overlapping samples and increasing times',()=>{
  const w=new SpeechWindows(),jobs=[];

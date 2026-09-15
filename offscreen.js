@@ -58,7 +58,7 @@ function drainVad(s){
  if(s.vadBusy||!s.vadReady)return;
  const audio=s.vadQueue.shift();if(!audio){flushVad(s);return;}
  s.vadBusy=true;s.vadTimeout=setTimeout(()=>{if(active===s){send(s,'speech-error',{error:'人聲偵測無回應，請重新開始'});stop();}},5000);
- s.vad.postMessage({type:'audio',audio,epoch:s.epoch,interval:Math.max(.55,Math.min(1.2,s.decodeMs/1000))},[audio.buffer]);
+ s.vad.postMessage({type:'audio',audio,epoch:s.epoch,interval:Math.max(.5,Math.min(1.2,s.decodeMs/1000))},[audio.buffer]);
 }
 function sample(s,data){
  if(active!==s||s.inputFlushed)return;
@@ -133,7 +133,7 @@ function initializeVad(s){
  s.vad.postMessage({type:'init',epoch:s.epoch,origin:Date.now(),rate:s.context.sampleRate,desktop:s.desktop});
 }
 async function start(m){
- stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,restartTimer:null,frames:0,level:0,decodeMs:650,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop',coalesceFinals:Boolean(m.recording)&&m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
+ stop();const s=active={session:m.session,epoch:0,ready:false,vadReady:false,restarts:0,restartTimer:null,frames:0,level:0,decodeMs:500,recording:Boolean(m.recording),queue:new DecodeQueue({retainFinals:Boolean(m.recording),retainInterim:m.mode==='desktop',coalesceFinals:Boolean(m.recording)&&m.mode==='desktop'}),vadQueue:[],filter:new SpeechResultFilter(),agreement:new Agreement(),metrics:new Measurements(),expired:0,rejected:0,overruns:0};
  try{
   s.desktop=m.mode==='desktop';
   s.stream=await navigator.mediaDevices.getUserMedia({audio:{mandatory:{chromeMediaSource:'tab',chromeMediaSourceId:m.streamId}},video:false});

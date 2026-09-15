@@ -4,6 +4,7 @@ This directory contains historical validation reports and measured evidence from
 
 ## Current release evidence
 
+- [3.9.8](RETEST-3.9.8.md)
 - [3.9.5](RETEST-3.9.5.md)
 - [3.9.4](RETEST-3.9.4.md)
 - [3.9.3](RETEST-3.9.3.md)
