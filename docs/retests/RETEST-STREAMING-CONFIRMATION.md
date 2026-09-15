@@ -21,7 +21,7 @@ cannot establish improvement over previous runs under different machine load.
 They bypass browser capture, VAD and rendering. Final translation still adds a
 redundant expression of thanks, so fidelity is not fully resolved.
 
-[Raw events](tests/results/stage7-clause-regression.json).
+[Raw events](../../tests/results/stage7-clause-regression.json).
 ## 3.7.5 follow-up
 
 Normal Japanese clause translation now uses sentence punctuation instead of case
@@ -36,7 +36,7 @@ ranged from 1.655 to 1.850 seconds (median 1.7625); final response ranged from
 11.292 to 12.193 seconds. Translation still includes redundant thanks. These
 numbers do not constitute a matched upstream comparison or a long-duration test.
 
-[Six-round raw events](tests/results/stage7-sentence-boundary.json).
+[Six-round raw events](../../tests/results/stage7-sentence-boundary.json).
 
 Desktop 3.7.5 was packaged, installed and relaunched. Packaged and installed
 app.asar SHA-256 matched:

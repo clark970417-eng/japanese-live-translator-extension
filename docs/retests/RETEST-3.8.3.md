@@ -19,7 +19,7 @@ Six Japanese sentences were tested with the actual HY-MT1.5-1.8B worker, using d
 | Provisional output enabled | 96.7 ms | 249.1 ms |
 | Exact completed cache hit | 1.3 ms | 1.3 ms |
 
-All final strings matched their corresponding completed reference. A cache hit applies only to previously translated identical text. Four-character provisional output can be an incomplete word or phrase. These figures exclude capture, VAD, and actual recognition and must not be presented as total livestream latency. [Raw trials](tests/results/stage11-streamed.jsonl).
+All final strings matched their corresponding completed reference. A cache hit applies only to previously translated identical text. Four-character provisional output can be an incomplete word or phrase. These figures exclude capture, VAD, and actual recognition and must not be presented as total livestream latency. [Raw trials](../../tests/results/stage11-streamed.jsonl).
 
 ## Translation-quality experiments
 
@@ -32,13 +32,13 @@ No prompt or default-model change was accepted:
 - Removing the colloquial-style request improved some outputs but retained material errors and worsened a sentence about telling someone their nose hair was showing.
 - 7B improved some phrasing and semantics but was substantially slower in these text probes; it still omitted an incomplete contrast in one concise-prompt output. It was not selected as the default.
 
-Inputs: [semantic cases](tests/fixtures/translation-semantics-stage11.json). Outputs: [1.8B concise](tests/results/stage11-prompts.jsonl), [1.8B neutral](tests/results/stage11-neutral.jsonl), [7B](tests/results/stage11-prompts-7b.jsonl), [neutral corpus comparison](tests/results/stage11-neutral-corpus.jsonl). The scripts record raw output for review and do not claim automated semantic correctness.
+Inputs: [semantic cases](../../tests/fixtures/translation-semantics-stage11.json). Outputs: [1.8B concise](../../tests/results/stage11-prompts.jsonl), [1.8B neutral](../../tests/results/stage11-neutral.jsonl), [7B](../../tests/results/stage11-prompts-7b.jsonl), [neutral corpus comparison](../../tests/results/stage11-neutral-corpus.jsonl). The scripts record raw output for review and do not claim automated semantic correctness.
 
 ## Verification status
 
 - Desktop unit tests: 534 passed; TypeScript check passed before packaging.
 - Isolated desktop UI: 13 passed, 1 audio-start test skipped.
-- Repeated real-audio replay: 21 segments over 211.79 seconds including initialization, two restarts, two silent controls, no empty final strings or pipeline errors. First Chinese median/max was 2,296/5,230 ms; final delay after audio end median/max was 2,685/6,865 ms. Package construction, tests, and ordinary computer use overlapped this run. These results show remaining variability; they are not a matched latency improvement claim. [Raw replay](tests/results/stage11-continuous.jsonl).
+- Repeated real-audio replay: 21 segments over 211.79 seconds including initialization, two restarts, two silent controls, no empty final strings or pipeline errors. First Chinese median/max was 2,296/5,230 ms; final delay after audio end median/max was 2,685/6,865 ms. Package construction, tests, and ordinary computer use overlapped this run. These results show remaining variability; they are not a matched latency improvement claim. [Raw replay](../../tests/results/stage11-continuous.jsonl).
 - Installed desktop 3.8.3 passed archive/runtime-byte, renderer-asset, signature, and native-addon portability checks. Opera manager and popup both confirmed 3.8.3 after reload; all 26 installed extension files matched. A separate Opera window played Japanese video without native captions and displayed Japanese/Chinese pairs. An early 444-block snapshot showed processing P50/P95 797/1,213 ms, queue P50/P95 78/510 ms, no dropped/resynchronized audio, and zero queued segments. Four-pair content turnover was subsequently observed, Stop returned the popup to ready, and the test tab was closed. This snapshot is not a full-session latency distribution, and visible translations still contain semantic errors.
 
 High-load end-to-end latency, broader semantic quality, and durable raw-audio recovery remain open. Earlier limitations in [3.8.2](RETEST-3.8.2.md) and [3.8.1](RETEST-3.8.1.md) remain applicable.

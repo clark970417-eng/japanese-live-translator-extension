@@ -16,7 +16,7 @@ The three model runs were sequential while the user continued normal computer us
 | Hy-MT2 1.8B | 228 / 335 ms | 389 / 637 ms |
 | Hy-MT2 7B | 1123 / 1971 ms | 1090 / 2049 ms |
 
-P95 uses nearest rank. All nine runs completed: 330 sentence trials, no empty output or request error. Successful completion is not a correctness score. [Machine-readable timing summary](tests/results/stage13-summary.json) links the raw filenames.
+P95 uses nearest rank. All nine runs completed: 330 sentence trials, no empty output or request error. Successful completion is not a correctness score. [Machine-readable timing summary](../../tests/results/stage13-summary.json) links the raw filenames.
 
 ## Semantic findings and decisions
 
@@ -39,7 +39,7 @@ A dedicated Opera GX window was used; the user's work windows were left open. Th
 
 A second dedicated window tested the installed extension again while six draft/translation requests ran in another tab. All six returned and the original video continued producing new captions. Two general local Chinese-to-Japanese drafts took 589 and 653 ms; the 21 ms curated phrase and 1 ms short translation must not be presented as general model inference performance.
 
-The later rolling popup snapshot showed 2,343 audio blocks, processing P50/P95 787/1258 ms, queue P50/P95 31/707 ms, zero queued segments, no dropped audio and no audio resynchronization. The latest reported audio-end-to-Chinese value was 1628 ms; it is not a session median. The desktop-mode “translation 0 ms” field is not evidence of instantaneous translation. [Observed results](tests/results/stage13-browser.json).
+The later rolling popup snapshot showed 2,343 audio blocks, processing P50/P95 787/1258 ms, queue P50/P95 31/707 ms, zero queued segments, no dropped audio and no audio resynchronization. The latest reported audio-end-to-Chinese value was 1628 ms; it is not a session median. The desktop-mode “translation 0 ms” field is not evidence of instantaneous translation. [Observed results](../../tests/results/stage13-browser.json).
 
 Visible semantic problems remained: いけんじゃない? became 不是吧？ in a likely positive context, ヒル became 山獵, and a draft's possible inability became definite inability. Caption continuity passed this smoke test; translation correctness did not.
 

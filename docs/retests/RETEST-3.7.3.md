@@ -1,7 +1,7 @@
 # Desktop 3.7.3 and extension 3.7.4 verification
 
 September 11, 2026. Staged changes and earlier baseline results are documented in
-[OPTIMIZATION-PROGRESS.md](OPTIMIZATION-PROGRESS.md).
+[optimization progress](../../OPTIMIZATION-PROGRESS.md).
 
 ## Controlled upstream comparison
 
@@ -28,11 +28,11 @@ Both had wording/meaning issues. Original added a welcome-to-event clause; the
 fork expanded thanks-for-coming into thanks-for-participating and extra thanks.
 Upstream emitted a thank-you caption for silent PCM; the fork returned no text.
 
-[Original raw results](tests/results/stage5-upstream-ac.json) ·
-[Fork raw results](tests/results/stage5-fork-ac.json)
+[Original raw results](../../tests/results/stage5-upstream-ac.json) ·
+[Fork raw results](../../tests/results/stage5-fork-ac.json)
 
-Earlier runs are retained rather than discarded: [original](tests/results/stage5-upstream.json),
-[fork](tests/results/stage5-fork.json), [repeat](tests/results/stage5-fork-repeat.json).
+Earlier runs are retained rather than discarded: [original](../../tests/results/stage5-upstream.json),
+[fork](../../tests/results/stage5-fork.json), [repeat](../../tests/results/stage5-fork-repeat.json).
 One fork run included approximately 448 seconds of system sleep, confirmed by
 macOS power logs ending at 17:39:20, and cannot represent normal inference latency.
 The subsequent repeat also ran much slower; its cause was not isolated. These

@@ -108,7 +108,7 @@ Latest verification before this handoff:
 - Opera manager and popup showed 3.8.5
 - Stop returned the live caption session to Ready with zero pending segments
 
-Read `RETEST-3.8.4.md`, `RETEST-3.8.5.md`, `RETEST-STAGE13.md`, `ACCEPTANCE.md`, and `COMPARISON-LIVETRANSLATE.md` before claiming a result. Raw measurements are under `tests/results/`.
+Read `docs/retests/RETEST-3.8.4.md`, `docs/retests/RETEST-3.8.5.md`, `docs/retests/RETEST-STAGE13.md`, `ACCEPTANCE.md`, and `COMPARISON-LIVETRANSLATE.md` before claiming a result. Raw measurements are under `tests/results/`.
 
 ## Immediate problem to solve next
 

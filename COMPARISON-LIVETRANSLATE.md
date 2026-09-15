@@ -58,7 +58,7 @@ held constant, and capture, VAD, browser messaging and rendering were bypassed.
 
 Raw evidence: [upstream](tests/results/stage8-upstream-ready-matched.jsonl),
 [fork](tests/results/stage8-fork-context-isolated.jsonl). Failed setup runs and
-rejected experiments are described in [the revision report](RETEST-3.8.0.md).
+rejected experiments are described in [the revision report](docs/retests/RETEST-3.8.0.md).
 
 ## Historical awake A/B results
 
@@ -138,8 +138,8 @@ support and release publishing are all listed as non-goals in
 ## What this round changed, and what it does not yet claim
 
 The latency and recognition numbers earlier in this file were measured before
-the changes in `RETEST-CONTENTION.md`, `RETEST-CONTINUITY.md`,
-`RETEST-ACCURACY.md` and `RETEST-DRAFTS.md`. They are **not** restated as
+the changes in `docs/retests/RETEST-CONTENTION.md`, `docs/retests/RETEST-CONTINUITY.md`,
+`docs/retests/RETEST-ACCURACY.md` and `docs/retests/RETEST-DRAFTS.md`. They are **not** restated as
 current. A matched fork-versus-upstream rerun on the same corpus is required
 before any performance verdict in this section is updated, and it must run while
 nothing else holds the inference worker.
@@ -234,10 +234,10 @@ a 16 GB machine, and neither grew across 20 trials.
 the fork changed the prompt and uses deterministic decoding, so outputs can
 differ. This corpus carries Japanese references for recognition and no Chinese
 references, so nothing here scores translation. The fork's own frozen holdout in
-`RETEST-ACCURACY.md` measures the fork's translator only, and it records six
+`docs/retests/RETEST-ACCURACY.md` measures the fork's translator only, and it records six
 genuine failures that remain.
 
-**Recovery and long sessions: not comparable.** `RETEST-SOAK.md` soaked the fork
+**Recovery and long sessions: not comparable.** `docs/retests/RETEST-SOAK.md` soaked the fork
 for 60 minutes and found 53 healthy minutes followed by an unexplained host
 death. Upstream was not soaked, so no comparison exists.
 
@@ -257,7 +257,7 @@ valid timing: first Chinese median/p95 was 1245/2103 ms against upstream
 recognition transcripts remain at 8.17% CER. The twentieth upstream latency row
 is excluded because its monotonic clock jumped by about sixteen minutes during
 one short file. Full conditions, raw paths and the recovery run are documented
-in [RETEST-3.9.3.md](RETEST-3.9.3.md).
+in [docs/retests/RETEST-3.9.3.md](docs/retests/RETEST-3.9.3.md).
 
 The older feature table above is historical. Versions 3.9.0–3.9.2 subsequently
 added file import with bundled FFmpeg fallback, speaker labels, TTS, CoreAudio

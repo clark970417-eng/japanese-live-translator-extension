@@ -15,10 +15,10 @@ The installed copies are **not** the current source, and both are labelled 3.8.6
 | `~/Downloads/youtube-translator-extension` | synced at the 3.8.6 install | differs from source only in `native-client.mjs` |
 
 Changes in source but **not** installed: the request-subject repair
-(`RETEST-DIRECTIVE.md`), interrupting a cold large-model draft
-(`RETEST-COLD-DRAFT.md`), repeated-caption suppression
-(`RETEST-CAPTION-REPEATS.md`), and the reconnect and stale-port fixes
-(`RETEST-FAULT-INJECTION.md`).
+(`docs/retests/RETEST-DIRECTIVE.md`), interrupting a cold large-model draft
+(`docs/retests/RETEST-COLD-DRAFT.md`), repeated-caption suppression
+(`docs/retests/RETEST-CAPTION-REPEATS.md`), and the reconnect and stale-port fixes
+(`docs/retests/RETEST-FAULT-INJECTION.md`).
 
 Choose one and write it here before starting:
 
@@ -92,7 +92,7 @@ clear note is more useful than a guessed Pass.
 | --- | --- | --- | --- |
 | S2.1 | Find and play real speech covering: quiet speech, fast speech, speech over background music, pauses, a startled `あー！`, and repeated `やば…`. Note the video and timestamps. | Never stuck at "listening" for more than 10 s while someone speaks; short utterances appear; exclamation and repetition appear without flooding duplicate captions. | ☐ Pass ☐ Fail ☐ Not run |
 | S2.2 | Play at least 60 s with music and no speech, such as a stream intro. **Health dump**. | No caption text appears; in particular no `ご視聴ありがとうございました` or closing-thanks line. | ☐ Pass ☐ Fail ☐ Not run |
-| S2.3 | Play a streamer genuinely saying `ご視聴ありがとうございました` on its own. | Record what appears. The shipped exact block is expected to drop it; `RETEST-OUTRO-CONTEXT.md` explains why and what would fix it. This item documents, it does not gate. | Observed: ________ |
+| S2.3 | Play a streamer genuinely saying `ご視聴ありがとうございました` on its own. | Record what appears. The shipped exact block is expected to drop it; `docs/retests/RETEST-OUTRO-CONTEXT.md` explains why and what would fix it. This item documents, it does not gate. | Observed: ________ |
 
 ### Stage 5: caption behavior and controls
 

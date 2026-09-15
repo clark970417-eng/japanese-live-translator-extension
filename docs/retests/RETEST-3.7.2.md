@@ -38,8 +38,8 @@ can benefit from cache; the first round also improved. Final translation average
 12.02 seconds before and 12.00 seconds after: final-sentence latency is essentially
 unchanged. These measurements preceded the application activity assertion.
 
-[Before events](tests/results/latency-371-baseline.json),
-[after events](tests/results/latency-372-fast.json).
+[Before events](../../tests/results/latency-371-baseline.json),
+[after events](../../tests/results/latency-372-fast.json).
 
 ## Sustained engine exercise
 
@@ -62,7 +62,7 @@ Those figures exclude Python/Metal allocations and do not prove an absence of al
 memory leaks. The existing quantized-context initialization fallback was exercised;
 it recovered without a fatal event. This run preceded the final activity assertion.
 
-[Raw sustained events](tests/results/latency-372-soak.json).
+[Raw sustained events](../../tests/results/latency-372-soak.json).
 
 ## Checks and browser acceptance
 
@@ -76,7 +76,7 @@ it recovered without a fatal event. This run preceded the final activity asserti
 - Five additional rounds with the activity assertion all produced final captions.
   First Chinese was 4.47–5.16 seconds under the then-current workload; this does
   not establish a speed improvement from the assertion.
-  [Activity assertion run](tests/results/latency-372-guard.json).
+  [Activity assertion run](../../tests/results/latency-372-guard.json).
 - The installed Opera capture test completed six consecutive fixture segments in
   one 79.33-second audio stream with 2.5-second gaps. It retained four caption
   groups and registered six first-Japanese events. Storage diagnostics confirmed
@@ -102,7 +102,7 @@ these cases. Japanese drafts generally used polite endings. Two important qualit
 limitations remain: the thanks-for-coming sentence was awkward in Chinese, and
 one Chinese future inability-to-stay sentence became past tense in Japanese.
 This small manual spot check is not an accuracy benchmark and does not establish
-natural conversational quality for all inputs. [Raw outputs](tests/results/translation-372-quality.json).
+natural conversational quality for all inputs. [Raw outputs](../../tests/results/translation-372-quality.json).
 
 ## Scope
 

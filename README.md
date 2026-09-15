@@ -1,4 +1,4 @@
-> Latest incremental validation: [3.8.5 bounded draft repair retest](RETEST-3.8.5.md). The broader latency and translation-quality overhaul remains in progress.
+> Latest desktop validation: [3.9.5 live latency and confidence-routing verification](docs/retests/RETEST-3.9.5.md).
 
 # Japanese Live Caption Translator
 
@@ -12,7 +12,7 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
-Current validation: [3.8.5 verification and remaining checks](RETEST-3.8.5.md).
+Current validation: [3.9.5 verification and remaining checks](docs/retests/RETEST-3.9.5.md).
 
 ## Project overview
 
@@ -88,11 +88,11 @@ The current revision passes 63 extension tests and 530 desktop tests. An isolate
 desktop interface run passed 13 checks; its audio-start check was not run. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See
-[3.8 verification](RETEST-3.8.0.md) and the [upstream comparison](COMPARISON-LIVETRANSLATE.md).
+[3.8 verification](docs/retests/RETEST-3.8.0.md) and the [upstream comparison](COMPARISON-LIVETRANSLATE.md).
 
 The end-to-end browser fixture at `tests/capture.html` uses the production capture
 and caption path with a 10.7-second synthetic Japanese recording. Historical
-browser-only measurements are recorded in [RETEST-3.4.8.md](RETEST-3.4.8.md);
+browser-only measurements are recorded in [docs/retests/RETEST-3.4.8.md](docs/retests/RETEST-3.4.8.md);
 they should not be interpreted as measurements of the new desktop backend.
 
 ## Limitations
@@ -100,7 +100,7 @@ they should not be interpreted as measurements of the new desktop backend.
 - Recognition quality can decrease with music, overlapping speakers, proper names, noise, and very short utterances.
 - Translation quality and latency depend on model choice, available compute, and, for network providers, service and network conditions.
 - Picture-in-picture windows cannot host a normal page content-script overlay.
-- A 60.02-minute repeated-speech stress run completed 329 trials and 32 restarts without empty final strings, but had substantial high-load latency spikes. Diverse hours-long livestreams and all optional engines remain unverified. See [the verification report](RETEST-3.8.0.md).
+- A 60.02-minute repeated-speech stress run completed 329 trials and 32 restarts without empty final strings, but had substantial high-load latency spikes. Diverse hours-long livestreams and all optional engines remain unverified. See [the verification report](docs/retests/RETEST-3.8.0.md).
 - The model has not been fine-tuned for this project.
 
 ## Third-party components
