@@ -135,6 +135,16 @@ test('a failed live-chat translation shows retry state and retries once',async()
  assert.equal(node.lines[0].textContent,'中：請再翻譯一次');
 });
 
+test('a second live-chat failure stops instead of creating a retry loop',async()=>{
+ const t=setup();await settle();const node=t.makeNode('翻訳が失敗するコメントです');
+ t.chat.push(node);t.scan();await settle();
+ t.requests[0].reply({ok:false,error:'first'});await settle();
+ t.requests[1].reply({ok:false,error:'second'});await settle();
+ assert.equal(node.lines[0].textContent,'中：翻譯失敗，請稍後重新整理再試');
+ t.scan();t.scan();await settle();
+ assert.equal(t.requests.length,2);
+});
+
 test('YouTube live chat survives selector changes through its semantic log region',async()=>{
  const t=setup(true);await settle();
  const node=t.makeNode('新しい配信コメントです');node.children=[];node.querySelectorAll=()=>[];node.closest=()=>null;

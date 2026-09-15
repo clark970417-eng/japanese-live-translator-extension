@@ -107,6 +107,35 @@ it('starts the first Chinese translation without waiting for another recognition
   } finally {processor.reset();vi.useRealTimers()}
 })
 
+it('SimulMT translates the newest Japanese revision that arrived while it was busy', async () => {
+  let source = '最初です', finish!: (value: string) => void
+  const calls: string[] = [], updates: any[] = []
+  const translateSimulMt = vi.fn((text: string) => {
+    calls.push(text)
+    if (calls.length === 1) return new Promise<string>(resolve => { finish = resolve })
+    return Promise.resolve('最新的中文')
+  })
+  const emitter = new EventEmitter(); emitter.on('interim-result', result => updates.push(result))
+  const processor = new StreamingProcessor({
+    emitter, agreement: new LocalAgreement(), contextBuffer: new ContextBuffer(),
+    getSTTEngine: () => ({processAudio: async () => ({text: source, language: 'ja'})}),
+    getTranslator: () => ({translate: async () => '', translateSimulMt}), getGlossary: () => [],
+    getSimulMtConfig: () => ({enabled: true, waitK: 1}), resolveTargetLanguage: () => 'zh',
+    incrementProcessing() {}, decrementProcessing() {}, getGeneration: () => 1
+  } as unknown as StreamingDeps)
+  try {
+    await processor.processStreaming(new Float32Array(16000), 16000)
+    expect(calls).toEqual(['最初で'])
+    source = '最初です。続きがあります'
+    await processor.processStreaming(new Float32Array(16000), 16000)
+    expect(calls).toHaveLength(1)
+    finish('最初的中文'); await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
+    expect(calls.at(-1)).toContain('続き')
+    await Promise.resolve(); await Promise.resolve()
+    expect(updates.some(result => result.translatedText === '最新的中文')).toBe(true)
+  } finally { processor.reset() }
+})
+
 it('times out a finalization behind stalled recognition without entering STT concurrently', async () => {
   vi.useFakeTimers()
   let finish!: (value: null) => void

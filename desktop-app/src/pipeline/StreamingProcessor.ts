@@ -83,6 +83,8 @@ export class StreamingProcessor {
   private simulMtLastBoundaryText = ''
   /** SimulMT: in-flight translation promise to prevent concurrent requests */
   private simulMtInFlight = false
+  /** Latest recognition revision that arrived while SimulMT was busy. */
+  private simulMtPending: (() => void) | null = null
 
   /** Last diarization result for merging with STT output (#549) */
   private lastDiarizationResult: DiarizationResult | null = null
@@ -143,6 +145,7 @@ export class StreamingProcessor {
     this.pendingTranslation = null
     this.simulMtLastBoundaryText = ''
     this.simulMtInFlight = false
+    this.simulMtPending = null
     this.clauseTranslatedPrefix = ''
     this.clauseTranslation = ''
     this.clauseTranslationInFlight = false
@@ -590,8 +593,13 @@ export class StreamingProcessor {
     const translator = this.deps.getTranslator()
     if (!translator?.translateSimulMt || !fullSourceText.trim()) return
 
-    // Skip if a SimulMT request is already in-flight
-    if (this.simulMtInFlight) return
+    // Retain the newest revision while translation is busy. Dropping it here
+    // leaves a long Japanese hypothesis visible with no Chinese until another
+    // recognition window happens to arrive.
+    if (this.simulMtInFlight) {
+      this.simulMtPending = () => this.handleSimulMtStreaming(fullSourceText,sourceLang,targetLang,confirmedText,interimText,waitK)
+      return
+    }
 
     // Check if we have enough units to start translating (wait-k policy)
     const unitCount = countUnits(fullSourceText, sourceLang)
@@ -606,6 +614,7 @@ export class StreamingProcessor {
 
     this.simulMtLastBoundaryText = textToTranslate
     this.simulMtInFlight = true
+    this.simulMtPending = null
 
     const gen = this.deps.getGeneration?.()
     const utterance = this.utteranceGeneration
@@ -642,6 +651,11 @@ export class StreamingProcessor {
       log.warn('SimulMT translation failed:', err)
     }).finally(() => {
       this.simulMtInFlight = false
+      if (this.isCurrentGeneration(gen, utterance)) {
+        const pending = this.simulMtPending
+        this.simulMtPending = null
+        pending?.()
+      }
     })
   }
 

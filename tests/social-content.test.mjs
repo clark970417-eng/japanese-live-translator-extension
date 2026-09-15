@@ -68,6 +68,14 @@ test('social live chat exposes retry progress and retries a transient failure on
  assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
 });
 
+test('social live chat stops after its bounded retry fails',async()=>{
+ const t=setup('live.bilibili.com');await settle();
+ t.requests[0].reply({ok:false,error:'first'});await settle();
+ t.requests[1].reply({ok:false,error:'second'});await settle();
+ assert.equal(t.translationLines[0].textContent,'中：翻譯失敗，請稍後重新整理再試');
+ assert.equal(t.requests.filter(x=>x.message.type==='translate').length,2);
+});
+
 test('long social chat is translated once instead of being silently skipped',async()=>{
  const source='今日は長い話をします。'.repeat(45);
  const t=setup('live.bilibili.com',{textContent:source,innerText:source,children:[],isConnected:true,

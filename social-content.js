@@ -168,9 +168,10 @@
       if (!valid()) { line.remove(); return; }
       line.textContent = `中：${result}`;
     } catch (_) {
-      translated.delete(node);
-      if (valid()) line.textContent = '中：翻譯暫時失敗，稍後會再試';
-      else line.remove();
+      // Keep the failed source marked after one retry so the status mutation
+      // cannot cause the page observer to resubmit it forever.
+      if (valid()) line.textContent = '中：翻譯失敗，請稍後重新整理再試';
+      else { translated.delete(node); line.remove(); }
     }
   }
 

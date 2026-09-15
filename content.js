@@ -85,9 +85,10 @@ async function translateElement(element, className, priority = false, queueOrder
     line.textContent = `中：${result}`;
     return true;
   } catch (error) {
-    translated.delete(element);
-    if (valid()) line.textContent = "中：翻譯暫時失敗，稍後會再試";
-    else line.remove();
+    // Keep the failed source marked after the one bounded retry. Otherwise our
+    // own status DOM mutation starts another scan and creates an endless loop.
+    if (valid()) line.textContent = "中：翻譯失敗，請稍後重新整理再試";
+    else { translated.delete(element); line.remove(); }
     return false;
   }
 }

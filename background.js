@@ -115,7 +115,7 @@ function cancelTranslations(){translationPending=null;publishedId=-1;for(const c
 async function translateCaption(text,signal){
  const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
  const configured=await settings();
- if(engineMode==='desktop'||configured.speechMode==='desktop')return localTranslation(text,'ja-zh');
+ if(engineMode==='desktop'||configured.speechMode==='desktop')return localTranslation(text,'ja-zh',12000);
  const primary=async s=>validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW',s)),'ja-zh',text);
  try{
   if(!configured.nvidiaKey)return await primary(deadline(signal,3000));
