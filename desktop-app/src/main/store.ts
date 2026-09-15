@@ -91,7 +91,7 @@ export interface AppSettings {
   slmSpeculativeDecoding: boolean
   /** Enable simultaneous translation (SimulMT) with Wait-k policy for lower latency */
   simulMtEnabled: boolean
-  /** Wait-k value: start translating after k confirmed words (default 3) */
+  /** Wait-k value: start translating after k confirmed words (default 2) */
   simulMtWaitK: number
   /** Local model for written Chinese-to-Japanese drafts when no caption session
    * is running: 'offline-hymt2' (7B, more accurate) or 'offline-hymt15'. While
@@ -202,8 +202,8 @@ export const store = new Store<AppSettings>({
     glossaryTerms: [],
     orgGlossaryTerms: [],
     slmSpeculativeDecoding: false,
-    simulMtEnabled: false,
-    simulMtWaitK: 3,
+    simulMtEnabled: true,
+    simulMtWaitK: 2,
     draftTranslationEngine: 'offline-hymt2',
     whisperVariant: 'kotoba-v2.0',
     moonshineVariant: 'base',

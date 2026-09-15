@@ -256,8 +256,8 @@ export function TranslatorSettings({
                 disabled={disabled}
               />
               <div>
-                <div style={{ fontWeight: 500, fontSize: '12px' }}>Conversational SimulMT</div>
-                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Translate at clause boundaries with KV cache reuse — lower latency than debounced mode</div>
+                <div style={{ fontWeight: 500, fontSize: '12px' }}>Conversational SimulMT (recommended for live streams)</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Show an early provisional translation with KV cache reuse, then correct it when the sentence completes.</div>
               </div>
             </label>
             {simulMtEnabled && (

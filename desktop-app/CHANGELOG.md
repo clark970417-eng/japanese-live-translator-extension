@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Live caption latency
 - Emit the first clear-speech recognition window at about 500 ms while retaining the 650 ms accuracy guard for weak or noisy speech.
 - Start the first streaming cadence at acoustic speech onset so VAD confirmation time is not added to the preview delay.
+- Enable conversational SimulMT with Wait-k 2 by default for earlier provisional Chinese, while complete sentences still receive final correction.
 
 ### Added
 - GPT-Realtime-Whisper evaluation scaffold + research notes (5702384)
