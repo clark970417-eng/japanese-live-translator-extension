@@ -58,6 +58,19 @@ test('semantic live region keeps chat translation working after site selectors c
  assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
 });
 
+test('long social chat is translated once instead of being silently skipped',async()=>{
+ const source='今日は長い話をします。'.repeat(45);
+ const t=setup('live.bilibili.com',{textContent:source,innerText:source,children:[],isConnected:true,
+  querySelector(){return null;},querySelectorAll(){return [];},closest:()=>null,
+  parentElement:{querySelector:()=>t?.translationLines?.find(x=>x.isConnected)},insertAdjacentElement(_,line){line.isConnected=true;t.translationLines.push(line);}});
+ await settle();
+ const request=t.requests.find(x=>x.message.type==='translate');
+ assert.equal(request.message.text,source);
+ request.reply({ok:true,text:'今天要說一段很長的話。'});await settle();
+ assert.equal(t.translationLines.length,1);
+ assert.equal(t.translationLines[0].textContent,'中：今天要說一段很長的話。');
+});
+
 test('Bilibili page scans cannot steal the button from the focused live composer',async()=>{
  const distractor={value:'',isConnected:true,focus(){},dispatchEvent(){},matches(){return false;},
   getBoundingClientRect(){return {width:300,height:40};},closest(){return null;},parentElement:{append(){}}};

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {phraseTranslation,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from '../translation-policy.mjs';
+import {phraseTranslation,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese} from '../translation-policy.mjs';
 test('whole phrases preserve negation, questions and viewer perspective',()=>{
  assert.equal(phraseTranslation('我先去睡覺了','zh-ja'),'そろそろ寝ますね。');
  assert.equal(phraseTranslation('不要勉強自己喔','zh-ja'),'無理しないでくださいね。');
@@ -54,4 +54,12 @@ test('standalone cheer spellings preserve praise without rewriting negation or c
  for(const text of ['頑張れ！！','がんばって～','がんばえ〜','ファイト'])assert.equal(phraseTranslation(text,'ja-zh'),'加油！');
  assert.equal(phraseTranslation('おしい','ja-zh'),'可惜了！');
  for(const text of ['ないです','ナイスじゃない','次こそ失敗しない','ないす？','頑張らないで','ファイトマネー'])assert.equal(phraseTranslation(text,'ja-zh'),undefined);
+});
+
+test('long chat messages split on sentence boundaries and never lose text',()=>{
+ const source='最初の長い文章です。'.repeat(45)+'句読点がないとても長いコメント'.repeat(30);
+ const chunks=splitTranslationText(source,120);
+ assert.ok(chunks.length>2);
+ assert.ok(chunks.every(chunk=>chunk.length<=120));
+ assert.equal(chunks.join(''),source);
 });

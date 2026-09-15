@@ -7,7 +7,7 @@ let engineMode='browser';
 const desktopTranslations=new Map();
 import {ResultGate} from './stream-core.mjs';
 import {CueCursor} from './cue-cursor.mjs';
-import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
+import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
 const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
 let captionMode='record',captionHold=3;
 const setHold=value=>{captionHold=Math.max(1,Math.min(6,Number(value)||3));};
@@ -64,20 +64,27 @@ async function styledTranslation(text,direction,signal){
  for(const run of providers){try{const d=await run();if(d.choices?.[0]?.finish_reason==='length')throw new Error('翻譯被截斷');return validateTranslation(d.choices?.[0]?.message?.content,direction,text);}catch(error){if(signal?.aborted)throw error;}}
  throw new Error(direction==='zh-ja'?'可愛禮貌語氣翻譯目前無法使用，請確認 NVIDIA／OpenRouter Key 或稍後重試':'情境翻譯目前無法使用');
 }
+async function translateSingle(text,direction,priority=false){
+ const phrase=phraseTranslation(text,direction);if(phrase)return phrase;
+ if(direction==='zh-ja')return (await makeDraft(text)).draft;
+ if(priority){
+  try{return await styledTranslation(text,direction);}catch(_error){}
+  // Static page text (especially the title) must not wait behind the live
+  // desktop audio queue. Use the independent text endpoint, then fall back
+  // to the selected local engine when the network is unavailable.
+  try{return validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW')),'ja-zh',text);}catch(_error){}
+ }
+ return translateCaption(text);
+}
 async function translate(text,direction,priority=false){
  if(!['ja-zh','zh-ja'].includes(direction)||typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的日文或中文');
  text=text.trim();
  return textMemo.run(direction+':'+priority+':'+text,async()=>{
-  const phrase=phraseTranslation(text,direction);if(phrase)return phrase;
-  if(direction==='zh-ja')return (await makeDraft(text)).draft;
-  if(priority){
-   try{return await styledTranslation(text,direction);}catch(_error){}
-   // Static page text (especially the title) must not wait behind the live
-   // desktop audio queue. Use the independent text endpoint, then fall back
-   // to the selected local engine when the network is unavailable.
-   try{return validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW')),'ja-zh',text);}catch(_error){}
-  }
-  return translateCaption(text);
+  const chunks=splitTranslationText(text);
+  if(chunks.length===1)return translateSingle(text,direction,priority);
+  const translated=[];
+  for(const chunk of chunks)translated.push(await translateSingle(chunk,direction,priority));
+  return translated.join('');
  });
 }
 let recordingReady,recordingPreview=null;

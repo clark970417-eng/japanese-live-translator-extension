@@ -134,7 +134,9 @@
     if (!enabled || !node?.isConnected || node.closest?.('.jtl-social-translation,.jtl-social-controls')) return;
     if (!isTitle) node = messageTextNode(node);
     const source = clean(node.innerText || node.textContent);
-    if (!source || source.length > 400 || !hasJapanese(source)) return;
+    // The background translator safely splits long messages. Keep only a
+    // generous guard against accidentally selecting an entire chat timeline.
+    if (!source || source.length > 3000 || !hasJapanese(source)) return;
     if (translated.get(node) === source) return;
     translated.set(node, source);
     const currentEpoch = epoch;

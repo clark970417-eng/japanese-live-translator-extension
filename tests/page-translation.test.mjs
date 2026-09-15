@@ -121,6 +121,16 @@ test('YouTube live chat survives selector changes through its semantic log regio
  assert.equal(t.requests[0].message.text,'新しい配信コメントです');
 });
 
+test('YouTube live chat keeps a multi-line Japanese message as one translated row',async()=>{
+ const t=setup();await settle();
+ const node=t.makeNode('今日は長い話をします。\nまず最初の話です。\n次に二つ目の話です。');
+ t.chat.push(node);t.scan();await settle();
+ assert.equal(t.requests.length,1);
+ t.requests[0].reply({ok:true,text:'今天要說一段很長的話。首先是第一件事。接著是第二件事。'});await settle();
+ assert.equal(node.lines.length,1);
+ assert.equal(node.lines[0].textContent,'中：今天要說一段很長的話。首先是第一件事。接著是第二件事。');
+});
+
 test('YouTube title translation supports the current alternate heading structure',async()=>{
  const t=setup(false,{selector:'#above-the-fold #title h1',text:'雑談しながら配信します'});await settle();
  assert.equal(t.requests.length,1);

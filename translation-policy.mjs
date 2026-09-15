@@ -62,6 +62,30 @@ export function validateTranslation(value,direction,source=''){
  if(source && text.length>Math.max(100,source.length*5))throw new Error('翻譯回應過長，請重試');
  return text;
 }
+// Keep each request short enough for local and hosted engines to finish
+// reliably. Prefer sentence/newline boundaries, then fall back to a hard
+// Unicode-safe split for unusually long unpunctuated chat messages.
+export function splitTranslationText(value,maxLength=240){
+ const text=String(value||'').trim();
+ if(!text)return [];
+ const limit=Math.max(80,Number(maxLength)||360);
+ // A rendered two/three-line chat can be short in total but still contain
+ // independent utterances. Preserve those as separate translation requests.
+ if(text.length<=limit&&!/[\r\n]/u.test(text))return [text];
+ const pieces=text.match(/[^\n。！？!?；;]+(?:[。！？!?；;]+|\n+|$)/gu)||[text];
+ const chunks=[];let current='';
+ const flush=()=>{if(current.trim())chunks.push(current.trim());current='';};
+ for(const piece of pieces){
+  const clean=piece.trim();if(!clean)continue;
+  if((current+clean).length<=limit){current+=clean;continue;}
+  flush();
+  if(clean.length<=limit){current=clean;continue;}
+  const chars=Array.from(clean);
+  while(chars.length){chunks.push(chars.splice(0,limit).join('').trim());}
+ }
+ flush();
+ return chunks.filter(Boolean);
+}
 export class TranslationMemo {
  constructor(limit=200){this.limit=limit;this.cache=new Map();this.pending=new Map();}
  async run(key,task){

@@ -5,12 +5,12 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 import {CueCursor} from '../cue-cursor.mjs';
 import {ResultGate} from '../stream-core.mjs';
-import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese} from '../translation-policy.mjs';
+import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese} from '../translation-policy.mjs';
 test('capture messages require active session and correct offscreen sender; stop clears subtitles',async()=>{
  let listener,session;const updates=[];
  const chrome={storage:{local:{get:async()=>({subtitleSettings:{captionMode:'realtime'}}),set:async()=>{}}},tabs:{sendMessage:async(id,m)=>updates.push(m),onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=> 'stream'},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{if(m.type==='offscreen-start')session=m.session;return{ok:true};}}};
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch:async()=>({ok:true,json:async()=>([[['大家好','こんにちは']]])})});
+ vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch:async()=>({ok:true,json:async()=>([[['大家好','こんにちは']]])})});
  const call=(m,s={})=>new Promise(resolve=>listener(m,s,resolve));
  await call({type:'subtitle-control',action:'start',tabId:7});
  listener({type:'speech-result',session,id:1,text:'こんにちは'},{url:'https://evil.example'},()=>{});
@@ -40,7 +40,7 @@ test('failed capture startup cleans up and exposes an actionable error, then can
  let listener,fail=true;const stopped=[];
  const chrome={storage:{local:{get:async()=>({subtitleSettings:{captionMode:'realtime'}}),set:async()=>{}}},tabs:{sendMessage:async()=>{},onRemoved:{addListener(){}}},offscreen:{hasDocument:async()=>true},tabCapture:{getMediaStreamId:async()=>{if(fail)throw Error('Extension has not been invoked (activeTab)');return 'stream';}},runtime:{getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:f=>listener=f},sendMessage:async m=>{stopped.push(m.type);return{ok:true};}}};
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console});
+ vm.runInNewContext(src,{RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console});
  const call=m=>new Promise(resolve=>listener(m,{},resolve));
  const failure=await call({type:'subtitle-control',action:'start',tabId:7});
  assert.equal(failure.ok,false);assert.match(failure.error,/影片分頁/);
@@ -57,7 +57,7 @@ test('frequent chat cheers bypass both desktop inference and network translation
  const chrome={storage:{local:{get:async()=>({speechMode:'desktop'}),set:async()=>{}}},tabs:{onRemoved:{addListener(){}}},runtime:{onMessage:{addListener:f=>listener=f}}};
  class NativeClient{request(){inference++;throw Error('Unexpected inference');}}
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
- vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch:async()=>{network++;throw Error('Unexpected network');}});
+ vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch:async()=>{network++;throw Error('Unexpected network');}});
  const replies=await Promise.all(Array.from({length:40},(_,i)=>new Promise(resolve=>listener({type:'translate',text:['ないすー','頑張れー！','ファイト','おしい'][i%4],direction:'ja-zh'}, {},resolve))));
  assert(replies.every(r=>r.ok));assert.deepEqual([...new Set(replies.map(r=>r.text))],['漂亮！','加油！','可惜了！']);
  assert.equal(inference,0);assert.equal(network,0);
@@ -69,7 +69,7 @@ test('live desktop captions keep ordinary chat on the selected local HY-MT path'
  class NativeClient{request(op){nativeOps.push(op);return Promise.resolve(op==='translate'?{text:'這是一般聊天訊息'}:{model:'local'});}}
  const src=fs.readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
  const fetch=async()=>{network++;return {ok:true,json:async()=>[[['這是一般聊天訊息']]]};};
- vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch});
+ vm.runInNewContext(src,{NativeClient,RecordingQueue,chrome,ResultGate,CueCursor,phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese,URLSearchParams,AbortSignal,AbortController,Date,console,fetch});
  const call=m=>new Promise(resolve=>listener(m,{},resolve));
  assert.equal((await call({type:'subtitle-control',action:'start',tabId:7})).ok,true);
  const translated=await call({type:'translate',text:'これは普通のチャットメッセージです',direction:'ja-zh'});
