@@ -398,6 +398,9 @@ async function runInference(
   const t0 = performance.now()
 
   try {
+    // SimulMT may own the context's only sequence. Final/debounced translation
+    // takes over here, then the next interim update recreates its session.
+    releaseSimulMtForStandardTranslation()
     // Use the prefix-cached session for KV cache reuse
     const { session, created } = await ensurePrefixCacheSession(systemPrompt)
 
@@ -720,6 +723,29 @@ let simulMtSession: import('node-llama-cpp').LlamaChatSession | null = null
 let simulMtSequence: LlamaContextSequence | null = null
 let simulMtLanguagePair: string = ''
 
+/** The translation context is configured with one sequence on the user's
+ * low-memory profile. Standard translation and SimulMT therefore cannot each
+ * retain their own persistent sequence. Hand ownership over explicitly when
+ * switching paths instead of letting getSequence() fail with "No sequences
+ * left" and delaying Chinese until the fallback translation runs. */
+function releasePrefixCacheForSimulMt(): void {
+  if (!prefixCacheSession && !prefixCacheSequence) return
+  prefixCacheSequence?.dispose?.()
+  prefixCacheSession?.dispose?.()
+  prefixCacheSession = null
+  prefixCacheSequence = null
+  prefixCacheSystemPrompt = undefined
+}
+
+function releaseSimulMtForStandardTranslation(): void {
+  if (!simulMtSession && !simulMtSequence) return
+  simulMtSequence?.dispose?.()
+  simulMtSession?.dispose?.()
+  simulMtSession = null
+  simulMtSequence = null
+  simulMtLanguagePair = ''
+}
+
 /**
  * Build the SimulMT multi-turn prompt.
  * Uses a conversational format where source chunks and target translations
@@ -802,6 +828,7 @@ async function handleTranslateSimulMt(
 
     // Create persistent session if needed
     if (!simulMtSession) {
+      releasePrefixCacheForSimulMt()
       simulMtSequence = await createContextSequence()
 
       const fromLang = LANG_NAMES_EN[from] ?? from
