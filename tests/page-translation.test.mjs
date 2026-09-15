@@ -70,12 +70,12 @@ test('a recycled node discards the late result and translates its new message',a
  // The virtualized list reuses this element for a different message.
  node.textContent='別のコメントになりました';
  t.requests[0].reply({ok:true,text:'這是第一則留言'});await settle();
- assert.equal(node.lines.length,0,'a result for text that is gone must not be written');
+ assert.equal(node.lines.filter(line=>!line.removed).length,0,'a result for text that is gone must not be written');
  t.scan();await settle();
  assert.equal(t.requests.length,2);
  t.requests[1].reply({ok:true,text:'變成另一則留言了'});await settle();
- assert.equal(node.lines.length,1);
- assert.equal(node.lines[0].textContent,'中：變成另一則留言了');
+ assert.equal(node.lines.filter(line=>!line.removed).length,1);
+ assert.equal(node.lines.find(line=>!line.removed).textContent,'中：變成另一則留言了');
 });
 
 test('an existing translation line is reused rather than duplicated',async()=>{
@@ -97,7 +97,7 @@ test('turning website text off drops a result that is already in flight',async()
  t.scan();await settle();
  t.toggle(false);
  t.requests.at(-1).reply({ok:true,text:'中途關閉'});await settle();
- assert.equal(node.lines.length,0);
+ assert.equal(node.lines.filter(line=>!line.removed).length,0);
 });
 
 test('a restored chat backlog is bounded and newest messages are translated first',async()=>{
@@ -111,6 +111,28 @@ test('a restored chat backlog is bounded and newest messages are translated firs
  t.requests[0].reply({ok:true,text:'最新'});await settle();
  assert.equal(t.requests.length,4);
  assert.equal(t.requests[3].message.text,'新しいコメント36です');
+});
+
+test('a queued live-chat message that left the screen is skipped',async()=>{
+ const t=setup();await settle();
+ for(let i=0;i<5;i++)t.chat.push(t.makeNode(`画面のコメント${i}です`));
+ t.scan();await settle();
+ assert.equal(t.requests.length,3);
+ t.chat[1].isConnected=false; // next queued item after the three active jobs
+ t.requests[0].reply({ok:true,text:'最新'});await settle();
+ assert.equal(t.requests.length,4);
+ assert.equal(t.requests[3].message.text,'画面のコメント0です');
+});
+
+test('a failed live-chat translation shows retry state and retries once',async()=>{
+ const t=setup();await settle();const node=t.makeNode('もう一度翻訳してください');
+ t.chat.push(node);t.scan();await settle();
+ assert.equal(node.lines[0].textContent,'中：翻譯中…');
+ t.requests[0].reply({ok:false,error:'temporary'});await settle();
+ assert.equal(t.requests.length,2);
+ assert.equal(node.lines[0].textContent,'中：第一次失敗，正在重試…');
+ t.requests[1].reply({ok:true,text:'請再翻譯一次'});await settle();
+ assert.equal(node.lines[0].textContent,'中：請再翻譯一次');
 });
 
 test('YouTube live chat survives selector changes through its semantic log region',async()=>{
@@ -146,5 +168,5 @@ test('a title node rebuilt while translation is pending can be retried',async()=
  t.requests[0].reply({ok:true,text:'新的直播'});await settle();
  t.title.isConnected=true;t.scan();await settle();
  assert.equal(t.requests.length,1,'the cached result should be reused without a second network request');
- assert.equal(t.title.lines[0].textContent,'中：新的直播');
+ assert.equal(t.title.lines.find(line=>!line.removed).textContent,'中：新的直播');
 });

@@ -104,12 +104,20 @@
     while (activeTranslations < MAX_ACTIVE_TRANSLATIONS && translationQueue.length) {
       translationQueue.sort((a, b) => b.order - a.order);
       const task = translationQueue.shift();
+      if (task.isValid && !task.isValid()) {
+        translationInFlight.delete(task.key);
+        task.reject(new Error('留言已離開畫面'));
+        continue;
+      }
       activeTranslations++;
       message({type: 'translate', text: task.source, direction: 'ja-zh', priority: task.isTitle})
         .then(result => {
           cache.set(task.key, result);
           task.resolve(result);
-        }, task.reject)
+        }, error => {
+          translationInFlight.delete(task.key);
+          task.reject(error);
+        })
         .finally(() => {
           activeTranslations--;
           translationInFlight.delete(task.key);
@@ -118,12 +126,12 @@
     }
   }
 
-  function requestTranslation(source, isTitle, order) {
+  function requestTranslation(source, isTitle, order, isValid) {
     const key = `ja-zh:${source}`;
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (translationInFlight.has(key)) return translationInFlight.get(key);
     const pending = new Promise((resolve, reject) => {
-      translationQueue.push({key, source, isTitle, order: order ?? ++translationOrder, resolve, reject});
+      translationQueue.push({key, source, isTitle, isValid, order: order ?? ++translationOrder, resolve, reject});
       pumpTranslations();
     });
     translationInFlight.set(key, pending);
@@ -140,19 +148,29 @@
     if (translated.get(node) === source) return;
     translated.set(node, source);
     const currentEpoch = epoch;
+    const valid = () => enabled && currentEpoch === epoch && node.isConnected && clean(node.innerText || node.textContent) === source;
+    const parent = node.parentElement;
+    let line = parent?.querySelector(':scope > .jtl-social-translation');
+    if (!line) {
+      line = document.createElement('div');
+      line.className = `jtl-social-translation${isTitle ? ' jtl-social-title' : ''}`;
+      node.insertAdjacentElement('afterend', line);
+    }
+    line.textContent = '中：翻譯中…';
     try {
-      const result = await requestTranslation(source, isTitle, order);
-      if (!enabled || currentEpoch !== epoch || !node.isConnected || clean(node.innerText || node.textContent) !== source) return;
-      const parent = node.parentElement;
-      let line = parent?.querySelector(':scope > .jtl-social-translation');
-      if (!line) {
-        line = document.createElement('div');
-        line.className = `jtl-social-translation${isTitle ? ' jtl-social-title' : ''}`;
-        node.insertAdjacentElement('afterend', line);
+      let result;
+      try { result = await requestTranslation(source, isTitle, order, valid); }
+      catch (firstError) {
+        if (!valid()) throw firstError;
+        line.textContent = '中：第一次失敗，正在重試…';
+        result = await requestTranslation(source, true, (order ?? 0) + 1000000, valid);
       }
+      if (!valid()) { line.remove(); return; }
       line.textContent = `中：${result}`;
     } catch (_) {
       translated.delete(node);
+      if (valid()) line.textContent = '中：翻譯暫時失敗，稍後會再試';
+      else line.remove();
     }
   }
 

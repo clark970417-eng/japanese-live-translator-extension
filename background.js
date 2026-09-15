@@ -82,8 +82,11 @@ async function translate(text,direction,priority=false){
  return textMemo.run(direction+':'+priority+':'+text,async()=>{
   const chunks=splitTranslationText(text);
   if(chunks.length===1)return translateSingle(text,direction,priority);
-  const translated=[];
-  for(const chunk of chunks)translated.push(await translateSingle(chunk,direction,priority));
+  const translated=new Array(chunks.length);let cursor=0;
+  // Two workers make multi-line chat noticeably faster without flooding the
+  // local model or remote provider with every chunk at once.
+  const worker=async()=>{while(cursor<chunks.length){const index=cursor++;translated[index]=await translateSingle(chunks[index],direction,priority);}};
+  await Promise.all(Array.from({length:Math.min(2,chunks.length)},worker));
   return translated.join('');
  });
 }

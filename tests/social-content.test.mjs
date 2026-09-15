@@ -58,6 +58,16 @@ test('semantic live region keeps chat translation working after site selectors c
  assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
 });
 
+test('social live chat exposes retry progress and retries a transient failure once',async()=>{
+ const t=setup('www.tiktok.com');await settle();
+ assert.equal(t.translationLines[0].textContent,'中：翻譯中…');
+ t.requests[0].reply({ok:false,error:'temporary'});await settle();
+ assert.equal(t.requests.filter(x=>x.message.type==='translate').length,2);
+ assert.equal(t.translationLines[0].textContent,'中：第一次失敗，正在重試…');
+ t.requests[1].reply({ok:true,text:'謝謝直播'});await settle();
+ assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
+});
+
 test('long social chat is translated once instead of being silently skipped',async()=>{
  const source='今日は長い話をします。'.repeat(45);
  const t=setup('live.bilibili.com',{textContent:source,innerText:source,children:[],isConnected:true,

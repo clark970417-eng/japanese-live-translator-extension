@@ -13,8 +13,8 @@ test('website toggle removes translations, rejects late results and leaves voice
  vm.runInNewContext(src,{chrome,window,document,MutationObserver:class{observe(){}},setInterval(){},setTimeout(){},clearTimeout(){},console});
  await Promise.resolve();assert.equal(messages.length,0);
  change({websiteTextEnabled:{newValue:true}},'local');assert.equal(messages.length,1);
- change({websiteTextEnabled:{newValue:false}},'local');reply({ok:true,text:'今天玩得很開心'});await Promise.resolve();assert.equal(lines.length,0);
- change({websiteTextEnabled:{newValue:true}},'local');await Promise.resolve();await Promise.resolve();assert.equal(lines.length,1);
- change({websiteTextEnabled:{newValue:false}},'local');assert.equal(lines[0].removed,true);
+ change({websiteTextEnabled:{newValue:false}},'local');reply({ok:true,text:'今天玩得很開心'});await Promise.resolve();assert.equal(lines.filter(x=>!x.removed).length,0);
+ change({websiteTextEnabled:{newValue:true}},'local');await Promise.resolve();await Promise.resolve();assert.equal(lines.filter(x=>!x.removed).length,1);
+ change({websiteTextEnabled:{newValue:false}},'local');assert.ok(lines.every(x=>x.removed));
  assert.ok(messages.every(m=>m.type==='translate'),'text switch must not start or stop capture');
 });

@@ -71,7 +71,7 @@ export function splitTranslationText(value,maxLength=240){
  const limit=Math.max(80,Number(maxLength)||360);
  // A rendered two/three-line chat can be short in total but still contain
  // independent utterances. Preserve those as separate translation requests.
- if(text.length<=limit&&!/[\r\n]/u.test(text))return [text];
+ if(text.length<=limit)return /[\r\n]/u.test(text)?text.split(/[\r\n]+/u).map(part=>part.trim()).filter(Boolean):[text];
  const pieces=text.match(/[^\n。！？!?；;]+(?:[。！？!?；;]+|\n+|$)/gu)||[text];
  const chunks=[];let current='';
  const flush=()=>{if(current.trim())chunks.push(current.trim());current='';};

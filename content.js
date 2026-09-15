@@ -13,6 +13,11 @@ function pumpTranslations() {
   while (activeTranslations < MAX_ACTIVE_TRANSLATIONS && translationQueue.length) {
     translationQueue.sort((a, b) => b.order - a.order);
     const task = translationQueue.shift();
+    if (task.isValid && !task.isValid()) {
+      inFlight.delete(task.key);
+      task.reject(new Error("留言已離開畫面"));
+      continue;
+    }
     activeTranslations++;
     chrome.runtime.sendMessage({type: "translate", text: task.text, direction: task.direction, priority: task.priority}, reply => {
       activeTranslations--;
@@ -40,12 +45,12 @@ function smallestJapaneseLeaves(region) {
   });
 }
 
-function requestTranslation(text, direction, priority = false, queueOrder) {
+function requestTranslation(text, direction, priority = false, queueOrder, isValid) {
   const key = `${direction}:${text}`;
   if (cache.has(key)) return Promise.resolve(cache.get(key));
   if (inFlight.has(key)) return inFlight.get(key);
   const promise = new Promise((resolve, reject) => {
-    translationQueue.push({key, text, direction, priority, resolve, reject, order: queueOrder ?? (++translationOrder + (priority ? 1000000 : 0))});
+    translationQueue.push({key, text, direction, priority, resolve, reject, isValid, order: queueOrder ?? (++translationOrder + (priority ? 1000000 : 0))});
     pumpTranslations();
   });
   inFlight.set(key, promise);
@@ -59,20 +64,30 @@ async function translateElement(element, className, priority = false, queueOrder
   if (!text || !hasJapanese(text)) return false;
   if (translated.get(element) === text) return true;
   translated.set(element, text);
+  const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
+  let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
+  if (!line) {
+    line = document.createElement("div");
+    line.className = className;
+    anchor.insertAdjacentElement("afterend", line);
+  }
+  line.textContent = "中：翻譯中…";
+  const valid=()=>websiteTextEnabled&&epoch===textEpoch&&element.isConnected&&element.textContent.trim()===text;
   try {
-    const result = await requestTranslation(text, "ja-zh", priority, queueOrder);
-    if (!websiteTextEnabled || epoch!==textEpoch || !element.isConnected || element.textContent.trim() !== text || !result) {translated.delete(element);return false;}
-    const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
-    let line = anchor.parentElement?.querySelector(`:scope > .${className}`);
-    if (!line) {
-      line = document.createElement("div");
-      line.className = className;
-      anchor.insertAdjacentElement("afterend", line);
+    let result;
+    try { result = await requestTranslation(text, "ja-zh", priority, queueOrder, valid); }
+    catch (firstError) {
+      if (!valid()) throw firstError;
+      line.textContent = "中：第一次失敗，正在重試…";
+      result = await requestTranslation(text, "ja-zh", true, (queueOrder??0)+1000000, valid);
     }
+    if (!valid() || !result) {translated.delete(element);line.remove();return false;}
     line.textContent = `中：${result}`;
     return true;
   } catch (error) {
     translated.delete(element);
+    if (valid()) line.textContent = "中：翻譯暫時失敗，稍後會再試";
+    else line.remove();
     return false;
   }
 }
