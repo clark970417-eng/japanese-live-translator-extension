@@ -2,6 +2,16 @@
 
 This file records user-facing changes. Public preview builds use `beta-vX.Y.Z` tags; stable builds use `vX.Y.Z` tags.
 
+## 4.2.2 - 2026-09-22
+
+### Quieter website translation
+
+- Kept automatic translation on YouTube, Twitch, X, TikTok, Bilibili, Facebook, and Instagram.
+- Changed all other websites to per-host opt-in from the extension popup.
+- Prevented ChatGPT and similar general conversation pages from receiving automatic translation rows under user messages.
+- Preserved tab-audio captions on general websites even when page-text translation is off.
+- Added a regression test proving a general conversation hostname stays untouched until explicitly enabled.
+
 ## 4.2.1 - 2026-09-22
 
 ### Website coverage

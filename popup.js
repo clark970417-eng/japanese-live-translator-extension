@@ -40,6 +40,36 @@ loadTranslationStatus();
 chrome.storage.local.get('websiteTextEnabled').then(s=>$('#websiteText').checked=s.websiteTextEnabled!==false);
 $('#websiteText').onchange=()=>chrome.storage.local.set({websiteTextEnabled:$('#websiteText').checked});
 
+const dedicatedHosts=['youtube.com','x.com','twitter.com','bilibili.com','tiktok.com','twitch.tv','facebook.com','instagram.com'];
+const isDedicatedHost=host=>dedicatedHosts.some(domain=>host===domain||host.endsWith('.'+domain));
+let currentSiteHost='';
+async function loadCurrentSiteAccess(){
+ const [tab]=await chrome.tabs.query({active:true,currentWindow:true});
+ let url;
+ try{url=new URL(tab?.url||'');}catch{return;}
+ if(!['http:','https:'].includes(url.protocol))return;
+ currentSiteHost=url.hostname.toLowerCase();
+ const section=$('#currentSiteSection'),toggle=$('#currentSiteTranslation');section.hidden=false;
+ if(isDedicatedHost(currentSiteHost)){
+  $('#currentSiteLabel').textContent='此網站使用專用翻譯規則';
+  $('#currentSiteHint').textContent='主要影音與社群網站會自動啟用。';
+  toggle.checked=true;toggle.disabled=true;
+  return;
+ }
+ const {genericSiteAccess={}}=await chrome.storage.local.get('genericSiteAccess');
+ $('#currentSiteLabel').textContent=`在 ${currentSiteHost} 啟用文字翻譯`;
+ $('#currentSiteHint').textContent='一般網站預設關閉，避免聊天、文件或搜尋頁被自動翻譯。';
+ toggle.checked=genericSiteAccess[currentSiteHost]===true;
+}
+$('#currentSiteTranslation').onchange=async()=>{
+ if(!currentSiteHost||isDedicatedHost(currentSiteHost))return;
+ const {genericSiteAccess={}}=await chrome.storage.local.get('genericSiteAccess');
+ const next={...genericSiteAccess};
+ if($('#currentSiteTranslation').checked)next[currentSiteHost]=true;else delete next[currentSiteHost];
+ await chrome.storage.local.set({genericSiteAccess:next});
+};
+loadCurrentSiteAccess();
+
 $('#exportRecording').onclick=async()=>{const entries=await send({type:'recording-export'});const text=entries.map(e=>new Date(e.createdAt).toLocaleString()+'\n'+e.original+'\n'+(e.translated||'[尚未翻譯]')).join('\n\n');const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='字幕記錄.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('#retryRecording').onclick=async()=>{await send({type:'recording-retry'});refresh();};
 

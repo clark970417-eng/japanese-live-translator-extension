@@ -1,6 +1,6 @@
 # Release and rollback guide
 
-The latest public preview is **beta-v4.2.1**. It expands page translation to general websites, adds dedicated Facebook and Instagram handling, and aligns the extension and desktop app at version 4.2.1. See [CHANGELOG.md](CHANGELOG.md) for the complete user-facing summary.
+The latest public preview is **beta-v4.2.2**. Major supported platforms translate automatically; other websites are opt-in per hostname so ordinary chats and documents remain untouched. See [CHANGELOG.md](CHANGELOG.md) for the complete user-facing summary.
 
 Japanese Live Translate uses two release channels:
 

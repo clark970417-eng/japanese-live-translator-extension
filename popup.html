@@ -4,6 +4,7 @@
 <body><main>
 <header><img src="icons/icon-32.png" width="24" height="24" alt=""><h1>Live Translate</h1></header>
 <section class="feature"><label class="switch"><span>網站文字翻譯<small>支援所有網站；YouTube、Twitch、X、TikTok、Bilibili、Facebook、Instagram 有專用規則</small></span><input id="websiteText" type="checkbox" checked></label></section>
+<section id="currentSiteSection" class="feature" hidden><label class="switch"><span id="currentSiteLabel">在此網站啟用文字翻譯</span><input id="currentSiteTranslation" type="checkbox"></label><p id="currentSiteHint" class="hint"></p></section>
 <details open class="language-settings"><summary>翻譯語言</summary>
 <div class="pair"><b>讀取網站文字</b><label>從<select id="readSource"></select></label><label>翻成<select id="readTarget"></select></label></div>
 <label class="switch sync"><span>打字／讀字同步<small>自動把打字方向設為讀字的反向</small></span><input id="syncTextLanguages" type="checkbox" checked></label>

@@ -11,6 +11,7 @@
     : host.endsWith('facebook.com') ? 'facebook'
     : host.endsWith('instagram.com') ? 'instagram'
     : 'generic';
+  const dedicatedSite = site !== 'generic';
 
   const configs = {
     bilibili: {
@@ -116,6 +117,8 @@
   let translationOrder = 0;
   const MAX_ACTIVE_TRANSLATIONS = 3;
   let enabled = false;
+  let globalTextEnabled = true;
+  let currentSiteEnabled = dedicatedSite;
   let epoch = 0;
   let polling = false;
   let lastSubtitleSignature = '';
@@ -413,12 +416,22 @@
     else scan();
   }
 
+  function applyTextAccess() {
+    setEnabled(globalTextEnabled && currentSiteEnabled);
+  }
+
   chrome.runtime.onMessage.addListener(payload => {
     if (payload.type === 'subtitle-update' && window.top === window) renderSubtitles({running: true, items: [payload.item]});
   });
-  chrome.storage.local.get(['websiteTextEnabled','languageSettings']).then(settings => {languageSettings={...languageSettings,...(settings.languageSettings||{})};setEnabled(settings.websiteTextEnabled !== false);});
+  chrome.storage.local.get(['websiteTextEnabled','languageSettings','genericSiteAccess']).then(settings => {
+    languageSettings={...languageSettings,...(settings.languageSettings||{})};
+    globalTextEnabled=settings.websiteTextEnabled !== false;
+    currentSiteEnabled=dedicatedSite || settings.genericSiteAccess?.[host] === true;
+    applyTextAccess();
+  });
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.websiteTextEnabled) setEnabled(changes.websiteTextEnabled.newValue !== false);
+    if (area === 'local' && changes.websiteTextEnabled) {globalTextEnabled=changes.websiteTextEnabled.newValue !== false;applyTextAccess();}
+    if (area === 'local' && changes.genericSiteAccess && !dedicatedSite) {currentSiteEnabled=changes.genericSiteAccess.newValue?.[host] === true;applyTextAccess();}
     if (area === 'local' && changes.subtitleSettings) captionBox?.controller.apply(changes.subtitleSettings.newValue);
     if (area === 'local' && changes.languageSettings) {languageSettings={...languageSettings,...changes.languageSettings.newValue};translated=new WeakMap();cache.clear();document.querySelectorAll('.jtl-social-translation,.jtl-social-controls').forEach(node=>node.remove());activeComposer=null;activeControls=null;scan();}
   });

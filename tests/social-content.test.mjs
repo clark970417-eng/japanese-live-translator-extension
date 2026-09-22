@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../social-content.js',import.meta.url),'utf8');
 const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 
-function setup(hostname,japaneseOverride,composerDistractor,semanticOnly=false){
+function setup(hostname,japaneseOverride,composerDistractor,semanticOnly=false,genericEnabled=false){
  const requests=[];
  const translationLines=[];
  const controls=[];
@@ -38,7 +38,7 @@ function setup(hostname,japaneseOverride,composerDistractor,semanticOnly=false){
   createElement:makeElement,addEventListener(){},createRange:()=>({selectNodeContents(){}})};
  const window={innerWidth:1200,innerHeight:800,getSelection:()=>({removeAllRanges(){},addRange(){}}),JtlCaptionWindow:class{constructor(){} render(){} apply(){}}};window.top=window;
  const chrome={runtime:{lastError:null,onMessage:{addListener(){}},sendMessage(message,reply){requests.push({message,reply});}},
-  storage:{local:{get:()=>Promise.resolve({websiteTextEnabled:true})},onChanged:{addListener(){}}}};
+  storage:{local:{get:()=>Promise.resolve({websiteTextEnabled:true,genericSiteAccess:genericEnabled?{[hostname]:true}:{}})},onChanged:{addListener(){}}}};
  vm.runInNewContext(source,{window,document,location:{hostname},chrome,MutationObserver:class{observe(){}},setTimeout:fn=>{fn();return 1;},setInterval(){},Event:class{},InputEvent:class{}});
  return {requests,translationLines,controls,box};
 }
@@ -149,9 +149,9 @@ test('Twitch discovers stream chat and installs a translated composer',async()=>
  assert.equal(t.controls.length,1);
 });
 
-for(const [site,hostname] of [['Facebook','www.facebook.com'],['Instagram','www.instagram.com'],['general website','example.com']]){
+for(const [site,hostname,genericEnabled] of [['Facebook','www.facebook.com',false],['Instagram','www.instagram.com',false],['general website','example.com',true]]){
  test(`${site} translates matching comments and installs a reviewable composer`,async()=>{
-  const t=setup(hostname);await settle();
+  const t=setup(hostname,null,null,false,genericEnabled);await settle();
   const request=t.requests.find(x=>x.message.type==='translate');
   assert.ok(request,`${site} comment was discovered`);
   request.reply({ok:true,text:'謝謝直播'});await settle();
@@ -159,6 +159,13 @@ for(const [site,hostname] of [['Facebook','www.facebook.com'],['Instagram','www.
   assert.equal(t.controls.length,1);
  });
 }
+
+test('general websites such as ChatGPT stay quiet until the user enables that hostname',async()=>{
+ const t=setup('chatgpt.com');await settle();
+ assert.equal(t.requests.filter(x=>x.message.type==='translate').length,0);
+ assert.equal(t.translationLines.length,0);
+ assert.equal(t.controls.length,0);
+});
 
 test('all-sites manifest uses the general adapter without double-injecting on dedicated sites',()=>{
  const manifest=JSON.parse(fs.readFileSync(new URL('../manifest.json',import.meta.url),'utf8'));

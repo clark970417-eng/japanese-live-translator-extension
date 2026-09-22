@@ -1,4 +1,4 @@
-> **Latest public preview: [4.2.1](https://github.com/clark970417-eng/japanese-live-translator-extension/releases/tag/beta-v4.2.1).** Download the desktop app and browser extension together, follow [beta installation and testing](BETA-TESTING.md), and send feedback with the repository issue forms.
+> **Latest public preview: [4.2.2](https://github.com/clark970417-eng/japanese-live-translator-extension/releases/tag/beta-v4.2.2).** Download the desktop app and browser extension together, follow [beta installation and testing](BETA-TESTING.md), and send feedback with the repository issue forms.
 
 # Japanese Live Caption Translator
 
@@ -12,16 +12,14 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
-Current release notes: [4.2.1 — translation across websites](CHANGELOG.md#421---2026-09-22). Historical verification reports remain in [`docs/retests`](docs/retests/).
+Current release notes: [4.2.2 — quieter per-site translation](CHANGELOG.md#422---2026-09-22). Historical verification reports remain in [`docs/retests`](docs/retests/).
 
-## What's new in 4.2.1
+## What's new in 4.2.2
 
-- Website translation now runs on ordinary HTTP and HTTPS pages instead of a five-site allowlist.
-- Facebook and Instagram have dedicated title, comment, chat, and writing-editor rules.
-- YouTube, Twitch, X, TikTok, and Bilibili retain their specialized adapters.
-- A conservative general adapter covers semantic titles, chats, comments, replies, and message editors on other websites.
-- Search, login, password, email, phone, and URL fields are excluded from the general writing control.
-- The extension and desktop app now share version 4.2.1 and were verified together in Opera GX.
+- YouTube, Twitch, X, TikTok, Bilibili, Facebook, and Instagram keep automatic dedicated translation.
+- Other websites are quiet by default and can be enabled one hostname at a time from the extension popup.
+- ChatGPT and similar conversation pages no longer receive translations under user messages unless explicitly enabled.
+- Search, login, password, email, phone, and URL fields remain excluded from the general writing control.
 
 ## Project overview
 
