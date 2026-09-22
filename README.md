@@ -1,4 +1,4 @@
-> Latest desktop validation: [3.9.5 live latency and confidence-routing verification](docs/retests/RETEST-3.9.5.md).
+> Public preview: download from [GitHub Releases](https://github.com/clark970417-eng/japanese-live-translator-extension/releases), follow [beta installation and testing](BETA-TESTING.md), and send feedback with the repository issue forms.
 
 # Japanese Live Caption Translator
 
@@ -49,6 +49,12 @@ This is windowed incremental recognition rather than a stateful streaming acoust
 
 ## Installation
 
+### Public beta
+
+Download the desktop package for your operating system and the browser extension ZIP from [GitHub Releases](https://github.com/clark970417-eng/japanese-live-translator-extension/releases). These preview packages are not code-signed, so read the operating-system-specific instructions and security explanation in [BETA-TESTING.md](BETA-TESTING.md) before opening them.
+
+### From source
+
 1. Clone or download this repository.
 2. Open `opera://extensions` in Opera GX or `chrome://extensions` in Chrome.
 3. Enable Developer mode.
@@ -63,6 +69,8 @@ download. Website text translation retains its existing provider routing.
 ## Privacy and security
 
 The default browser and MLX desktop recognition paths process audio locally. Browser-mode and website translation may send recognized or page text to the selected provider. Optional cloud engines in the full desktop application can send audio or text to their configured providers. Extension credentials are stored in `chrome.storage.local`; desktop settings use the application store. Neither is committed. Transcripts remain locally until cleared. The upstream application also retains its local usage metrics and session logging.
+
+The preview privacy notice, deletion guidance, and safe-feedback rules are in [PRIVACY.md](PRIVACY.md).
 
 ## Repository structure
 
@@ -84,7 +92,7 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The current revision passes 125 extension tests and 662 desktop tests. An isolated
+The current revision passes 125 extension tests and 666 desktop tests. An isolated
 desktop interface run passed 13 checks; its audio-start check was not run. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See

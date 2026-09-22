@@ -1,0 +1,44 @@
+name: Translation quality feedback
+description: Report a mistranslation or recognition error with enough context to improve it.
+title: "[Translation] "
+labels: [translation-quality, beta-feedback]
+body:
+  - type: input
+    id: pair
+    attributes:
+      label: Language pair
+      placeholder: "Example: Japanese → Traditional Chinese"
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Input type
+      options: [Live speech, Video file, Live chat, Page text or title, Writing draft]
+    validations:
+      required: true
+  - type: textarea
+    id: original
+    attributes:
+      label: Original text
+      description: Share only content you have permission to post.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Translation produced
+    validations:
+      required: true
+  - type: textarea
+    id: better
+    attributes:
+      label: Better translation and context
+      description: Explain names, slang, game terms, accent, or earlier sentences that affect the meaning.
+    validations:
+      required: true
+  - type: input
+    id: engine
+    attributes:
+      label: Recognition and translation engines
+      placeholder: "Shown in the app configuration summary"

@@ -1,0 +1,72 @@
+name: Beta problem report
+description: Report missing captions, translation failures, installation problems, or a broken website.
+title: "[Beta bug] "
+labels: [bug, beta-feedback]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for testing. Do not paste API keys, passwords, private messages, or full private transcripts.
+  - type: dropdown
+    id: area
+    attributes:
+      label: What failed?
+      options:
+        - Live audio captions
+        - Website text or live chat translation
+        - Chinese-to-other-language writing draft
+        - Installation or startup
+        - Long-session stability
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: website
+    attributes:
+      label: Website
+      options: [YouTube, Twitch, TikTok, Bilibili, X / Twitter, Desktop app only, Other]
+  - type: input
+    id: version
+    attributes:
+      label: App and extension version
+      placeholder: "Example: app 4.1.1, extension 4.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: Operating system
+      options: [macOS Apple Silicon, macOS Intel, Windows 11, Windows 10, Linux, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options: [Opera GX, Opera, Chrome, Edge, Other Chromium browser, Not applicable]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include what you opened, which language pair you selected, and which button you pressed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and timing
+      description: Add error text, approximate delay, session length, engine names, and a privacy-safe screenshot if available.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed API keys, passwords, private messages, and personal information.
+          required: true
