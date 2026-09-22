@@ -26,7 +26,9 @@ jobs:
           cache-dependency-path: desktop-app/package-lock.json
       - run: npm ci
         if: runner.os != 'Windows'
-      - run: npm ci --omit=optional
+      - run: npm ci --ignore-scripts
+        if: runner.os == 'Windows'
+      - run: node scripts/fix-whisper-addon.js
         if: runner.os == 'Windows'
       - run: npm run typecheck
       - run: npm test -- --run

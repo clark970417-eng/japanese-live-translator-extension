@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld('api', {
   finalizeStreaming: (audioData: number[]) => ipcRenderer.invoke('finalize-streaming', audioData),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   decodeMediaFile: (path: string) => ipcRenderer.invoke('decode-media-file', path),
+  processMediaFile: (path: string, jobId: string) => ipcRenderer.invoke('process-media-file', path, jobId),
+  cancelMediaFile: (jobId: string) => ipcRenderer.invoke('cancel-media-file', jobId),
+  onMediaFileProgress: (callback: (data: { jobId: string; processedSeconds: number }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { jobId: string; processedSeconds: number }): void => callback(data)
+    ipcRenderer.on('media-file-progress', handler)
+    return () => ipcRenderer.off('media-file-progress', handler)
+  },
   // Cloud realtime e2e streaming (#721)
   pushRealtimeAudio: (audioData: number[]) => ipcRenderer.invoke('push-realtime-audio', audioData),
   speechBoundary: (boundary: 'start' | 'end') => ipcRenderer.invoke('speech-boundary', boundary),

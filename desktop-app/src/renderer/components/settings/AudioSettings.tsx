@@ -23,9 +23,11 @@ interface AudioSettingsProps {
   streamingIntervalMs: number
   onStreamingIntervalChange: (ms: number) => void
   onTranslateFile: (file: File) => Promise<void>
+  mediaImportActive: boolean
+  onCancelMediaImport: () => Promise<void>
 }
 
-export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNoiseSuppressionChange, platform, streamingIntervalMs, onStreamingIntervalChange, onTranslateFile }: AudioSettingsProps): React.JSX.Element {
+export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNoiseSuppressionChange, platform, streamingIntervalMs, onStreamingIntervalChange, onTranslateFile, mediaImportActive, onCancelMediaImport }: AudioSettingsProps): React.JSX.Element {
   const showMicSelector = audio.audioSource !== 'system'
 
   return (
@@ -44,6 +46,12 @@ export function AudioSettings({ audio, disabled, noiseSuppressionEnabled, onNois
           }}
         />
       </label>
+      {mediaImportActive && (
+        <button type="button" onClick={() => void onCancelMediaImport()}
+          style={{ ...buttonStyle, width: '100%', marginBottom: '10px', borderColor: '#ef4444', color: '#fecaca' }}>
+          Cancel file translation
+        </button>
+      )}
       <div style={{ fontSize: '11px', color: '#94a3b8', margin: '-4px 0 10px' }}>
         FFmpeg input: MP3, M4A, WAV, FLAC, OGG, WebM, MKV, MOV, AVI, MPEG, TS and more
       </div>

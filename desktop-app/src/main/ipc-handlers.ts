@@ -27,5 +27,5 @@ export function registerIpcHandlers(ctx: AppContext): void {
   registerEnterpriseIpc(ctx)
   registerShortcutIpc()
   registerOnboardingIpc(ctx)
-  registerMediaFileIpc()
+  registerMediaFileIpc(ctx)
 }

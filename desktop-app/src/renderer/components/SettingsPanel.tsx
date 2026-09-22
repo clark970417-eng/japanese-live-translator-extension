@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { useSettingsState } from '../hooks/useSettingsState'
-import { decodeAudioFileWithFallback, splitAudioNearSilence } from '../audio-file'
 import { Onboarding } from './Onboarding'
 import {
   AudioSettings,
@@ -27,26 +26,38 @@ function SettingsPanel(): React.JSX.Element {
   const [gerEnabled, setGerEnabled] = useState(false)
   useEffect(() => { window.api.getSettings().then(v => setGerEnabled(!!v.gerEnabled)) }, [])
   const disabled = s.isRunning || s.isStarting
+  const [mediaJobId, setMediaJobId] = useState<string | null>(null)
+
+  useEffect(() => window.api.onMediaFileProgress(({ jobId, processedSeconds }) => {
+    if (jobId === mediaJobId) s.setStatus(`Translating file: ${formatMediaTime(processedSeconds)} processed`)
+  }), [mediaJobId, s.setStatus])
 
   const handleTranslateFile = async (file: File): Promise<void> => {
     let started = false
+    const jobId = crypto.randomUUID()
     try {
-      s.setStatus(`Decoding ${file.name}...`)
-      const audio = await decodeAudioFileWithFallback(file)
-      const segments = splitAudioNearSilence(audio)
-      if (segments.length === 0) throw new Error('The file contains no usable audio.')
+      const path = window.api.getPathForFile(file)
+      if (!path) throw new Error('The selected file cannot be accessed.')
+      setMediaJobId(jobId)
+      s.setStatus(`Opening ${file.name}...`)
       started = await s.handleStart({ captureAudio: false })
       if (!started) return
-      for (let i = 0; i < segments.length; i++) {
-        s.setStatus(`Translating ${file.name}: ${i + 1} / ${segments.length}`)
-        await window.api.processAudio(Array.from(segments[i]))
-      }
-      s.setStatus(`Finished ${file.name}`)
+      const result = await window.api.processMediaFile(path, jobId)
+      s.setStatus(result.cancelled
+        ? `Cancelled ${file.name} at ${formatMediaTime(result.processedSeconds)}`
+        : `Finished ${file.name} (${formatMediaTime(result.processedSeconds)})`)
     } catch (error) {
       s.setStatus(`File translation failed: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
+      setMediaJobId(null)
       if (started) await s.handleStop()
     }
+  }
+
+  const cancelMediaFile = async (): Promise<void> => {
+    if (!mediaJobId) return
+    s.setStatus('Cancelling file translation...')
+    await window.api.cancelMediaFile(mediaJobId)
   }
 
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -127,6 +138,8 @@ function SettingsPanel(): React.JSX.Element {
           window.api.saveSettings({ streamingIntervalMs: v })
         }}
         onTranslateFile={handleTranslateFile}
+        mediaImportActive={mediaJobId !== null}
+        onCancelMediaImport={cancelMediaFile}
       />
 
       {/* Current config summary — always visible */}
@@ -326,6 +339,16 @@ function SettingsPanel(): React.JSX.Element {
       />
     </div>
   )
+}
+
+function formatMediaTime(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const remaining = total % 60
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`
+    : `${minutes}:${String(remaining).padStart(2, '0')}`
 }
 
 const containerStyle: React.CSSProperties = {
