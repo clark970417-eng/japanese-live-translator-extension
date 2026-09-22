@@ -3,7 +3,7 @@ name: Build public beta
 on:
   workflow_dispatch:
   push:
-    tags: ['beta-v*']
+    tags: ["beta-v*"]
 
 permissions:
   contents: write
@@ -81,7 +81,7 @@ jobs:
       - run: npm run build
       - name: Build unsigned beta package
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: ${{ matrix.command }}
       - uses: actions/upload-artifact@v4
         with:
@@ -103,6 +103,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd beta
+          find . -maxdepth 1 -type f -name '* *' -print0 | while IFS= read -r -d '' file; do
+            mv "$file" "${file// /.}"
+          done
           find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS.txt
           jq -n \
             --arg tag "${GITHUB_REF_NAME}" \
