@@ -5,7 +5,7 @@ import { connect } from 'net'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { startExtensionCompanion } from './extension-companion'
+import { companionEndpoint, startExtensionCompanion } from './extension-companion'
 import type { AppContext } from './app-context'
 
 vi.mock('./store', () => ({ store: { get: vi.fn() } }))
@@ -34,7 +34,7 @@ async function harness() {
     process: vi.fn(async () => null)
   })
   const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
-  const socket = connect(join(directory, 'desktop.sock'))
+  const socket = connect(companionEndpoint(directory))
   const messages: Array<Record<string, unknown>> = []
   let buffer = ''
   socket.setEncoding('utf8')

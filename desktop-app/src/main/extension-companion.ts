@@ -3,6 +3,7 @@ import { createServer, type Server, type Socket } from 'net'
 import { mkdirSync, chmodSync, existsSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import { createHash } from 'crypto'
 import { ALL_LANGUAGES, type Language, type TranslationResult } from '../engines/types'
 import { store } from './store'
 import { startPipeline, type PipelineStartConfig } from './ipc/pipeline-ipc'
@@ -21,12 +22,19 @@ import type { SpeechEvidence } from '../engines/types'
  * it is treated as a second client and refused. */
 const OWNER_RELEASE_GRACE_MS = 2000
 
+/** Windows requires a named pipe; Unix systems use a protected domain socket. */
+export function companionEndpoint(directory: string, platform = process.platform): string {
+  if (platform !== 'win32') return join(directory, 'desktop.sock')
+  const id = createHash('sha256').update(directory).digest('hex').slice(0, 20)
+  return `\\\\.\\pipe\\japanese-live-caption-${id}`
+}
+
 export async function startExtensionCompanion(ctx: AppContext, directory?: string): Promise<Server> {
   const dir = directory || join(homedir(), 'Library/Application Support/JapaneseLiveCaption')
   mkdirSync(dir, { recursive: true, mode: 0o700 })
-  chmodSync(dir, 0o700)
-  const path = join(dir, 'desktop.sock')
-  if (existsSync(path)) unlinkSync(path)
+  if (process.platform !== 'win32') chmodSync(dir, 0o700)
+  const path = companionEndpoint(dir)
+  if (process.platform !== 'win32' && existsSync(path)) unlinkSync(path)
   let owned = false
   /** The previous connection's teardown. A client reconnecting after the old
    * socket closed is accepted at once, but starts no work until the session it
@@ -301,6 +309,9 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       waiting.shift()?.()
     })
   }
-  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(path, () => { chmodSync(path, 0o600); resolve() }) })
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(path, () => {
+    if (process.platform !== 'win32') chmodSync(path, 0o600)
+    resolve()
+  }) })
   return server
 }

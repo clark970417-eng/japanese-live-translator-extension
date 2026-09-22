@@ -69,7 +69,7 @@ vi.mock('./ipc/pipeline-ipc', () => ({ startPipeline: vi.fn(async () => {
   return { success: true }
 }) }))
 
-import { startExtensionCompanion } from './extension-companion'
+import { companionEndpoint, startExtensionCompanion } from './extension-companion'
 import { workerPool } from './worker-pool'
 import type { AppContext } from './app-context'
 
@@ -96,7 +96,7 @@ async function companion() {
   fake.pipeline = pipeline
   const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
   const client = () => {
-    const socket = connect(join(directory, 'desktop.sock'))
+    const socket = connect(companionEndpoint(directory))
     const messages: Array<Record<string, unknown> & { at: number }> = []
     let buffer = ''
     socket.setEncoding('utf8')

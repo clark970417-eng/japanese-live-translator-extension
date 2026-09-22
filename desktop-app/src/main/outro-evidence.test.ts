@@ -12,7 +12,7 @@ import { connect } from 'net'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { startExtensionCompanion } from './extension-companion'
+import { companionEndpoint, startExtensionCompanion } from './extension-companion'
 import { isUnspokenOutro } from '../engines/stt/transcript-guard'
 import type { SpeechEvidence } from '../engines/types'
 import type { AppContext } from './app-context'
@@ -54,7 +54,7 @@ async function harness() {
   const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
   const sockets: Array<ReturnType<typeof connect>> = []
   const client = () => {
-    const socket = connect(join(directory, 'desktop.sock'))
+    const socket = connect(companionEndpoint(directory))
     sockets.push(socket)
     const messages: Array<Record<string, unknown>> = []
     let buffer = '', id = 0

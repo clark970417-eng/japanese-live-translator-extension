@@ -4,7 +4,7 @@ import { connect } from 'net'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { startExtensionCompanion } from './extension-companion'
+import { companionEndpoint, startExtensionCompanion } from './extension-companion'
 import type { AppContext } from './app-context'
 import { store } from './store'
 import { startPipeline } from './ipc/pipeline-ipc'
@@ -12,6 +12,14 @@ import { startPipeline } from './ipc/pipeline-ipc'
 vi.mock('./store', () => ({ store: { get: vi.fn() } }))
 vi.mock('./ipc/pipeline-ipc', () => ({ startPipeline: vi.fn(async () => ({ success: true })) }))
 const textInference = vi.hoisted(() => vi.fn(async () => 'こんにちは'))
+
+it('uses a Windows named pipe instead of an unsupported Unix socket path', () => {
+  const first = companionEndpoint('C:\\Users\\one\\caption', 'win32')
+  expect(first.startsWith('\\\\.\\pipe\\japanese-live-caption-')).toBe(true)
+  expect(first.slice(-20)).toMatch(/^[a-f0-9]{20}$/)
+  expect(companionEndpoint('C:\\Users\\one\\caption', 'win32')).toBe(first)
+  expect(companionEndpoint('/tmp/caption', 'linux')).toBe('/tmp/caption/desktop.sock')
+})
 
 vi.mock('../engines/translator/HunyuanMT15Translator', () => ({ HunyuanMT15Translator: class {
   async initialize() {} async dispose() {}
@@ -33,7 +41,7 @@ it('emits Japanese before translation, rejects invalid audio, and continues afte
   })
   const ctx = { pipeline } as unknown as AppContext
   const server = await startExtensionCompanion(ctx, directory)
-  const socket = connect(join(directory, 'desktop.sock'))
+  const socket = connect(companionEndpoint(directory))
   const messages: Array<Record<string, unknown>> = []
   let buffer = ''
   socket.setEncoding('utf8')
@@ -93,7 +101,7 @@ it('rejects excess page translations without disconnecting audio and gives queue
     process: vi.fn(async () => { order.push('audio'); return { sourceText: '声', translatedText: '聲音' } })
   })
   const server = await startExtensionCompanion({pipeline} as unknown as AppContext, directory)
-  const socket = connect(join(directory, 'desktop.sock'))
+  const socket = connect(companionEndpoint(directory))
   const messages: Array<Record<string, unknown>> = []
   let buffer = ''
   socket.setEncoding('utf8')
@@ -145,7 +153,7 @@ it('acknowledges recognized speech before translation, routes late Chinese to it
     })
   })
   const server = await startExtensionCompanion({pipeline} as unknown as AppContext, directory)
-  const socket = connect(join(directory, 'desktop.sock'))
+  const socket = connect(companionEndpoint(directory))
   const messages: any[] = []
   let buffer = ''
   socket.setEncoding('utf8')
@@ -187,7 +195,7 @@ it('releases optional draft repair for arriving audio, keeps the draft, and drai
     finalizeStreaming: vi.fn(async () => ({ sourceText: '声', translatedText: '聲音', timestamp: 9 }))
   })
   const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
-  const socket = connect(join(directory, 'desktop.sock'))
+  const socket = connect(companionEndpoint(directory))
   const messages: Array<Record<string, unknown>> = []
   let buffer = ''
   socket.setEncoding('utf8')
@@ -252,7 +260,7 @@ it('uses the draft model only while no caption session is running', async () => 
   vi.mocked(store.get).mockImplementation(key =>
     (key === 'draftTranslationEngine' ? 'offline-hymt2' : 'offline-hymt15') as never)
   const server = await startExtensionCompanion({ pipeline } as unknown as AppContext, directory)
-  const socket = connect(join(directory, 'desktop.sock'))
+  const socket = connect(companionEndpoint(directory))
   const messages: Array<Record<string, unknown>> = []
   let buffer = ''
   socket.setEncoding('utf8')

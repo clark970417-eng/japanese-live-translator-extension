@@ -5,7 +5,7 @@ import { connect, type Socket } from 'net'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { startExtensionCompanion } from './extension-companion'
+import { companionEndpoint, startExtensionCompanion } from './extension-companion'
 import type { AppContext } from './app-context'
 
 vi.mock('./store', () => ({ store: { get: vi.fn() } }))
@@ -24,7 +24,7 @@ interface Client { socket: Socket, messages: Array<Record<string, unknown>>, clo
 
 function client(directory: string): Promise<Client> {
   return new Promise(resolve => {
-    const socket = connect(join(directory, 'desktop.sock'))
+    const socket = connect(companionEndpoint(directory))
     const state: Client = { socket, messages: [], closed: false, request: () => 0 }
     let buffer = '', id = 0
     socket.setEncoding('utf8')
