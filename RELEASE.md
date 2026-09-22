@@ -1,5 +1,7 @@
 # Release and rollback guide
 
+The latest public preview is **beta-v4.2.1**. It expands page translation to general websites, adds dedicated Facebook and Instagram handling, and aligns the extension and desktop app at version 4.2.1. See [CHANGELOG.md](CHANGELOG.md) for the complete user-facing summary.
+
 Japanese Live Translate uses two release channels:
 
 - **Beta** tags use `beta-vX.Y.Z`. They are public previews and may be unsigned.
@@ -29,3 +31,12 @@ If the app cannot open, reinstalling does not delete user data. Uninstallers are
 3. Publish a Beta first and complete the live-service checklist in `BETA-TESTING.md`.
 4. Promote with a stable `vX.Y.Z` tag only after unresolved blocking issues are closed.
 5. Verify every expected asset, `SHA256SUMS.txt`, and `release-manifest.json` on the release page.
+
+## 4.2.1 verification completed
+
+- Extension: 129 tests passed.
+- Desktop: 668 tests passed.
+- TypeScript checks and production build passed.
+- The locally packaged macOS application passed deep code-signature verification.
+- Opera GX loaded extension 4.2.1, connected to desktop 4.2.1, started tab capture, loaded the desktop model, stopped cleanly, and returned to ready.
+- Facebook access and the all-websites manifest path were verified without posting or changing user content.

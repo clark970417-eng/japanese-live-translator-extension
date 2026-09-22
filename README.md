@@ -1,10 +1,10 @@
-> Public preview: download from [GitHub Releases](https://github.com/clark970417-eng/japanese-live-translator-extension/releases), follow [beta installation and testing](BETA-TESTING.md), and send feedback with the repository issue forms.
+> **Latest public preview: [4.2.1](https://github.com/clark970417-eng/japanese-live-translator-extension/releases/tag/beta-v4.2.1).** Download the desktop app and browser extension together, follow [beta installation and testing](BETA-TESTING.md), and send feedback with the repository issue forms.
 
 # Japanese Live Caption Translator
 
 ![Extension icon](./icon-preview.png)
 
-A Chromium browser extension that generates multilingual captions for online video and live audio. It supports browser inference and a local desktop companion while keeping caption controls in the browser.
+A local-first desktop app and Chromium extension for multilingual live captions, website translation, and reviewable translated replies. It can caption audio from the active browser tab and translate visible titles, comments, posts, and live chat without automatically submitting anything.
 
 The complete upstream LiveTranslate application is included in
 [desktop-app](desktop-app/INTEGRATION.md), with attribution and a private browser
@@ -12,7 +12,16 @@ bridge. This integration preserves the extension's page translation, Japanese
 reply drafts, caption modes and visual controls. See the integration notes for
 the implemented path, tests and remaining limits.
 
-Current validation: [3.9.5 verification and remaining checks](docs/retests/RETEST-3.9.5.md).
+Current release notes: [4.2.1 — translation across websites](CHANGELOG.md#421---2026-09-22). Historical verification reports remain in [`docs/retests`](docs/retests/).
+
+## What's new in 4.2.1
+
+- Website translation now runs on ordinary HTTP and HTTPS pages instead of a five-site allowlist.
+- Facebook and Instagram have dedicated title, comment, chat, and writing-editor rules.
+- YouTube, Twitch, X, TikTok, and Bilibili retain their specialized adapters.
+- A conservative general adapter covers semantic titles, chats, comments, replies, and message editors on other websites.
+- Search, login, password, email, phone, and URL fields are excluded from the general writing control.
+- The extension and desktop app now share version 4.2.1 and were verified together in Opera GX.
 
 ## Project overview
 
@@ -21,7 +30,7 @@ The project explores a practical accessibility problem: live Japanese media ofte
 It supports two independent workflows:
 
 - **Page text translation** translates titles, live chat messages, comments, and posts across the web. YouTube, Twitch, X, Bilibili, TikTok, Facebook, and Instagram have dedicated page rules; other sites use a conservative general adapter.
-- **Audio captioning** captures the current YouTube, Twitch, X Spaces, Bilibili, or TikTok tab and produces movable, resizable bilingual captions.
+- **Audio captioning** captures audio from the active browser tab and produces movable, resizable bilingual captions.
 
 The extension never publishes a message automatically. Its optional writing assistant creates a Japanese draft from Chinese text and leaves review and submission to the user.
 
@@ -35,7 +44,7 @@ The extension never publishes a message automatically. Its optional writing assi
 - Two display modes: one low-latency caption pair or a four-entry ordered transcript queue.
 - A movable and resizable caption panel with configurable type size, color, outline, background, and opacity.
 - Persistent transcript records, failed-translation retry, and text export.
-- Translation of titles, live chat, comments, and posts across websites, with selectable popular languages and dedicated rules for major platforms.
+- Translation of titles, live chat, comments, and posts across websites, with 14 selectable languages and dedicated rules for major platforms.
 - Reviewable writing translations for detected comment, reply, and live-chat editors; synchronized mode automatically reverses the reading pair.
 - Local audio processing by default, with optional cloud engines in the desktop application; no automatic posting.
 
@@ -61,7 +70,7 @@ Every release includes SHA-256 checksums and a build provenance manifest. The de
 2. Open `opera://extensions` in Opera GX or `chrome://extensions` in Chrome.
 3. Enable Developer mode.
 4. Select **Load unpacked** and choose the directory containing `manifest.json`.
-5. Refresh the target YouTube, Twitch, X, Bilibili, or TikTok page, open the extension, and select **Start audio**.
+5. Refresh the target website, open the extension, and select **Start audio** when you also want captions for that tab's audio.
 
 Browser mode downloads Whisper Small and uses network translation. Desktop mode
 requires the [local app and native messaging registration](desktop-app/INTEGRATION.md);
@@ -94,9 +103,7 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The current revision passes 125 extension tests and 666 desktop tests. An isolated
-desktop interface run passed 13 checks; its audio-start check was not run. Coverage includes native response ordering, source-before-translation
-events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
+The current revision passes **129 extension tests and 668 desktop tests**, plus desktop TypeScript checks and a production build. A local Opera GX acceptance run loaded the desktop model from the extension, started tab capture, reached the live no-speech state, stopped cleanly, and returned to ready. Coverage includes native response ordering, source-before-translation events, invalid audio, warmup failures, silent PCM, major-site adapters, the general website adapter, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See
 [3.8 verification](docs/retests/RETEST-3.8.0.md) and the [upstream comparison](COMPARISON-LIVETRANSLATE.md).
 
@@ -110,6 +117,7 @@ they should not be interpreted as measurements of the new desktop backend.
 - Recognition quality can decrease with music, overlapping speakers, proper names, noise, and very short utterances.
 - Translation quality and latency depend on model choice, available compute, and, for network providers, service and network conditions.
 - Picture-in-picture windows cannot host a normal page content-script overlay.
+- Text rendered only inside images, video frames, canvas elements, or inaccessible closed components cannot be read as normal page text.
 - A 60.02-minute repeated-speech stress run completed 329 trials and 32 restarts without empty final strings, but had substantial high-load latency spikes. Diverse hours-long livestreams and all optional engines remain unverified. See [the verification report](docs/retests/RETEST-3.8.0.md).
 - The model has not been fine-tuned for this project.
 
