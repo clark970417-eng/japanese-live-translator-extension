@@ -11,6 +11,7 @@ import {
   VirtualMicSettings,
   SessionControls,
   UpdateStatus,
+  SupportSettings,
   CrashRecoveryBanner,
   ConfigSummary,
   EnterpriseSettings,
@@ -302,6 +303,8 @@ function SettingsPanel(): React.JSX.Element {
           <KeyboardShortcuts />
 
           <UpdateStatus />
+
+          <SupportSettings />
         </div>
       )}
 

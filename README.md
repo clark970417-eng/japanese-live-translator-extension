@@ -53,6 +53,8 @@ This is windowed incremental recognition rather than a stateful streaming acoust
 
 Download the desktop package for your operating system and the browser extension ZIP from [GitHub Releases](https://github.com/clark970417-eng/japanese-live-translator-extension/releases). These preview packages are not code-signed, so read the operating-system-specific instructions and security explanation in [BETA-TESTING.md](BETA-TESTING.md) before opening them.
 
+Every release includes SHA-256 checksums and a build provenance manifest. The desktop app supports Stable and Beta update channels; unsigned builds open the verified GitHub download page instead of attempting an unsafe silent replacement. See the [release and rollback guide](RELEASE.md) for recovery instructions.
+
 ### From source
 
 1. Clone or download this repository.

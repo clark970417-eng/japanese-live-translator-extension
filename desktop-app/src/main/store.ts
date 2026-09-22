@@ -161,6 +161,8 @@ export interface AppSettings {
   preferredLocalEngine: string
   /** Current model quality tier in use: 1=basic (fast-start), 2=full-quality (#694) */
   activeModelTier: 1 | 2 | null
+  /** Update feed to follow. Beta includes prereleases; stable ignores them. */
+  updateChannel: 'stable' | 'beta'
 }
 
 export const store = new Store<AppSettings>({
@@ -235,6 +237,7 @@ export const store = new Store<AppSettings>({
     onboardingModelStatus: 'idle',
     onboardingDownloadProgress: 0,
     preferredLocalEngine: 'offline-hymt15',
-    activeModelTier: null
+    activeModelTier: null,
+    updateChannel: 'beta'
   }
 })

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Live Translate — Multilingual Captions",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "description": "Multilingual live captions, page, chat and typing translation for YouTube, Twitch, X, TikTok and Bilibili.",
   "icons": {
     "16": "icons/icon-16.png",

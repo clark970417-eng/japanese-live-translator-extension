@@ -97,7 +97,6 @@ async function processMediaWithFfmpeg(
   let pending = Buffer.alloc(0)
   let totalBytes = 0
   let processedSamples = 0
-  let cancelled = false
   const errors: Buffer[] = []
   let processing = Promise.resolve()
   const timeout = setTimeout(() => decoder.kill('SIGKILL'), 6 * 60 * 60_000)
@@ -140,7 +139,7 @@ async function processMediaWithFfmpeg(
   decoder.once('error', () => {})
   const exitCode = await new Promise<number | null>((accept) => decoder.once('close', accept))
   clearTimeout(timeout)
-  cancelled = decoder.killed && totalBytes <= MAX_PCM_BYTES
+  const cancelled = decoder.killed && totalBytes <= MAX_PCM_BYTES
   try {
     await processing
     if (!cancelled && totalBytes <= MAX_PCM_BYTES) await processAvailable(true)

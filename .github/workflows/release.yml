@@ -33,6 +33,8 @@ jobs:
       - run: node scripts/fix-whisper-addon.js
         if: runner.os == 'Windows'
       - run: npm run typecheck
+      - run: npm run lint
+        if: runner.os == 'Linux'
       - run: npm test -- --run
       - run: npm run build
   mac:
@@ -116,8 +118,59 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Remove-Item -Recurse -Force node_modules/naudiodon -ErrorAction SilentlyContinue
+      - name: Require Windows signing credentials
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:CSC_LINK) { throw 'Missing required signing secret: WINDOWS_CERTIFICATE_PFX' }
+          if (-not $env:CSC_KEY_PASSWORD) { throw 'Missing required signing secret: WINDOWS_CERTIFICATE_PASSWORD' }
       - run: npm run build
       - name: Build installer and publish update metadata
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ runner.os == 'Windows' && secrets.WINDOWS_CERTIFICATE_PFX || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
         run: npx electron-builder ${{ matrix.target }} --publish always
+
+  finalize-release:
+    needs: [mac, windows-linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download published installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir release-assets
+          gh release download "${GITHUB_REF_NAME}" --dir release-assets --repo "${GITHUB_REPOSITORY}" \
+            --skip-existing --pattern '*.dmg' --pattern '*.zip' --pattern '*.exe' --pattern '*.AppImage' \
+            --pattern '*.yml' --pattern '*.blockmap'
+      - name: Generate verification and provenance files
+        run: |
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS.txt
+          jq -n \
+            --arg tag "${GITHUB_REF_NAME}" \
+            --arg commit "${GITHUB_SHA}" \
+            --arg builtAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg workflow "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{tag:$tag,commit:$commit,builtAt:$builtAt,workflow:$workflow,signedTargets:["macos","windows"],channel:"stable"}' \
+            > release-manifest.json
+      - name: Upload verification files and generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" release-assets/SHA256SUMS.txt release-assets/release-manifest.json \
+            --repo "${GITHUB_REPOSITORY}" --clobber
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="${GITHUB_REF_NAME}" --jq .body > generated-notes.md
+          {
+            echo 'Downloads can be verified with `SHA256SUMS.txt`. Build provenance is recorded in `release-manifest.json`.'
+            echo
+            cat generated-notes.md
+          } > release-notes.md
+          gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+            --draft=false --notes-file release-notes.md

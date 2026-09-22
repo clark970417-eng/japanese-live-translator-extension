@@ -207,10 +207,13 @@ export interface ElectronAPI {
 
   // Auto-update (#314)
   updateCheck: () => Promise<{ success?: boolean; error?: string }>
-  updateDownload: () => Promise<{ success?: boolean; error?: string }>
+  updateDownload: () => Promise<{ success?: boolean; openedBrowser?: boolean; error?: string }>
   updateInstall: () => Promise<{ success?: boolean; deferred?: boolean }>
-  updateGetStatus: () => Promise<{ state: string; version?: string; progress?: number; error?: string }>
-  onUpdateStatus: (callback: (status: { state: string; version?: string; progress?: number; error?: string }) => void) => (() => void)
+  updateSetChannel: (channel: 'stable' | 'beta') => Promise<{ success?: boolean; error?: string }>
+  updateGetStatus: () => Promise<{ state: string; version?: string; progress?: number; error?: string; currentVersion?: string; channel?: 'stable' | 'beta'; installMode?: 'automatic' | 'browser'; releaseUrl?: string }>
+  exportDiagnostics: () => Promise<{ success?: boolean; canceled?: boolean; path?: string; error?: string }>
+  openSupportUrl: (url: string) => Promise<{ success?: boolean; error?: string }>
+  onUpdateStatus: (callback: (status: { state: string; version?: string; progress?: number; error?: string; currentVersion?: string; channel?: 'stable' | 'beta'; installMode?: 'automatic' | 'browser'; releaseUrl?: string }) => void) => (() => void)
 }
 
 declare global {

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release readiness
+- Add Stable and Beta update channels.
+- Add browser-based update discovery for unsigned builds while retaining automatic installation for signed stable builds.
+- Add an in-app Support & Privacy section with privacy-safe diagnostic export and direct feedback links.
+- Add SHA-256 checksums and build provenance manifests to Beta and stable release automation.
+- Add repeatable publishing, generated release notes, rollback instructions, and release verification gates.
+
 ### Live caption latency
 - Emit the first clear-speech recognition window at about 500 ms while retaining the 650 ms accuracy guard for weak or noisy speech.
 - Start the first streaming cadence at acoustic speech onset so VAD confirmation time is not added to the preview delay.

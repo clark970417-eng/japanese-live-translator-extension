@@ -238,9 +238,12 @@ contextBridge.exposeInMainWorld('api', {
   updateCheck: () => ipcRenderer.invoke('update-check'),
   updateDownload: () => ipcRenderer.invoke('update-download'),
   updateInstall: () => ipcRenderer.invoke('update-install'),
+  updateSetChannel: (channel: 'stable' | 'beta') => ipcRenderer.invoke('update-set-channel', channel),
   updateGetStatus: () => ipcRenderer.invoke('update-get-status'),
-  onUpdateStatus: (callback: (status: { state: string; version?: string; progress?: number; error?: string }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, status: { state: string; version?: string; progress?: number; error?: string }): void => callback(status)
+  exportDiagnostics: () => ipcRenderer.invoke('export-diagnostics'),
+  openSupportUrl: (url: string) => ipcRenderer.invoke('open-support-url', url),
+  onUpdateStatus: (callback: (status: { state: string; version?: string; progress?: number; error?: string; currentVersion?: string; channel?: 'stable' | 'beta'; installMode?: 'automatic' | 'browser'; releaseUrl?: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: { state: string; version?: string; progress?: number; error?: string; currentVersion?: string; channel?: 'stable' | 'beta'; installMode?: 'automatic' | 'browser'; releaseUrl?: string }): void => callback(status)
     ipcRenderer.on('update-status', handler)
     return () => ipcRenderer.off('update-status', handler)
   }

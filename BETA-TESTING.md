@@ -6,6 +6,15 @@ This preview is intended for people who agree to test unfinished software and re
 
 Download the package for your computer and `japanese-live-translator-extension.zip` from the repository's **Releases** page.
 
+### Verify the download
+
+Each release includes `SHA256SUMS.txt` and `release-manifest.json`. Verify the installer before opening it:
+
+- **macOS/Linux:** run `shasum -a 256 <downloaded-file>` and compare the result with `SHA256SUMS.txt`.
+- **Windows PowerShell:** run `Get-FileHash <downloaded-file> -Algorithm SHA256` and compare the result with `SHA256SUMS.txt`.
+
+`release-manifest.json` identifies the exact source commit and GitHub Actions build that produced the files.
+
 ### macOS
 
 1. Choose the Apple Silicon package for M-series Macs or the Intel package for Intel Macs.
@@ -51,5 +60,9 @@ For a longer test, leave one real stream running for two hours. Note the delay n
 ## Report feedback
 
 Use **Issues → New issue** and select either **Beta problem report** or **Translation quality feedback**. Include the app and extension version, computer type, browser, website, language pair, engine names, approximate delay, and exact reproduction steps. Remove API keys, private chats, account names, and other personal information.
+
+The desktop app can export a privacy-safe diagnostic JSON from **Support & Privacy**. It contains the app version, operating system, selected engine names, and recent session health. It excludes API keys, audio, captions, and translated text.
+
+If a Beta behaves worse, follow [the rollback guide](RELEASE.md#roll-back). Installing an older version keeps existing settings and downloaded models.
 
 Read [PRIVACY.md](PRIVACY.md) before testing cloud translation.

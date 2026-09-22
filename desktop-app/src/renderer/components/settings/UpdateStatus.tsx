@@ -7,6 +7,10 @@ interface UpdateState {
   version?: string
   progress?: number
   error?: string
+  currentVersion?: string
+  channel?: 'stable' | 'beta'
+  installMode?: 'automatic' | 'browser'
+  releaseUrl?: string
 }
 
 export function UpdateStatus(): React.JSX.Element {
@@ -49,10 +53,30 @@ export function UpdateStatus(): React.JSX.Element {
     }
   }, [])
 
+  const handleChannelChange = useCallback(async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const channel = event.target.value as 'stable' | 'beta'
+    setUpdate((previous) => ({ ...previous, channel, state: 'checking' }))
+    const result = await window.api.updateSetChannel(channel)
+    if (result.error) setUpdate((previous) => ({ ...previous, state: 'error', error: result.error }))
+  }, [])
+
+  const channelControl = (
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+      <label htmlFor="update-channel" style={{ fontSize: '12px', color: '#94a3b8' }}>Update channel</label>
+      <select id="update-channel" value={update.channel ?? 'beta'} onChange={handleChannelChange}
+        style={{ background: '#0f172a', color: '#e2e8f0', border: '1px solid #475569', borderRadius: '6px', padding: '6px' }}>
+        <option value="stable">Stable</option>
+        <option value="beta">Beta</option>
+      </select>
+      {update.currentVersion && <span style={{ fontSize: '12px', color: '#64748b' }}>Current v{update.currentVersion}</span>}
+    </div>
+  )
+
   // Don't render anything when idle and no update info
   if (update.state === 'idle' || update.state === 'not-available') {
     return (
       <Section label="App Updates">
+        {channelControl}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '13px', color: '#94a3b8' }}>
             {update.state === 'not-available' && update.version
@@ -82,6 +106,7 @@ export function UpdateStatus(): React.JSX.Element {
 
   return (
     <Section label="App Updates">
+      {channelControl}
       <div style={{
         background: '#1e293b',
         borderRadius: '8px',
@@ -111,7 +136,7 @@ export function UpdateStatus(): React.JSX.Element {
                 marginTop: 0
               }}
             >
-              Download Update
+              {update.installMode === 'browser' ? 'Open Verified Download Page' : 'Download Update'}
             </button>
           </>
         )}

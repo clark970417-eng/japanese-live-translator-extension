@@ -75,6 +75,8 @@ jobs:
         shell: pwsh
         run: Remove-Item -Recurse -Force node_modules/naudiodon -ErrorAction SilentlyContinue
       - run: npm run typecheck
+      - run: npm run lint
+        if: runner.os == 'Linux'
       - run: npm test -- --run
       - run: npm run build
       - name: Build unsigned beta package
@@ -100,8 +102,33 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" beta/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --prerelease \
-            --title "Japanese Live Translate ${GITHUB_REF_NAME}" \
-            --notes "Public preview build. Read BETA-TESTING.md before installation. These packages are not code-signed; your operating system will show a security warning. Please report results through the repository issue forms."
+          cd beta
+          find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS.txt
+          jq -n \
+            --arg tag "${GITHUB_REF_NAME}" \
+            --arg commit "${GITHUB_SHA}" \
+            --arg builtAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg workflow "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{tag:$tag,commit:$commit,builtAt:$builtAt,workflow:$workflow,signed:false,channel:"beta"}' \
+            > release-manifest.json
+          cd ..
+          cat > beta-notes.md <<EOF
+          Public preview build. Read the [installation and testing guide](https://github.com/${GITHUB_REPOSITORY}/blob/main/BETA-TESTING.md) before installation.
+
+          Verify downloads with \`SHA256SUMS.txt\`. These packages are not code-signed, so the operating system will show a security warning. Report results through the repository issue forms.
+          EOF
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="${GITHUB_REF_NAME}" --jq .body > generated-notes.md
+          printf '\n## Changes\n\n' >> beta-notes.md
+          cat generated-notes.md >> beta-notes.md
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" beta/* --repo "${GITHUB_REPOSITORY}" --clobber
+            gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+              --prerelease --notes-file beta-notes.md
+          else
+            gh release create "${GITHUB_REF_NAME}" beta/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --prerelease \
+              --title "Japanese Live Translate ${GITHUB_REF_NAME}" \
+              --notes-file beta-notes.md
+          fi

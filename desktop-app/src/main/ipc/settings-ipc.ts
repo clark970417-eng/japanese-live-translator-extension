@@ -1,4 +1,5 @@
-import { ipcMain, dialog } from 'electron'
+import { app, ipcMain, dialog, shell } from 'electron'
+import { arch, platform, release, totalmem } from 'os'
 import { readFile, writeFile } from 'fs/promises'
 import { store } from '../store'
 import type { AppSettings, SubtitleSettings, CorrectionEntry } from '../store'
@@ -17,6 +18,48 @@ const _log = createLogger('ipc:settings')
 
 /** Register settings persistence IPC handlers */
 export function registerSettingsIpc(ctx: AppContext): void {
+  const supportUrls = new Set([
+    'https://github.com/clark970417-eng/japanese-live-translator-extension/issues/new?template=bug-report.yml',
+    'https://github.com/clark970417-eng/japanese-live-translator-extension/issues/new?template=translation-quality.yml',
+    'https://github.com/clark970417-eng/japanese-live-translator-extension/blob/main/PRIVACY.md',
+    'https://github.com/clark970417-eng/japanese-live-translator-extension/releases'
+  ])
+
+  ipcMain.handle('open-support-url', async (_event, url: unknown) => {
+    if (typeof url !== 'string' || !supportUrls.has(url)) return { error: 'Unsupported link' }
+    await shell.openExternal(url)
+    return { success: true }
+  })
+
+  ipcMain.handle('export-diagnostics', async () => {
+    if (!ctx.mainWindow) return { error: 'No main window' }
+    const result = await dialog.showSaveDialog(ctx.mainWindow, {
+      title: 'Export diagnostics',
+      defaultPath: `japanese-live-translate-diagnostics-${Date.now()}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (result.canceled || !result.filePath) return { canceled: true }
+    const diagnostics = {
+      generatedAt: new Date().toISOString(),
+      app: { version: app.getVersion(), packaged: app.isPackaged },
+      system: { platform: platform(), release: release(), arch: arch(), memoryBytes: totalmem() },
+      configuration: {
+        updateChannel: store.get('updateChannel'),
+        sttEngine: store.get('sttEngine'),
+        translationEngine: store.get('translationEngine'),
+        sourceLanguage: store.get('sourceLanguage'),
+        targetLanguage: store.get('targetLanguage'),
+        audioSource: store.get('audioSource'),
+        streamingIntervalMs: store.get('streamingIntervalMs'),
+        noiseSuppressionEnabled: store.get('noiseSuppressionEnabled'),
+        simulMtEnabled: store.get('simulMtEnabled')
+      },
+      recentSessions: (store.get('sessionLogs') || []).slice(-20)
+    }
+    await writeFile(result.filePath, JSON.stringify(diagnostics, null, 2), 'utf-8')
+    return { success: true, path: result.filePath }
+  })
+
   ipcMain.handle('get-settings', () => {
     return {
       translationEngine: store.get('translationEngine'),
@@ -66,7 +109,8 @@ export function registerSettingsIpc(ctx: AppContext): void {
       isFirstRun: store.get('isFirstRun'),
       onboardingModelStatus: store.get('onboardingModelStatus'),
       onboardingDownloadProgress: store.get('onboardingDownloadProgress'),
-      preferredLocalEngine: store.get('preferredLocalEngine')
+      preferredLocalEngine: store.get('preferredLocalEngine'),
+      updateChannel: store.get('updateChannel')
     }
   })
 

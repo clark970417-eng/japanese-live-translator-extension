@@ -16,7 +16,7 @@ The extension reads supported YouTube, Twitch, TikTok, Bilibili, and X pages to 
 
 ## Diagnostics and feedback
 
-Preview testers choose what to share through GitHub. Diagnostic reports can include operating-system and hardware information, engine configuration, timing, and error messages. Testers must remove API keys, passwords, private messages, account names, and personal information before posting.
+Preview testers choose what to share through GitHub. The optional in-app diagnostic export contains the app version, operating system and architecture, total memory, selected engine and language identifiers, non-content audio settings, and the last 20 session health summaries. It excludes API keys, raw audio, recognized speech, subtitles, translations, and browsing history. Testers should still review the file before posting it.
 
 ## Deletion
 
