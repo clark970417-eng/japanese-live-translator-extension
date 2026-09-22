@@ -1,16 +1,19 @@
 name: Release desktop app
-
 on:
   push:
-    tags:
-      - 'v*'
-
+    tags: ['v*']
 permissions:
   contents: write
-
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  macos-arm64:
-    runs-on: macos-15
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: desktop-app
@@ -25,13 +28,46 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --run
       - run: npm run build
+  mac:
+    needs: verify
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop-app/package-lock.json
+      - run: npm ci
+      - run: npm run build
       - name: Build bundled speaker diarization bridge
         run: |
           cd scripts/fluid-audio
           swift build -c release
           mkdir -p ../../resources/bin
           cp .build/release/fluid-audio-bridge ../../resources/bin/fluid-audio-bridge
-      - name: Build and publish macOS update artifacts
+      - name: Require Apple distribution credentials
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            test -n "${!name:-}" || { echo "Missing required signing secret: $name"; exit 1; }
+          done
+      - name: Sign, notarize and publish macOS package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.MACOS_CERTIFICATE_P12 }}
@@ -39,12 +75,31 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          required=(CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID)
-          for name in "${required[@]}"; do
-            if [ -z "${!name:-}" ]; then
-              echo "Missing required signing secret: $name"
-              exit 1
-            fi
-          done
-          npx electron-builder --mac dmg zip --arm64 --publish always --config.mac.notarize=true
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish always --config.mac.notarize=true
+  windows-linux:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            target: --win nsis --x64
+          - os: ubuntu-24.04
+            target: --linux AppImage --x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop-app/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Build installer and publish update metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder ${{ matrix.target }} --publish always

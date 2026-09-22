@@ -1,6 +1,6 @@
 {
   "name": "live-translate",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Local-first multilingual live captions and browser translation",
   "main": "./out/main/index.js",
   "scripts": {
@@ -23,7 +23,9 @@
     "bench:stt:generate": "cd benchmark && npm run stt:generate-testset",
     "shadow:ja-en": "LT_SHADOW_JA_EN=1 electron-vite dev",
     "shadow:ja-en:cloud": "LT_SHADOW_JA_EN=1 LT_SHADOW_CLOUD=1 electron-vite dev",
-    "shadow:ja-en:cloud-all": "LT_SHADOW_JA_EN=1 LT_SHADOW_CLOUD=1 LT_SHADOW_GEMINI_LIVE=1 electron-vite dev"
+    "shadow:ja-en:cloud-all": "LT_SHADOW_JA_EN=1 LT_SHADOW_CLOUD=1 LT_SHADOW_GEMINI_LIVE=1 electron-vite dev",
+    "test:stability": "node scripts/stability-gate.mjs",
+    "diagnose:compatibility": "node scripts/qualification-report.mjs"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^3.0.0",

@@ -30,14 +30,22 @@ const TTS_VOICES: Record<string, Array<{ id: string; label: string }>> = {
     { id: 'zf_xiaoni', label: 'Xiaoni (F)' },
     { id: 'zm_yunjian', label: 'Yunjian (M)' },
     { id: 'zm_yunxi', label: 'Yunxi (M)' }
-  ]
+  ],
+  fr: [{ id: 'ff_siwis', label: 'Siwis (F)' }],
+  es: [{ id: 'ef_dora', label: 'Dora (F)' }],
+  it: [{ id: 'if_sara', label: 'Sara (F)' }],
+  pt: [{ id: 'pf_dora', label: 'Dora (F)' }]
 }
 
 /** All voices flattened for the selector */
 const ALL_VOICES = [
   { group: 'English', voices: TTS_VOICES.en! },
   { group: 'Japanese', voices: TTS_VOICES.ja! },
-  { group: 'Chinese', voices: TTS_VOICES.zh! }
+  { group: 'Chinese', voices: TTS_VOICES.zh! },
+  { group: 'French', voices: TTS_VOICES.fr! },
+  { group: 'Spanish', voices: TTS_VOICES.es! },
+  { group: 'Italian', voices: TTS_VOICES.it! },
+  { group: 'Portuguese', voices: TTS_VOICES.pt! }
 ]
 
 interface TTSSettingsProps {

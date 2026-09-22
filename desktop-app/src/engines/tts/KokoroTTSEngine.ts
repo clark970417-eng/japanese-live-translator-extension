@@ -53,7 +53,11 @@ export const TTS_VOICES: Record<string, Array<{ id: string; label: string }>> = 
     { id: 'zf_xiaoni', label: 'Xiaoni (F)' },
     { id: 'zm_yunjian', label: 'Yunjian (M)' },
     { id: 'zm_yunxi', label: 'Yunxi (M)' }
-  ]
+  ],
+  fr: [{ id: 'ff_siwis', label: 'Siwis (F)' }],
+  es: [{ id: 'ef_dora', label: 'Dora (F)' }],
+  it: [{ id: 'if_sara', label: 'Sara (F)' }],
+  pt: [{ id: 'pf_dora', label: 'Dora (F)' }]
 }
 
 interface KokoroTTSOptions {
