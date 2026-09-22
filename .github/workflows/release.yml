@@ -112,6 +112,10 @@ jobs:
         if: runner.os == 'Windows'
       - run: node scripts/fix-whisper-addon.js
         if: runner.os == 'Windows'
+      - name: Exclude unsupported Windows virtual microphone backend
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Remove-Item -Recurse -Force node_modules/naudiodon -ErrorAction SilentlyContinue
       - run: npm run build
       - name: Build installer and publish update metadata
         env:
