@@ -1,12 +1,16 @@
-// Shared Bilibili and TikTok adapter: page/live-chat translation, CH/JP drafts,
-// and the same tab-audio caption surface used by YouTube and X.
+// Shared social and general website adapter: page/chat/comment translation,
+// reviewable writing drafts, and the tab-audio caption surface.
 (() => {
   if (window.__jtlSocial) return;
   window.__jtlSocial = true;
 
   const host = location.hostname.toLowerCase();
-  const site = host.endsWith('bilibili.com') ? 'bilibili' : host.endsWith('tiktok.com') ? 'tiktok' : host.endsWith('twitch.tv') ? 'twitch' : '';
-  if (!site) return;
+  const site = host.endsWith('bilibili.com') ? 'bilibili'
+    : host.endsWith('tiktok.com') ? 'tiktok'
+    : host.endsWith('twitch.tv') ? 'twitch'
+    : host.endsWith('facebook.com') ? 'facebook'
+    : host.endsWith('instagram.com') ? 'instagram'
+    : 'generic';
 
   const configs = {
     bilibili: {
@@ -53,6 +57,50 @@
         '[contenteditable="true"][data-placeholder*="chat" i]',
         'textarea:not([disabled])', '[role="textbox"]',
         '[contenteditable]:not([contenteditable="false"])'
+      ]
+    },
+    facebook: {
+      title: ['[role="main"] h1', 'main h1', 'h1'],
+      text: [
+        '[role="article"] [dir="auto"]', '[role="log"] [dir="auto"]',
+        '[aria-label*="comment" i] [dir="auto"]', '[aria-label*="留言"] [dir="auto"]',
+        '[aria-label*="評論"] [dir="auto"]', '[data-ad-preview="message"]'
+      ],
+      composer: [
+        '[contenteditable="true"][role="textbox"]',
+        '[contenteditable="true"][aria-label*="comment" i]', '[contenteditable="true"][aria-label*="留言"]',
+        'textarea[placeholder*="comment" i]', 'textarea[placeholder*="留言"]'
+      ]
+    },
+    instagram: {
+      title: ['main h1', 'article h1', 'h1'],
+      text: [
+        'article ul li span[dir="auto"]', 'article [role="button"] + span[dir="auto"]',
+        '[role="dialog"] ul li span[dir="auto"]', '[role="log"] [dir="auto"]',
+        '[aria-label*="comment" i] [dir="auto"]'
+      ],
+      composer: [
+        'textarea[placeholder*="comment" i]', 'textarea[aria-label*="comment" i]',
+        '[contenteditable="true"][role="textbox"]', '[contenteditable="true"][aria-label*="comment" i]'
+      ]
+    },
+    generic: {
+      title: ['main h1', '[role="main"] h1', 'article h1', 'h1'],
+      text: [
+        '[role="log"] [role="listitem"]', '[role="log"] [dir="auto"]',
+        '[role="feed"] [role="article"] p', '[role="article"] [class*="comment" i]',
+        '[class*="comment" i] p', '[class*="message" i] [dir="auto"]',
+        '[data-testid*="comment" i]', '[data-testid*="message" i]',
+        '[aria-label*="comment" i] [dir="auto"]', '[aria-label*="chat" i] [dir="auto"]'
+      ],
+      composer: [
+        '[contenteditable="true"][role="textbox"]',
+        'textarea[placeholder*="comment" i]', 'textarea[placeholder*="message" i]',
+        'textarea[placeholder*="chat" i]', 'textarea[placeholder*="reply" i]',
+        '[contenteditable="true"][aria-label*="comment" i]',
+        '[contenteditable="true"][aria-label*="message" i]',
+        '[contenteditable="true"][aria-label*="chat" i]',
+        '[contenteditable="true"][aria-label*="reply" i]'
       ]
     }
   };
@@ -219,6 +267,14 @@
 
   function isUsableComposer(box) {
     if (!box?.isConnected || box.matches?.('[disabled],[aria-disabled="true"]')) return false;
+    if (site === 'generic') {
+      const purpose = clean([
+        box.getAttribute?.('type'), box.getAttribute?.('name'), box.getAttribute?.('role'),
+        box.getAttribute?.('aria-label'), box.getAttribute?.('placeholder')
+      ].join(' ')).toLowerCase();
+      if (/search|搜尋|搜索|email|e-mail|password|密碼|電話|phone|url|網址|login|登入/.test(purpose)) return false;
+      if (!/comment|message|chat|reply|post|留言|評論|訊息|聊天|回覆|發佈|textbox/.test(purpose)) return false;
+    }
     const rect = box.getBoundingClientRect?.();
     return !rect || (rect.width > 0 && rect.height > 0);
   }
@@ -278,7 +334,8 @@
       node.matches?.('textarea, input[type="text"], input:not([type])') ||
       node.isContentEditable || node.getAttribute?.('role') === 'textbox'
     ));
-    if (box) installComposer(box, true);
+    const supported = box && config.composer.some(selector => box.matches?.(selector));
+    if (supported && isUsableComposer(box)) installComposer(box, true);
     scan();
   }
 

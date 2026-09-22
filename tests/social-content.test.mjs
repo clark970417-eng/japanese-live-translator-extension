@@ -17,16 +17,21 @@ function setup(hostname,japaneseOverride,composerDistractor,semanticOnly=false){
   insertAdjacentElement(_,line){line.isConnected=true;translationLines.push(line);}};
  const composerHost={append(node){node.isConnected=true;controls.push(node);}};
  const box={value:'今天也很可愛',isConnected:true,focus(){},dispatchEvent(){},
-  matches(){return false;},getBoundingClientRect(){return {width:300,height:40};},
+  matches(selector){return /textarea|textbox|contenteditable|comment|message|chat|reply/.test(selector);},
+  getAttribute(name){return name==='role'?'textbox':name==='placeholder'?'Write a comment':'';},
+  getBoundingClientRect(){return {width:300,height:40};},
   closest(){return composerHost;},parentElement:composerHost};
  const makeElement=tag=>({tagName:tag.toUpperCase(),children:[],isConnected:false,className:'',textContent:'',dataset:{},style:{setProperty(){}},
   classList:{add(){}},setAttribute(){},addEventListener(name,fn){this['on'+name]=fn;},append(...kids){this.children.push(...kids);},
   querySelector(){return null;},remove(){this.isConnected=false;}});
  const document={documentElement:{},body:{append(node){node.isConnected=true;if(node.className==='jtl-social-controls')controls.push(node);}},
   querySelectorAll(selector){
-   if(!semanticOnly&&(selector.includes('danmaku-content')||selector.includes('chat-message')||selector.includes('chat-line-message-body')))return Array.isArray(japanese)?japanese:[japanese];
+   if(!semanticOnly&&(selector.includes('danmaku-content')||selector.includes('chat-message')||selector.includes('chat-line-message-body')||
+      ((hostname.includes('facebook')||hostname.includes('instagram'))&&selector.includes('[dir="auto"]'))||
+      (hostname==='example.com'&&(selector.includes('comment')||selector.includes('role="article"')))))return Array.isArray(japanese)?japanese:[japanese];
    if(semanticOnly&&selector.includes('[role="log"]'))return [{querySelectorAll:()=>Array.isArray(japanese)?japanese:[japanese]}];
-   if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea')||selector.includes('data-a-target="chat-input"'))return [box];
+   if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea')||selector.includes('data-a-target="chat-input"')||
+      ((hostname.includes('facebook')||hostname.includes('instagram')||hostname==='example.com')&&(selector.includes('comment')||selector.includes('role="textbox"'))))return [box];
    if(composerDistractor&&selector.includes('textarea:not([disabled])'))return [composerDistractor];
    return [];
   },
@@ -142,4 +147,25 @@ test('Twitch discovers stream chat and installs a translated composer',async()=>
  request.reply({ok:true,text:'謝謝直播'});await settle();
  assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
  assert.equal(t.controls.length,1);
+});
+
+for(const [site,hostname] of [['Facebook','www.facebook.com'],['Instagram','www.instagram.com'],['general website','example.com']]){
+ test(`${site} translates matching comments and installs a reviewable composer`,async()=>{
+  const t=setup(hostname);await settle();
+  const request=t.requests.find(x=>x.message.type==='translate');
+  assert.ok(request,`${site} comment was discovered`);
+  request.reply({ok:true,text:'謝謝直播'});await settle();
+  assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
+  assert.equal(t.controls.length,1);
+ });
+}
+
+test('all-sites manifest uses the general adapter without double-injecting on dedicated sites',()=>{
+ const manifest=JSON.parse(fs.readFileSync(new URL('../manifest.json',import.meta.url),'utf8'));
+ const general=manifest.content_scripts.find(entry=>entry.matches?.includes('https://*/*'));
+ assert.ok(general);
+ assert.ok(general.js.includes('social-content.js'));
+ assert.equal(general.all_frames,true);
+ assert.ok(general.exclude_matches.includes('https://www.youtube.com/*'));
+ assert.ok(general.exclude_matches.includes('https://*.tiktok.com/*'));
 });

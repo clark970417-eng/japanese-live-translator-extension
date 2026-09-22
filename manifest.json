@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Live Translate — Multilingual Captions",
-  "version": "4.2.0",
-  "description": "Multilingual live captions, page, chat and typing translation for YouTube, Twitch, X, TikTok and Bilibili.",
+  "version": "4.2.1",
+  "description": "Multilingual live captions plus page, chat, comment and typing translation across the web.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -73,6 +73,36 @@
     },
     {
       "matches": [
+        "https://bilibili.com/*",
+        "https://*.bilibili.com/*",
+        "https://tiktok.com/*",
+        "https://*.tiktok.com/*",
+        "https://twitch.tv/*",
+        "https://www.twitch.tv/*",
+        "https://m.twitch.tv/*"
+      ],
+      "js": [
+        "caption-window.js",
+        "social-content.js"
+      ],
+      "css": [
+        "social-content.css",
+        "caption-window.css"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "exclude_matches": [
+        "https://www.youtube.com/*",
+        "https://x.com/*",
+        "https://www.x.com/*",
+        "https://twitter.com/*",
+        "https://www.twitter.com/*",
         "https://bilibili.com/*",
         "https://*.bilibili.com/*",
         "https://tiktok.com/*",

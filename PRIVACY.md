@@ -12,7 +12,7 @@ Browser translation and any cloud engine the user enables may send captured audi
 
 ## Website access
 
-The extension reads supported YouTube, Twitch, TikTok, Bilibili, and X pages to find video titles, visible comments, live chat, and message editors. It adds translations and draft controls to those pages. It does not submit a post automatically.
+When website text translation is enabled, the extension can read pages you visit to find visible titles, comments, chat messages, and message editors. YouTube, Twitch, TikTok, Bilibili, X, Facebook, and Instagram use dedicated page rules; other websites use conservative semantic rules. It adds translations and draft controls to matching content. It does not submit a post automatically.
 
 ## Diagnostics and feedback
 

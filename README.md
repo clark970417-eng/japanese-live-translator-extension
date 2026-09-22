@@ -20,7 +20,7 @@ The project explores a practical accessibility problem: live Japanese media ofte
 
 It supports two independent workflows:
 
-- **Page text translation** translates Japanese video titles, live chat messages, comments, and X posts into Traditional Chinese across YouTube, Twitch, X, Bilibili, and TikTok.
+- **Page text translation** translates titles, live chat messages, comments, and posts across the web. YouTube, Twitch, X, Bilibili, TikTok, Facebook, and Instagram have dedicated page rules; other sites use a conservative general adapter.
 - **Audio captioning** captures the current YouTube, Twitch, X Spaces, Bilibili, or TikTok tab and produces movable, resizable bilingual captions.
 
 The extension never publishes a message automatically. Its optional writing assistant creates a Japanese draft from Chinese text and leaves review and submission to the user.
@@ -35,8 +35,8 @@ The extension never publishes a message automatically. Its optional writing assi
 - Two display modes: one low-latency caption pair or a four-entry ordered transcript queue.
 - A movable and resizable caption panel with configurable type size, color, outline, background, and opacity.
 - Persistent transcript records, failed-translation retry, and text export.
-- Translation of titles, live chat, and comments on YouTube, Twitch, Bilibili, and TikTok, plus X posts, with selectable popular languages.
-- Reviewable writing translations for comment, reply, and live-chat editors on all five supported sites; synchronized mode automatically reverses the reading pair.
+- Translation of titles, live chat, comments, and posts across websites, with selectable popular languages and dedicated rules for major platforms.
+- Reviewable writing translations for detected comment, reply, and live-chat editors; synchronized mode automatically reverses the reading pair.
 - Local audio processing by default, with optional cloud engines in the desktop application; no automatic posting.
 
 ## System design
