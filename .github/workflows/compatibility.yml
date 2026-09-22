@@ -28,6 +28,8 @@ jobs:
         if: runner.os != 'Windows'
       - run: npm ci --ignore-scripts
         if: runner.os == 'Windows'
+      - run: node node_modules/electron/install.js
+        if: runner.os == 'Windows'
       - run: node scripts/fix-whisper-addon.js
         if: runner.os == 'Windows'
       - run: npm run typecheck

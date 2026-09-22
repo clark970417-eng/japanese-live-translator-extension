@@ -2,7 +2,7 @@
 import { createServer, type Server, type Socket } from 'net'
 import { mkdirSync, chmodSync, existsSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { join, posix } from 'path'
 import { createHash } from 'crypto'
 import { ALL_LANGUAGES, type Language, type TranslationResult } from '../engines/types'
 import { store } from './store'
@@ -24,7 +24,11 @@ const OWNER_RELEASE_GRACE_MS = 2000
 
 /** Windows requires a named pipe; Unix systems use a protected domain socket. */
 export function companionEndpoint(directory: string, platform = process.platform): string {
-  if (platform !== 'win32') return join(directory, 'desktop.sock')
+  if (platform !== 'win32') {
+    // Use the target platform's separator when tests or packaging tools resolve
+    // an endpoint for another operating system.
+    return platform === process.platform ? join(directory, 'desktop.sock') : posix.join(directory.replaceAll('\\', '/'), 'desktop.sock')
+  }
   const id = createHash('sha256').update(directory).digest('hex').slice(0, 20)
   return `\\\\.\\pipe\\japanese-live-caption-${id}`
 }

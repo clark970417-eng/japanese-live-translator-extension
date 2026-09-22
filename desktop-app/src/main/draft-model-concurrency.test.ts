@@ -105,7 +105,9 @@ it('completes caption init and decode while a cold large-model draft is still lo
     const draft = messages.find(m => m.id === 1)!
     expect(draft.ok).toBe(true)
     expect(draft.result).toMatchObject({ text: 'こんにちは', fallbackModel: true })
-    expect(draft.at).toBeGreaterThanOrEqual(decode.at)
+    // Array insertion records delivery order directly. Wall clocks on Windows
+    // can move by a millisecond while adjacent socket messages are handled.
+    expect(messages.findIndex(m => m.id === 1)).toBeGreaterThan(messages.findIndex(m => m.id === 3))
   } finally {
     control.releaseLargeLoad?.()
     socket.destroy()
