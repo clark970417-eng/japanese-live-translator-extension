@@ -24,9 +24,9 @@ function setup(hostname,japaneseOverride,composerDistractor,semanticOnly=false){
   querySelector(){return null;},remove(){this.isConnected=false;}});
  const document={documentElement:{},body:{append(node){node.isConnected=true;if(node.className==='jtl-social-controls')controls.push(node);}},
   querySelectorAll(selector){
-   if(!semanticOnly&&(selector.includes('danmaku-content')||selector.includes('chat-message')))return Array.isArray(japanese)?japanese:[japanese];
+   if(!semanticOnly&&(selector.includes('danmaku-content')||selector.includes('chat-message')||selector.includes('chat-line-message-body')))return Array.isArray(japanese)?japanese:[japanese];
    if(semanticOnly&&selector.includes('[role="log"]'))return [{querySelectorAll:()=>Array.isArray(japanese)?japanese:[japanese]}];
-   if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea'))return [box];
+   if(selector.includes('chat-input textarea')||selector.includes('comment-input"] textarea')||selector.includes('data-a-target="chat-input"'))return [box];
    if(composerDistractor&&selector.includes('textarea:not([disabled])'))return [composerDistractor];
    return [];
   },
@@ -134,3 +134,12 @@ for(const [site,hostname] of [['Bilibili','live.bilibili.com'],['TikTok','www.ti
   assert.equal(t.box.value,'今日もとても可愛いですね！');
  });
 }
+
+test('Twitch discovers stream chat and installs a translated composer',async()=>{
+ const t=setup('www.twitch.tv');await settle();
+ const request=t.requests.find(x=>x.message.type==='translate');
+ assert.ok(request,'Twitch Japanese chat was discovered');
+ request.reply({ok:true,text:'謝謝直播'});await settle();
+ assert.equal(t.translationLines[0].textContent,'中：謝謝直播');
+ assert.equal(t.controls.length,1);
+});

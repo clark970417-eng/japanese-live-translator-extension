@@ -1,6 +1,11 @@
 // X uses a separate script so YouTube's player and composer stay independent.
 (() => {
   let websiteTextEnabled=false, textEpoch=0;
+  let languageSettings={readSource:'ja',readTarget:'zh',typeSource:'zh',typeTarget:'ja',speechSource:'ja',speechTarget:'zh',syncTextLanguages:true};
+  const langLabel=code=>({ja:'日',zh:'中',en:'英',ko:'韓',es:'西',fr:'法',de:'德',pt:'葡',it:'義',ru:'俄',th:'泰',vi:'越',id:'印尼',ar:'阿'})[code]||code.toUpperCase();
+  const direction=kind=>`${languageSettings[kind+'Source']}-${languageSettings[kind+'Target']}`;
+  const languagePattern={ja:/[\u3040-\u30ff]/,zh:/[\u3400-\u9fff]/,ko:/[\uac00-\ud7af]/,ru:/[\u0400-\u04ff]/,ar:/[\u0600-\u06ff]/,th:/[\u0e00-\u0e7f]/};
+  const matchesLanguage=(text,lang)=>languagePattern[lang]?.test(text)??/[A-Za-zÀ-ž]/.test(text);
   const composers = new WeakMap();
   const posts = new WeakMap();
   let panel,captionBox;
@@ -65,14 +70,20 @@
       range.selectNodeContents(box);
       selection.removeAllRanges();
       selection.addRange(range);
-      document.execCommand('insertText', false, preview.value);
+      const inserted = document.execCommand?.('insertText', false, preview.value);
+      // X periodically changes its React editor implementation. Some versions
+      // return true from execCommand without updating the actual textbox.
+      if (!inserted || read(box) !== preview.value.trim()) {
+        if(box.replaceChildren&&document.createTextNode)box.replaceChildren(document.createTextNode(preview.value));else box.textContent=preview.value;
+      }
       box.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: preview.value}));
+      box.dispatchEvent(new Event('change', {bubbles: true}));
       status.textContent = read(box) === preview.value.trim()
         ? '已放入日文，確認後自行送出。'
         : '未能放入，請從上方草稿複製日文。';
     });
     apply.hidden = true;
-    const translate = button('CH/JP', async () => {
+    const translate = button(`${langLabel(languageSettings.typeSource)}/${langLabel(languageSettings.typeTarget)}`, async () => {
       source = read(box);
       const epoch = textEpoch;
       if (!source) { status.textContent = '請先輸入中文。'; return; }
@@ -80,7 +91,7 @@
       apply.hidden = true;
       status.textContent = '翻譯中…';
       try {
-        const result = await message({type: 'make-draft', text: source});
+        const result = await message({type: 'make-draft', text: source, direction: direction('type')});
         if (!websiteTextEnabled || epoch !== textEpoch || !box.isConnected || !controls.isConnected) return;
         if(read(box)!==source){status.textContent='原文已修改，請重新翻譯';return;}
         preview.value = result.draft;
@@ -101,16 +112,17 @@
 
   function addPost(text) {
     if (posts.get(text)?.isConnected) return;
+    if (!matchesLanguage(read(text), languageSettings.readSource)) return;
     const controls = document.createElement('div');
     controls.className = 'jtl-x-controls';
     const result = document.createElement('div');
     result.setAttribute('role', 'status');
-    const translate = button('JP/CH', async () => {
+    const translate = button(`${langLabel(languageSettings.readSource)}/${langLabel(languageSettings.readTarget)}`, async () => {
       const source = read(text);
       translate.disabled = true;
       result.textContent = '翻譯中…';
       try {
-        const value = await message({type: 'translate', text: source, direction: 'ja-zh', priority: true});
+        const value = await message({type: 'translate', text: source, direction: direction('read'), priority: true});
         result.textContent = read(text) === source ? value : '貼文已更新，請再按一次翻譯。';
       } catch (error) { result.textContent = error.message; }
       finally { translate.disabled = false; }
@@ -218,7 +230,7 @@
 
   function scan() {
     if(websiteTextEnabled){
-    document.querySelectorAll('[contenteditable="true"][data-testid^="tweetTextarea_"]').forEach(addComposer);
+    document.querySelectorAll('[contenteditable="true"][data-testid^="tweetTextarea_"], [data-testid^="tweetTextarea_"] [contenteditable="true"]').forEach(addComposer);
     document.querySelectorAll('[data-testid="tweetText"]').forEach(addPost);
     }
     syncSpacePanel();
@@ -228,9 +240,10 @@
     if(!enabled)document.querySelectorAll('.jtl-x-controls').forEach(el=>el.remove());
     scan();
   }
-  chrome.storage.local.get('websiteTextEnabled').then(s=>setWebsiteText(s.websiteTextEnabled!==false));
+  chrome.storage.local.get(['websiteTextEnabled','languageSettings']).then(s=>{languageSettings={...languageSettings,...(s.languageSettings||{})};setWebsiteText(s.websiteTextEnabled!==false);});
   chrome.storage.onChanged.addListener((changes,area)=>{
     if(area==='local'&&changes.websiteTextEnabled)setWebsiteText(changes.websiteTextEnabled.newValue!==false);
+    if(area==='local'&&changes.languageSettings){languageSettings={...languageSettings,...changes.languageSettings.newValue};document.querySelectorAll('.jtl-x-controls').forEach(el=>el.remove());setWebsiteText(websiteTextEnabled);}
   });
   chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.subtitleSettings)captionBox?.controller.apply(changes.subtitleSettings.newValue);});
   let scheduled = false;

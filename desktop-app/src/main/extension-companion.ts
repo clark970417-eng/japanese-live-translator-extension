@@ -3,7 +3,7 @@ import { createServer, type Server, type Socket } from 'net'
 import { mkdirSync, chmodSync, existsSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
-import type { TranslationResult } from '../engines/types'
+import { ALL_LANGUAGES, type Language, type TranslationResult } from '../engines/types'
 import { store } from './store'
 import { startPipeline, type PipelineStartConfig } from './ipc/pipeline-ipc'
 import { buildEngineConfig, resolveEngineMode } from '../engine-selection'
@@ -155,7 +155,7 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
       for (;;) {
         const newline = buffer.indexOf('\n'); if (newline < 0) break
         const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1)
-        let m: { id?: number; op?: string; audio?: string; text?: string; direction?: string; segment?: string; final?: boolean; speechSeconds?: unknown }
+        let m: { id?: number; op?: string; audio?: string; text?: string; direction?: string; segment?: string; final?: boolean; speechSeconds?: unknown; sourceLanguage?: string; targetLanguage?: string }
         try { m = JSON.parse(line) } catch { send({ ok: false, error: 'Invalid request' }); continue }
         if (!m || typeof m !== 'object') { send({ ok: false, error: 'Invalid request' }); continue }
         const audioPriority = ['decode', 'init', 'stop'].includes(m.op || '')
@@ -183,6 +183,18 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               result = { stopped: true }
             } else if (m.op === 'init') {
               if (pipeline.active && !ownsSession) throw new Error('Stop desktop audio capture before starting browser capture.')
+              const supported = new Set(['ja','en','zh','ko','fr','de','es','pt','ru','it','nl','pl','ar','th','vi','id'])
+              if (m.sourceLanguage && m.targetLanguage) {
+                if (!supported.has(m.sourceLanguage) || !supported.has(m.targetLanguage) || m.sourceLanguage === m.targetLanguage) throw new Error('Invalid language pair')
+                store.set('sourceLanguage', m.sourceLanguage as Language)
+                store.set('targetLanguage', m.targetLanguage as Language)
+              }
+              // MLX only exists on Apple Silicon. A copied profile or the old
+              // platform-agnostic default must still start on Intel Mac,
+              // Windows and Linux instead of selecting an unregistered engine.
+              if (!(process.platform === 'darwin' && process.arch === 'arm64') && store.get('sttEngine') === 'mlx-whisper') {
+                store.set('sttEngine', 'whisper-local')
+              }
               ownsSession = true; ctx.extensionConnected = true
               ctx.subtitleWindow?.hide()
               if (!pipeline.active) {
@@ -225,9 +237,8 @@ export async function startExtensionCompanion(ctx: AppContext, directory?: strin
               } finally { pipeline.off('source-result', source) }
             } else if (m.op === 'translate') {
               if (typeof m.text !== 'string' || !m.text.trim() || m.text.length > 3000) throw new Error('Invalid text')
-              if (!['ja-zh', 'zh-ja', 'ja-en'].includes(m.direction || 'ja-zh')) throw new Error('Invalid language')
-              const from = m.direction === 'zh-ja' ? 'zh' : 'ja'
-              const to = m.direction === 'zh-ja' ? 'ja' : m.direction === 'ja-en' ? 'en' : 'zh'
+              const [from, to] = (m.direction || 'ja-zh').split('-') as [Language, Language]
+              if (!ALL_LANGUAGES.includes(from) || !ALL_LANGUAGES.includes(to) || from === to) throw new Error('Invalid language')
               // Drafts may use a more accurate model than the captions, but only
               // while no caption session is running. The shared worker unloads
               // one model to load another, and measuring that swap against live

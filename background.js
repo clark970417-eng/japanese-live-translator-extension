@@ -9,12 +9,25 @@ import {ResultGate} from './stream-core.mjs';
 import {CueCursor} from './cue-cursor.mjs';
 import {phraseTranslation,viewerPrompt,chinesePrompt,validateTranslation,splitTranslationText,TranslationMemo,firstTranslation,polishChinese} from './translation-policy.mjs';
 const OPENROUTER="https://openrouter.ai/api/v1",NVIDIA="https://integrate.api.nvidia.com/v1";
-let captionMode='record',captionHold=3;
+let captionMode='record',captionHold=3,speechFrom='ja',speechTo='zh';
 const setHold=value=>{captionHold=Math.max(1,Math.min(6,Number(value)||3));};
 chrome.storage.onChanged?.addListener((changes,area)=>{if(area==='local'&&changes.subtitleSettings)setHold(changes.subtitleSettings.newValue?.holdSeconds);});
 const fresh=item=>item&&!item.expired&&Date.now()/1000<(item.expiresAt??item.updatedAt+3);
 const items=[];let running=false,lastError="",captureTabId=null,drainingSession=null,stopPromise=null;
-const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode","subtitleSettings"]);
+const LANGUAGE_CODES=new Set(['ja','en','zh','ko','es','fr','de','pt','it','ru','th','vi','id','ar']);
+const languageDefaults={readSource:'ja',readTarget:'zh',typeSource:'zh',typeTarget:'ja',speechSource:'ja',speechTarget:'zh',syncTextLanguages:true};
+const settings=()=>chrome.storage.local.get(["openrouterKey","nvidiaKey","speechMode","subtitleSettings","languageSettings"]);
+const pair=(from,to)=>`${from}-${to}`;
+function parseDirection(direction){const [from,to]=String(direction||'').split('-');if(!LANGUAGE_CODES.has(from)||!LANGUAGE_CODES.has(to)||from===to)throw new Error('不支援這組語言');return {from,to};}
+async function languageSettings(){const saved=(await chrome.storage.local.get('languageSettings')).languageSettings||{};return {...languageDefaults,...saved};}
+function checkedTranslation(value,direction,source){const {from,to}=parseDirection(direction);return (from==='ja'&&to==='zh')||(from==='zh'&&to==='ja')?validateTranslation(value,direction,source):String(value||'').trim();}
+function checkedPageTranslation(value,direction,source){
+ const {to}=parseDirection(direction),result=String(value||'').trim();
+ if(!result||result===String(source||'').trim())throw new Error('翻譯服務未回傳結果');
+ const targetPattern={zh:/[\u3400-\u9fff]/,ja:/[\u3040-\u30ff]/,ko:/[\uac00-\ud7af]/,ru:/[\u0400-\u04ff]/,ar:/[\u0600-\u06ff]/,th:/[\u0e00-\u0e7f]/};
+ if(targetPattern[to]&&!targetPattern[to].test(result))throw new Error('翻譯服務未回傳目標語言');
+ return result;
+}
 const deadline=(signal,ms)=>signal?AbortSignal.any([signal,AbortSignal.timeout(ms)]):AbortSignal.timeout(ms);
 async function request(url,key,body,signal){const r=await fetch(url,{signal:deadline(signal,10000),method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok){const error=new Error(`API ${r.status}`);error.status=r.status;throw error;}return d}
 async function nvidia(text,from,to,signal){const {nvidiaKey}=await settings();if(!nvidiaKey)throw new Error("請先儲存 NVIDIA Key");const d=await request(`${NVIDIA}/chat/completions`,nvidiaKey,{model:"nvidia/riva-translate-4b-instruct-v2",messages:[{role:"system",content:`${from}-${to}`},{role:"user",content:text}],temperature:0,max_tokens:300},signal);return(d.choices?.[0]?.message?.content||"").trim()}
@@ -29,21 +42,23 @@ const textMemo=new TranslationMemo();
 async function localTranslation(text,direction,timeout=60000){
  const key=direction+':'+text.trim();const cached=desktopTranslations.get(key);if(cached)return cached;
  const result=await desktop.request('translate',{text,direction},timeout);
- const translated=validateTranslation(result.text,direction,text);
+ const translated=checkedTranslation(result.text,direction,text);if(!translated)throw new Error('翻譯回應為空');
  desktopTranslations.set(key,translated);if(desktopTranslations.size>200)desktopTranslations.delete(desktopTranslations.keys().next().value);
  return translated;
 }
-async function makeDraft(text){
- if(typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的中文');
+async function makeDraft(text,direction){
+ if(typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字');
  text=text.trim();
- const phrase=phraseTranslation(text,'zh-ja');if(phrase)return {draft:phrase,mode:'校對短句'};
+ if(!direction){const langs=await languageSettings();direction=pair(langs.typeSource,langs.typeTarget);}
+ const {from,to}=parseDirection(direction);
+ const phrase=phraseTranslation(text,direction);if(phrase)return {draft:phrase,mode:'校對短句'};
  const configured=await settings();
  const key=`draft:${configured.speechMode==='desktop'}:${Boolean(configured.openrouterKey)}:${Boolean(configured.nvidiaKey)}:${text}`;
  return textMemo.run(key,async()=>{
-  const local=async timeout=>({draft:await localTranslation(text,'zh-ja',timeout),mode:'本機翻譯草稿 · 請確認語氣'});
+  const local=async timeout=>({draft:await localTranslation(text,direction,timeout),mode:'本機翻譯草稿 · 請確認語氣'});
   if(configured.speechMode==='desktop'){try{return await local(60000);}catch(_error){/* Continue through independent fallbacks. */}}
-  try{return {draft:await styledTranslation(text,'zh-ja'),mode:'可愛禮貌'};}catch(_error){/* No configured provider or provider failed. */}
-  try{return {draft:validateTranslation(await freeTranslate(text,'zh-TW','ja'),'zh-ja',text),mode:'一般機翻：語氣模型目前無法使用，請檢查措辭'};}
+  try{return {draft:await styledTranslation(text,direction),mode:direction==='zh-ja'?'可愛禮貌':'自然語氣'};}catch(_error){/* No configured provider or provider failed. */}
+  try{return {draft:checkedTranslation(await freeTranslate(text,from==='zh'?'zh-TW':from,to==='zh'?'zh-TW':to),direction,text),mode:'一般機翻：請確認措辭'};}
   catch(networkError){
    if(configured.speechMode!=='desktop'){try{return await local(15000);}catch(_localError){/* Report the faster network error below. */}}
    throw networkError;
@@ -52,7 +67,9 @@ async function makeDraft(text){
 }
 async function styledTranslation(text,direction,signal){
  const {openrouterKey,nvidiaKey}=await settings();
- const messages=[{role:'system',content:direction==='zh-ja'?viewerPrompt:chinesePrompt},{role:'user',content:text}];
+ const {from,to}=parseDirection(direction);
+ const prompt=direction==='zh-ja'?viewerPrompt:direction==='ja-zh'?chinesePrompt:`Translate from ${from} to ${to}. Return only the natural translation, preserving names, tone, emoji and line breaks.`;
+ const messages=[{role:'system',content:prompt},{role:'user',content:text}];
  const providers=[];
  if(nvidiaKey){
   for(const model of ['nvidia/nemotron-3.5-lightning-30b-a3b'])providers.push(async()=>{
@@ -61,23 +78,25 @@ async function styledTranslation(text,direction,signal){
   });
  }
  if(openrouterKey)providers.push(()=>request(`${OPENROUTER}/chat/completions`,openrouterKey,{model:'google/gemma-4-31b-it:free',messages,temperature:0.2,max_tokens:600},signal));
- for(const run of providers){try{const d=await run();if(d.choices?.[0]?.finish_reason==='length')throw new Error('翻譯被截斷');return validateTranslation(d.choices?.[0]?.message?.content,direction,text);}catch(error){if(signal?.aborted)throw error;}}
- throw new Error(direction==='zh-ja'?'可愛禮貌語氣翻譯目前無法使用，請確認 NVIDIA／OpenRouter Key 或稍後重試':'情境翻譯目前無法使用');
+ for(const run of providers){try{const d=await run();if(d.choices?.[0]?.finish_reason==='length')throw new Error('翻譯被截斷');const value=checkedTranslation(d.choices?.[0]?.message?.content,direction,text);if(value)return value;}catch(error){if(signal?.aborted)throw error;}}
+ throw new Error('情境翻譯目前無法使用');
 }
 async function translateSingle(text,direction,priority=false){
  const phrase=phraseTranslation(text,direction);if(phrase)return phrase;
- if(direction==='zh-ja')return (await makeDraft(text)).draft;
+ const {from,to}=parseDirection(direction);
+ if(direction==='zh-ja')return (await makeDraft(text,direction)).draft;
  if(priority){
   try{return await styledTranslation(text,direction);}catch(_error){}
   // Static page text (especially the title) must not wait behind the live
   // desktop audio queue. Use the independent text endpoint, then fall back
   // to the selected local engine when the network is unavailable.
-  try{return validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW')),'ja-zh',text);}catch(_error){}
+  try{const raw=await freeTranslate(text,from==='zh'?'zh-TW':from,to==='zh'?'zh-TW':to);return checkedPageTranslation(to==='zh'?polishChinese(text,raw):raw,direction,text);}catch(_error){}
  }
- return translateCaption(text);
+ if(direction==='ja-zh')return translateCaption(text);
+ try{return await localTranslation(text,direction,15000);}catch(_error){return checkedTranslation(await freeTranslate(text,from==='zh'?'zh-TW':from,to==='zh'?'zh-TW':to),direction,text);}
 }
 async function translate(text,direction,priority=false){
- if(!['ja-zh','zh-ja'].includes(direction)||typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字的日文或中文');
+ parseDirection(direction);if(typeof text!=='string'||!text.trim()||text.length>3000)throw new Error('請輸入 1–3000 字');
  text=text.trim();
  return textMemo.run(direction+':'+priority+':'+text,async()=>{
   const chunks=splitTranslationText(text);
@@ -93,7 +112,7 @@ async function translate(text,direction,priority=false){
 let recordingReady,recordingPreview=null;
 const recording=new RecordingQueue({
  save:entries=>chrome.storage.local.set({recordedCaptions:entries}),
- translate:text=>textMemo.run('record:'+engineMode+':'+text,async()=>{const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;if(engineMode==='desktop')return translateCaption(text);try{return await styledTranslation(text,'ja-zh');}catch(_){return translateCaption(text);}}),
+ translate:text=>textMemo.run(`record:${engineMode}:${speechFrom}-${speechTo}:${text}`,async()=>{const direction=pair(speechFrom,speechTo);const phrase=phraseTranslation(text,direction);if(phrase)return phrase;if(engineMode==='desktop')return translateCaption(text);try{return await styledTranslation(text,direction);}catch(_){return translateCaption(text);}}),
  onChange:()=>{if(captionMode==='record'&&running)pushSubtitle(recordingItem());},
  onError:()=>{lastError='字幕記錄無法儲存，請匯出記錄並檢查儲存空間';if(running)stopCapture();}
 });
@@ -113,15 +132,16 @@ let diagnostics={}, modelStatus='', controlBusy=false, controlAction='', transla
 const captionRequests=new Map();
 function cancelTranslations(){translationPending=null;publishedId=-1;for(const controller of captionRequests.values())controller.abort();captionRequests.clear();}
 async function translateCaption(text,signal){
- const phrase=phraseTranslation(text,'ja-zh');if(phrase)return phrase;
+ const direction=pair(speechFrom,speechTo),phrase=phraseTranslation(text,direction);if(phrase)return phrase;
+ const from=speechFrom,to=speechTo;
  const configured=await settings();
- if(engineMode==='desktop'||configured.speechMode==='desktop')return localTranslation(text,'ja-zh',12000);
- const primary=async s=>validateTranslation(polishChinese(text,await freeTranslate(text,'ja','zh-TW',s)),'ja-zh',text);
+ if(engineMode==='desktop'||configured.speechMode==='desktop')return localTranslation(text,direction,12000);
+ const primary=async s=>{const raw=await freeTranslate(text,from==='zh'?'zh-TW':from,to==='zh'?'zh-TW':to,s);return checkedTranslation(to==='zh'?polishChinese(text,raw):raw,direction,text);};
  try{
   if(!configured.nvidiaKey)return await primary(deadline(signal,3000));
-  return await firstTranslation(primary,async s=>validateTranslation(polishChinese(text,await styledTranslation(text,'ja-zh',s)),'ja-zh',text),deadline(signal,3000),400);
+  return await firstTranslation(primary,async s=>checkedTranslation(await styledTranslation(text,direction,s),direction,text),deadline(signal,3000),400);
  }catch(networkError){
-  try{return await localTranslation(text,'ja-zh',15000);}catch(_localError){throw networkError;}
+  try{return await localTranslation(text,direction,15000);}catch(_localError){throw networkError;}
  }
 }
 const translationCache=new Map();
@@ -131,7 +151,7 @@ function desktopEvent(event){
  const result=event.result||{text:event.text};
  const original=String(result.text||(result.final?meta.caption?.original:'')||'').trim();if(!original)return;
  let translated=String(result.translated||'').trim();
- if(translated&&(!result.targetLanguage||result.targetLanguage==='zh')){try{translated=validateTranslation(translated,'ja-zh',original);}catch{translated='';}}
+ if(translated&&(!result.targetLanguage||result.targetLanguage===speechTo)){try{translated=checkedTranslation(translated,pair(speechFrom,speechTo),original);}catch{translated='';}}
  const previous=meta.caption;
  if(previous?.final&&!result.correction)return;
  // An old translation must never be paired with a new source hypothesis.
@@ -157,7 +177,7 @@ async function translateItem(job){
  if(captionRequests.size>=2){translationPending=job;return;}
  const controller=new AbortController();captionRequests.set(job,controller);
  try {
-  const key='ja-zh-TW:'+job.item.original;
+ const key=`${speechFrom}-${speechTo}:`+job.item.original;
   const result=translationCache.get(key)||await translateCaption(job.item.original,controller.signal);
   if(controller.signal.aborted)return;
   translationCache.set(key,result);if(translationCache.size>200)translationCache.delete(translationCache.keys().next().value);
@@ -222,9 +242,9 @@ async function resetCapture(){
 async function startCapture(tabId){
  if(!Number.isInteger(tabId))throw new Error('請先選擇影片分頁');
  await stopCapture();const prefs=(await settings()).subtitleSettings;setHold(prefs?.holdSeconds);captionMode=prefs?.captionMode==='realtime'?'realtime':'record';if(captionMode==='record')await initRecording();captureTabId=tabId;diagnostics={};lastError='';
- engineMode=(await settings()).speechMode==='desktop'?'desktop':'browser';
+ const configured=await settings(),langs={...languageDefaults,...(configured.languageSettings||{})};speechFrom=langs.speechSource;speechTo=langs.speechTarget;parseDirection(pair(speechFrom,speechTo));engineMode=configured.speechMode==='desktop'?'desktop':'browser';
  try{
- if(engineMode==='desktop'){modelStatus='正在載入桌面模型，首次可能需要下載…';await desktop.request('init',{},600000);}
+ if(engineMode==='desktop'){modelStatus='正在載入桌面模型，首次可能需要下載…';await desktop.request('init',{sourceLanguage:speechFrom,targetLanguage:speechTo},600000);}
  await ensureOffscreen();
  const streamId=await chrome.tabCapture.getMediaStreamId({targetTabId:tabId});
  running=true;modelStatus='正在擷取分頁聲音';
@@ -268,7 +288,7 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
  if(m.type==='native-caption'){
   if(!running || s.tab?.id!==captureTabId || s.frameId!==0 || !/^https:\/\/www\.youtube\.com\//.test(s.url||'')){send({ok:false});return;}
   const text=typeof m.text==='string'?m.text.trim().slice(0,500):'';
-  if(text && /[\u3040-\u30ff]/.test(text)){
+  if(text && (speechFrom!=='ja'||/[\u3040-\u30ff]/.test(text))){
    nativeUntil=Date.now()+1800;
    chrome.runtime.sendMessage({type:'offscreen-native',session:gate.session}).catch(()=>{});
    if(text!==nativeText){if(captionMode==='record'){if(nativeText&&!text.startsWith(nativeText))recordTranscript({text:nativeText,source:'native'});nativeText=text;}else{if(!nativeText){cancelTranslations();items.length=0;pushSubtitle(null);}nativeText=text;addTranscript({session:gate.session,text,source:'native'});}}
@@ -279,7 +299,7 @@ chrome.runtime.onMessage.addListener((m,s,send)=>{
  }
  else if(m.type==='recording-export')task=initRecording().then(()=>recording.entries);
  else if(m.type==='recording-retry')task=initRecording().then(()=>recording.retry()).then(()=>({pending:recording.pending}));
- else if(m.type==='make-draft')task=makeDraft(m.text);
+ else if(m.type==='make-draft')task=makeDraft(m.text,m.direction);
  else if(m.type==='translate')task=translate(m.text,m.direction,Boolean(m.priority));
  else if(m.type==='subtitles')task=Promise.resolve({running:running&&s.tab?.id===captureTabId,items:s.tab?.id===captureTabId?(captionMode==='record'?[recordingItem()]:items.filter(fresh)):[]});
  else if(m.type==='health')task=Promise.resolve({running,draining:!!drainingSession,lastError,modelStatus,controlBusy,controlAction,diagnostics,captureTabId,captionMode,recordingPending:recording.pending,recordingFailed:recording.failed});

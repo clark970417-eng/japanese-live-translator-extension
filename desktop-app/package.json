@@ -1,7 +1,7 @@
 {
   "name": "live-translate",
-  "version": "3.9.13",
-  "description": "Local-first live captions and Japanese/Traditional Chinese translation with browser controls",
+  "version": "4.0.0",
+  "description": "Local-first multilingual live captions and browser translation",
   "main": "./out/main/index.js",
   "scripts": {
     "postinstall": "node scripts/fix-whisper-addon.js",

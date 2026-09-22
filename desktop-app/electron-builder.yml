@@ -28,12 +28,15 @@ mac:
     - target: dmg
       arch:
         - arm64
+        - x64
     - target: zip
       arch:
         - arm64
+        - x64
     - target: dir
       arch:
         - arm64
+        - x64
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
@@ -48,6 +51,15 @@ win:
       arch:
         - x64
   icon: build/icon.ico
+  asarUnpack:
+    - 'node_modules/@kutalia/whisper-node-addon/**'
+    - 'node_modules/node-llama-cpp/**'
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  category: Utility
   asarUnpack:
     - 'node_modules/@kutalia/whisper-node-addon/**'
     - 'node_modules/node-llama-cpp/**'

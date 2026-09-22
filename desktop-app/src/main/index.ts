@@ -79,7 +79,7 @@ async function initPipeline(): Promise<void> {
     modelVariant: (store.get('whisperVariant') as WhisperVariant) || undefined
   }))
   // mlx-whisper is Apple Silicon only — skip registration on other platforms
-  if (process.platform === 'darwin') {
+  if (process.platform === 'darwin' && process.arch === 'arm64') {
     ctx.pipeline.registerSTT('mlx-whisper', () => new MlxWhisperEngine({
       language: store.get('sourceLanguage') === 'auto' ? undefined : store.get('sourceLanguage') as Language,
       onProgress: (msg) => ctx.mainWindow?.webContents.send('status-update', msg)

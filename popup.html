@@ -3,7 +3,14 @@
 <head><meta charset="utf-8"><link rel="stylesheet" href="popup.css"></head>
 <body><main>
 <header><img src="icons/icon-32.png" width="24" height="24" alt=""><h1>Live Translate</h1></header>
-<section class="feature"><label class="switch"><span>網站文字翻譯<small>日文標題、直播聊天與留言 → 繁中</small></span><input id="websiteText" type="checkbox" checked></label></section><section class="feature"><h2>影片／直播語音字幕</h2><p class="hint">按開始後，讀取目前分頁的聲音。</p><p id="status" role="status" aria-live="polite">檢查中…</p>
+<section class="feature"><label class="switch"><span>網站文字翻譯<small>YouTube、Twitch、X、TikTok、Bilibili 的標題、聊天與留言</small></span><input id="websiteText" type="checkbox" checked></label></section>
+<details open class="language-settings"><summary>翻譯語言</summary>
+<div class="pair"><b>讀取網站文字</b><label>從<select id="readSource"></select></label><label>翻成<select id="readTarget"></select></label></div>
+<label class="switch sync"><span>打字／讀字同步<small>自動把打字方向設為讀字的反向</small></span><input id="syncTextLanguages" type="checkbox" checked></label>
+<div class="pair"><b>輸入留言</b><label>從<select id="typeSource"></select></label><label>翻成<select id="typeTarget"></select></label></div>
+<div class="pair"><b>語音字幕</b><label>聽<select id="speechSource"></select></label><label>翻成<select id="speechTarget"></select></label></div>
+<p id="languageStatus" class="hint" role="status"></p>
+</details><section class="feature"><h2>影片／直播語音字幕</h2><p class="hint">按開始後，讀取目前分頁的聲音。</p><p id="status" role="status" aria-live="polite">檢查中…</p>
 <label>辨識與翻譯引擎<select id="engineMode"><option value="browser">瀏覽器 WebGPU ＋ 網路翻譯</option><option value="desktop">桌面程式 · 共用引擎設定</option></select></label><p class="hint">桌面模式需要先安裝本機輔助程式，開始時自動啟動。</p><button id="desktopSettings">開啟完整桌面設定</button><p class="hint">引擎、詞彙字典、品質分流與桌面功能在此設定；下次開始語音時套用。</p><div class="actions"><button id="start">開始語音</button><button id="stop">停止語音</button></div></section>
 <details class="caption-settings"><summary>字幕外觀與顯示模式</summary><div id="captionPreview" aria-label="字幕外觀預覽"><span id="previewJa">一緒に楽しみましょう。</span><span id="previewZh">一起享受吧。</span></div><label>字幕模式（下次開始生效）<select id="captionMode"><option value="record">完整記錄 · 依序翻譯 · 四組字幕</option><option value="realtime">即時優先 · 單組字幕</option></select></label><p class="hint">完整模式在停頓後記錄，翻譯慢也保留排隊。四組字幕隨新句更新；停止收音後仍完成已記錄的翻譯。</p>
 <div class="color-row"><label>日文顏色<input id="japaneseColor" type="color" value="#ffffff"></label><label>中文顏色<input id="chineseColor" type="color" value="#ffffff"></label></div>

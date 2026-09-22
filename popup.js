@@ -1,5 +1,13 @@
 import {captureStatus} from "./capture-status.mjs";
 const $=s=>document.querySelector(s);
+const languageOptions=[['ja','日本語'],['en','English'],['zh','繁體中文'],['ko','한국어'],['es','Español'],['fr','Français'],['de','Deutsch'],['pt','Português'],['it','Italiano'],['ru','Русский'],['th','ไทย'],['vi','Tiếng Việt'],['id','Bahasa Indonesia'],['ar','العربية']];
+const languageDefaults={readSource:'ja',readTarget:'zh',typeSource:'zh',typeTarget:'ja',speechSource:'ja',speechTarget:'zh',syncTextLanguages:true};
+const languageIds=Object.keys(languageDefaults);
+for(const id of languageIds.filter(id=>id!=='syncTextLanguages')){const select=$('#'+id);for(const [value,label] of languageOptions)select.add(new Option(label,value));}
+async function loadLanguages(){const saved=(await chrome.storage.local.get('languageSettings')).languageSettings||{};const value={...languageDefaults,...saved};for(const id of languageIds){if(id==='syncTextLanguages')$('#'+id).checked=Boolean(value[id]);else $('#'+id).value=value[id];}applySync();}
+function applySync(){const synced=$('#syncTextLanguages').checked;$('#typeSource').disabled=synced;$('#typeTarget').disabled=synced;if(synced){$('#typeSource').value=$('#readTarget').value;$('#typeTarget').value=$('#readSource').value;}}
+async function saveLanguages(){applySync();const value={};for(const id of languageIds)value[id]=id==='syncTextLanguages'?$('#'+id).checked:$('#'+id).value;if(value.readSource===value.readTarget||value.typeSource===value.typeTarget||value.speechSource===value.speechTarget){$('#languageStatus').textContent='來源和目標語言不能相同。';return;}await chrome.storage.local.set({languageSettings:value});$('#languageStatus').textContent='已套用；網站文字立即更新，語音設定於下次開始時生效。';}
+for(const id of languageIds)$('#'+id).addEventListener('change',saveLanguages);
 $('#extensionVersion').textContent='v'+chrome.runtime.getManifest().version;
 chrome.storage.local.get('speechMode').then(s=>$('#engineMode').value=s.speechMode==='desktop'?'desktop':'browser');
 $('#engineMode').onchange=()=>chrome.storage.local.set({speechMode:$('#engineMode').value});
@@ -16,7 +24,7 @@ controls.forEach(id=>$("#"+id).addEventListener("input",saveSettings));
 $("#reset").onclick=async()=>{controls.forEach(id=>{if(id==="showOutline")$("#"+id).checked=defaults[id];else $("#"+id).value=defaults[id]});await saveSettings()};
 $("#start").onclick=async()=>{$("#status").textContent="正在擷取聲音…";$("#start").disabled=true;try{const[tab]=await chrome.tabs.query({active:true,currentWindow:true});if(!tab?.id)throw new Error("請先選擇影片分頁");await send({type:"subtitle-control",action:"start",tabId:tab.id});await refresh()}catch(e){$("#status").textContent=`提示：${e.message}`}};
 $("#stop").onclick=async()=>{await send({type:"subtitle-control",action:"stop"});refresh()};
-loadSettings();refresh();setInterval(refresh,1500);
+loadSettings();loadLanguages();refresh();setInterval(refresh,1500);
 async function loadTranslationStatus(){
  const values=await chrome.storage.local.get(['nvidiaKey','openrouterKey']);
  for(const id of ['nvidiaKey','openrouterKey'])$('#'+id).placeholder=values[id]?'已儲存（留空保留）':'尚未設定';

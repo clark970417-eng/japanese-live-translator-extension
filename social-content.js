@@ -5,7 +5,7 @@
   window.__jtlSocial = true;
 
   const host = location.hostname.toLowerCase();
-  const site = host.endsWith('bilibili.com') ? 'bilibili' : host.endsWith('tiktok.com') ? 'tiktok' : '';
+  const site = host.endsWith('bilibili.com') ? 'bilibili' : host.endsWith('tiktok.com') ? 'tiktok' : host.endsWith('twitch.tv') ? 'twitch' : '';
   if (!site) return;
 
   const configs = {
@@ -27,6 +27,12 @@
         'textarea:not([disabled])', '[role="textbox"]',
         '[contenteditable]:not([contenteditable="false"])'
       ]
+    },
+
+    twitch: {
+      title: ['h1[data-a-target="stream-title"]', '[data-a-target="stream-title"]', 'h1'],
+      text: ['[data-a-target="chat-line-message-body"]', '[data-test-selector="chat-line-message-body"]', '.chat-line__message'],
+      composer: ['[data-a-target="chat-input"]', 'textarea[data-a-target="chat-input"]', '[contenteditable="true"][data-a-target="chat-input"]']
     },
     tiktok: {
       title: ['h1[data-e2e="browse-video-desc"]', '[data-e2e="browser-nickname"] + div', 'h1'],
@@ -51,7 +57,7 @@
     }
   };
   const config = configs[site];
-  const translated = new WeakMap();
+  let translated = new WeakMap();
   const composers = new WeakMap();
   let activeComposer;
   let activeControls;
@@ -66,6 +72,11 @@
   let polling = false;
   let lastSubtitleSignature = '';
   let captionBox;
+  let languageSettings={readSource:'ja',readTarget:'zh',typeSource:'zh',typeTarget:'ja',speechSource:'ja',speechTarget:'zh',syncTextLanguages:true};
+  const langLabel=code=>({ja:'日',zh:'中',en:'英',ko:'韓',es:'西',fr:'法',de:'德',pt:'葡',it:'義',ru:'俄',th:'泰',vi:'越',id:'印尼',ar:'阿'})[code]||code.toUpperCase();
+  const direction=kind=>`${languageSettings[kind+'Source']}-${languageSettings[kind+'Target']}`;
+  const languagePattern={ja:/[\u3040-\u30ff]/,zh:/[\u3400-\u9fff]/,ko:/[\uac00-\ud7af]/,ru:/[\u0400-\u04ff]/,ar:/[\u0600-\u06ff]/,th:/[\u0e00-\u0e7f]/};
+  const matchesLanguage=(text,lang)=>languagePattern[lang]?.test(text)??/[A-Za-zÀ-ž]/.test(text);
 
   const hasJapanese = text => /[\u3040-\u30ff]/.test(text);
   const hasChinese = text => /[\u3400-\u9fff]/.test(text) && !hasJapanese(text);
@@ -77,7 +88,7 @@
       '[data-e2e="message-text"]', '[class*="CommentContent"]', '[class*="CommentText"]',
       '.danmaku-content', '.reply-content', '.sub-reply-content'
     ].join(','));
-    if (explicit && hasJapanese(clean(explicit.innerText || explicit.textContent))) return explicit;
+    if (explicit && matchesLanguage(clean(explicit.innerText || explicit.textContent),languageSettings.readSource)) return explicit;
 
     // TikTok's fallback chat selector can cover the avatar, nickname, badge and
     // message in one React container. Prefer the smallest Japanese leaf that is
@@ -86,8 +97,8 @@
     const candidates = [...node.querySelectorAll('span,p,div')].filter(element => {
       if (element.closest?.(metadata)) return false;
       const text = clean(element.innerText || element.textContent);
-      if (!text || !hasJapanese(text)) return false;
-      return ![...element.children].some(child => hasJapanese(clean(child.innerText || child.textContent)));
+      if (!text || !matchesLanguage(text,languageSettings.readSource)) return false;
+      return ![...element.children].some(child => matchesLanguage(clean(child.innerText || child.textContent),languageSettings.readSource));
     });
     return candidates.sort((a, b) => clean(a.innerText || a.textContent).length - clean(b.innerText || b.textContent).length)[0] || node;
   }
@@ -110,7 +121,7 @@
         continue;
       }
       activeTranslations++;
-      message({type: 'translate', text: task.source, direction: 'ja-zh', priority: task.isTitle})
+      message({type: 'translate', text: task.source, direction: direction('read'), priority: task.isTitle})
         .then(result => {
           cache.set(task.key, result);
           task.resolve(result);
@@ -127,7 +138,7 @@
   }
 
   function requestTranslation(source, isTitle, order, isValid) {
-    const key = `ja-zh:${source}`;
+    const key = `${direction('read')}:${source}`;
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (translationInFlight.has(key)) return translationInFlight.get(key);
     const pending = new Promise((resolve, reject) => {
@@ -144,7 +155,7 @@
     const source = clean(node.innerText || node.textContent);
     // The background translator safely splits long messages. Keep only a
     // generous guard against accidentally selecting an entire chat timeline.
-    if (!source || source.length > 3000 || !hasJapanese(source)) return;
+    if (!source || source.length > 3000 || !matchesLanguage(source,languageSettings.readSource)) return;
     if (translated.get(node) === source) return;
     translated.set(node, source);
     const currentEpoch = epoch;
@@ -156,7 +167,7 @@
       line.className = `jtl-social-translation${isTitle ? ' jtl-social-title' : ''}`;
       node.insertAdjacentElement('afterend', line);
     }
-    line.textContent = '中：翻譯中…';
+    line.textContent = `${langLabel(languageSettings.readTarget)}：翻譯中…`;
     try {
       let result;
       try { result = await requestTranslation(source, isTitle, order, valid); }
@@ -166,7 +177,7 @@
         result = await requestTranslation(source, true, (order ?? 0) + 1000000, valid);
       }
       if (!valid()) { line.remove(); return; }
-      line.textContent = `中：${result}`;
+      line.textContent = `${langLabel(languageSettings.readTarget)}：${result}`;
     } catch (_) {
       // Keep the failed source marked after one retry so the status mutation
       // cannot cause the page observer to resubmit it forever.
@@ -227,7 +238,7 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'jtl-social-language';
-    button.textContent = 'CH/JP';
+    button.textContent = `${langLabel(languageSettings.typeSource)}/${langLabel(languageSettings.typeTarget)}`;
     button.setAttribute('aria-label', '將這則中文留言翻成日文草稿');
     const status = document.createElement('span');
     status.setAttribute('role', 'status');
@@ -237,11 +248,11 @@
       event.stopPropagation();
       const source = editableText(box);
       const currentEpoch = epoch;
-      if (!source || !hasChinese(source)) { status.textContent = '請先輸入中文'; return; }
+      if (!source || !matchesLanguage(source,languageSettings.typeSource)) { status.textContent = `請先輸入${langLabel(languageSettings.typeSource)}文`; return; }
       button.disabled = true;
       status.textContent = '翻譯中…';
       try {
-        const result = await message({type: 'make-draft', text: source});
+        const result = await message({type: 'make-draft', text: source, direction: direction('type')});
         if (!enabled || currentEpoch !== epoch || !box.isConnected || !controls.isConnected) return;
         if (editableText(box) !== source) { status.textContent = '原文已修改，請重新翻譯'; return; }
         if (!result?.draft) throw new Error('沒有收到日文草稿');
@@ -316,7 +327,7 @@
       .flatMap(region => [...region.querySelectorAll('span,p,div')])
       .filter(element => {
         const text = clean(element.innerText || element.textContent);
-        return text && hasJapanese(text) && ![...element.children].some(child => hasJapanese(clean(child.innerText || child.textContent)));
+        return text && matchesLanguage(text,languageSettings.readSource) && ![...element.children].some(child => matchesLanguage(clean(child.innerText || child.textContent),languageSettings.readSource));
       });
     const messages = [...new Set([
       ...config.text.flatMap(selector => [...document.querySelectorAll(selector)]),
@@ -348,10 +359,11 @@
   chrome.runtime.onMessage.addListener(payload => {
     if (payload.type === 'subtitle-update' && window.top === window) renderSubtitles({running: true, items: [payload.item]});
   });
-  chrome.storage.local.get('websiteTextEnabled').then(settings => setEnabled(settings.websiteTextEnabled !== false));
+  chrome.storage.local.get(['websiteTextEnabled','languageSettings']).then(settings => {languageSettings={...languageSettings,...(settings.languageSettings||{})};setEnabled(settings.websiteTextEnabled !== false);});
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.websiteTextEnabled) setEnabled(changes.websiteTextEnabled.newValue !== false);
     if (area === 'local' && changes.subtitleSettings) captionBox?.controller.apply(changes.subtitleSettings.newValue);
+    if (area === 'local' && changes.languageSettings) {languageSettings={...languageSettings,...changes.languageSettings.newValue};translated=new WeakMap();cache.clear();document.querySelectorAll('.jtl-social-translation,.jtl-social-controls').forEach(node=>node.remove());activeComposer=null;activeControls=null;scan();}
   });
   let scheduled = false;
   new MutationObserver(() => {

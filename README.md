@@ -4,7 +4,7 @@
 
 ![Extension icon](./icon-preview.png)
 
-A Chromium browser extension that generates bilingual Japanese–Traditional Chinese captions for online video and live audio. It supports browser inference and a local desktop companion while keeping caption controls in the browser.
+A Chromium browser extension that generates multilingual captions for online video and live audio. It supports browser inference and a local desktop companion while keeping caption controls in the browser.
 
 The complete upstream LiveTranslate application is included in
 [desktop-app](desktop-app/INTEGRATION.md), with attribution and a private browser
@@ -20,8 +20,8 @@ The project explores a practical accessibility problem: live Japanese media ofte
 
 It supports two independent workflows:
 
-- **Page text translation** translates Japanese video titles, live chat messages, comments, and X posts into Traditional Chinese across YouTube, X, Bilibili, and TikTok.
-- **Audio captioning** captures the current YouTube, X Spaces, Bilibili, or TikTok tab and produces movable, resizable bilingual captions.
+- **Page text translation** translates Japanese video titles, live chat messages, comments, and X posts into Traditional Chinese across YouTube, Twitch, X, Bilibili, and TikTok.
+- **Audio captioning** captures the current YouTube, Twitch, X Spaces, Bilibili, or TikTok tab and produces movable, resizable bilingual captions.
 
 The extension never publishes a message automatically. Its optional writing assistant creates a Japanese draft from Chinese text and leaves review and submission to the user.
 
@@ -35,8 +35,8 @@ The extension never publishes a message automatically. Its optional writing assi
 - Two display modes: one low-latency caption pair or a four-entry ordered transcript queue.
 - A movable and resizable caption panel with configurable type size, color, outline, background, and opacity.
 - Persistent transcript records, failed-translation retry, and text export.
-- Translation of Japanese titles, live chat, and comments on YouTube, Bilibili, and TikTok, plus X posts.
-- Chinese-to-Japanese review drafts for comment, reply, and live-chat editors on all four supported sites.
+- Translation of titles, live chat, and comments on YouTube, Twitch, Bilibili, and TikTok, plus X posts, with selectable popular languages.
+- Reviewable writing translations for comment, reply, and live-chat editors on all five supported sites; synchronized mode automatically reverses the reading pair.
 - Local audio processing by default, with optional cloud engines in the desktop application; no automatic posting.
 
 ## System design
@@ -53,7 +53,7 @@ This is windowed incremental recognition rather than a stateful streaming acoust
 2. Open `opera://extensions` in Opera GX or `chrome://extensions` in Chrome.
 3. Enable Developer mode.
 4. Select **Load unpacked** and choose the directory containing `manifest.json`.
-5. Refresh the target YouTube, X, Bilibili, or TikTok page, open the extension, and select **Start audio**.
+5. Refresh the target YouTube, Twitch, X, Bilibili, or TikTok page, open the extension, and select **Start audio**.
 
 Browser mode downloads Whisper Small and uses network translation. Desktop mode
 requires the [local app and native messaging registration](desktop-app/INTEGRATION.md);
@@ -84,7 +84,7 @@ Run the automated suite with:
 node --test tests/*.test.mjs
 ```
 
-The current revision passes 63 extension tests and 530 desktop tests. An isolated
+The current revision passes 125 extension tests and 662 desktop tests. An isolated
 desktop interface run passed 13 checks; its audio-start check was not run. Coverage includes native response ordering, source-before-translation
 events, invalid audio, warmup failures, silent PCM, and existing caption behavior.
 These tests do not establish long-session or commercial-product parity. See

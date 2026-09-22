@@ -2,6 +2,11 @@
 if(window.__jtlV3)return;window.__jtlV3=true;
 let translated = new WeakMap();
 let websiteTextEnabled=false, textEpoch=0, contextInvalid=false;
+let languageSettings={readSource:'ja',readTarget:'zh',typeSource:'zh',typeTarget:'ja',speechSource:'ja',speechTarget:'zh',syncTextLanguages:true};
+const langLabel=code=>({ja:'日',zh:'中',en:'英',ko:'韓',es:'西',fr:'法',de:'德',pt:'葡',it:'義',ru:'俄',th:'泰',vi:'越',id:'印尼',ar:'阿'})[code]||code.toUpperCase();
+const direction=kind=>`${languageSettings[kind+'Source']}-${languageSettings[kind+'Target']}`;
+const languagePattern={ja:/[\u3040-\u30ff]/,zh:/[\u3400-\u9fff]/,ko:/[\uac00-\ud7af]/,ru:/[\u0400-\u04ff]/,ar:/[\u0600-\u06ff]/,th:/[\u0e00-\u0e7f]/};
+const matchesLanguage=(text,lang)=>languagePattern[lang]?.test(text)??/[A-Za-zÀ-ž]/.test(text);
 const cache = new Map();
 const inFlight = new Map();
 const translationQueue = [];
@@ -41,7 +46,7 @@ function smallestJapaneseLeaves(region) {
   return [...region.querySelectorAll('span,p,div,yt-formatted-string')].filter(element => {
     if (element.closest?.('#author-name,[id*="author" i],[class*="author" i],a')) return false;
     const text = (element.textContent || '').trim();
-    return text && hasJapanese(text) && ![...(element.children || [])].some(child => hasJapanese(child.textContent || ''));
+    return text && matchesLanguage(text,languageSettings.readSource) && ![...(element.children || [])].some(child => matchesLanguage(child.textContent || '',languageSettings.readSource));
   });
 }
 
@@ -61,7 +66,7 @@ async function translateElement(element, className, priority = false, queueOrder
   if (!websiteTextEnabled || !element) return false;
   const epoch=textEpoch;
   const text = element.textContent.trim();
-  if (!text || !hasJapanese(text)) return false;
+  if (!text || !matchesLanguage(text,languageSettings.readSource)) return false;
   if (translated.get(element) === text) return true;
   translated.set(element, text);
   const anchor = className === "jtl-title" ? (element.closest("h1") || element) : element;
@@ -71,18 +76,18 @@ async function translateElement(element, className, priority = false, queueOrder
     line.className = className;
     anchor.insertAdjacentElement("afterend", line);
   }
-  line.textContent = "中：翻譯中…";
+  line.textContent = `${langLabel(languageSettings.readTarget)}：翻譯中…`;
   const valid=()=>websiteTextEnabled&&epoch===textEpoch&&element.isConnected&&element.textContent.trim()===text;
   try {
     let result;
-    try { result = await requestTranslation(text, "ja-zh", priority, queueOrder, valid); }
+    try { result = await requestTranslation(text, direction('read'), priority, queueOrder, valid); }
     catch (firstError) {
       if (!valid()) throw firstError;
       line.textContent = "中：第一次失敗，正在重試…";
-      result = await requestTranslation(text, "ja-zh", true, (queueOrder??0)+1000000, valid);
+      result = await requestTranslation(text, direction('read'), true, (queueOrder??0)+1000000, valid);
     }
     if (!valid() || !result) {translated.delete(element);line.remove();return false;}
-    line.textContent = `中：${result}`;
+    line.textContent = `${langLabel(languageSettings.readTarget)}：${result}`;
     return true;
   } catch (error) {
     // Keep the failed source marked after the one bounded retry. Otherwise our
@@ -103,10 +108,10 @@ function scan() {
       "ytd-watch-metadata #title h1",
       "#above-the-fold #title h1",
       "h1.ytd-watch-metadata"
-    ].map(selector=>document.querySelector(selector)).find(element=>hasJapanese(element?.textContent||""));
+    ].map(selector=>document.querySelector(selector)).find(element=>matchesLanguage(element?.textContent||"",languageSettings.readSource));
     const titleLines = [...document.querySelectorAll(".jtl-title")];
     titleLines.slice(1).forEach(line => line.remove());
-    titleLines.forEach(line => { if (!/[\u3400-\u9fff]/.test(line.textContent.replace(/^中[：:]\s*/, ""))) line.remove(); });
+    titleLines.forEach(line => { if (!line.textContent.trim()) line.remove(); });
     translateElement(title, "jtl-title", true);
     installCommentButtons();
     installSubtitleOverlay();
@@ -125,7 +130,7 @@ function scan() {
 function installCommentButtons() {
   document.querySelectorAll("ytd-comment-thread-renderer #content-text, ytd-comment-view-model #content-text").forEach(element => {
     const text = element.textContent.trim();
-    if (!text || !hasJapanese(text) || element.parentElement?.querySelector(":scope > .jtl-comment-action")) return;
+    if (!text || !matchesLanguage(text,languageSettings.readSource) || element.parentElement?.querySelector(":scope > .jtl-comment-action")) return;
     const action = document.createElement("button");
     action.type = "button";
     action.className = "jtl-comment-action";
@@ -180,6 +185,7 @@ function applySubtitleSettings(settings) {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.websiteTextEnabled) setWebsiteText(changes.websiteTextEnabled.newValue!==false);
   if (area === "local" && changes.subtitleSettings) applySubtitleSettings(changes.subtitleSettings.newValue);
+  if (area === "local" && changes.languageSettings) {languageSettings={...languageSettings,...changes.languageSettings.newValue};translated=new WeakMap();document.querySelectorAll('.jtl-title,.jtl-translation,.jtl-comment-action,.jtl-composer-controls').forEach(el=>el.remove());scan();}
 });
 
 let lastSubtitleKey = "", subtitleExpiryTimer;
@@ -193,7 +199,7 @@ function readNativeCaption(){
  if(text!==lastNativeCaption){lastNativeCaption=text;nativeChangedAt=Date.now();}
  // Follow the visible native cue; its end is authoritative.
  runtimeMessage({type:'native-caption',text}).catch(()=>{});
- document.querySelector('#movie_player')?.classList.toggle('jtl-native-active',hasJapanese(text));
+ document.querySelector('#movie_player')?.classList.toggle('jtl-native-active',matchesLanguage(text,languageSettings.speechSource||'ja'));
 }
 function renderSubtitle(item) {
   if(item?.recordingRows){clearTimeout(subtitleExpiryTimer);installSubtitleOverlay();const overlay=document.querySelector('#jtl-subtitles');if(overlay){overlay.captionWindow.render(item.recordingRows);overlay.classList.toggle('jtl-visible',item.recordingRows.length>0);}return;}
@@ -239,8 +245,10 @@ function editableText(box) {
 function replaceEditable(box, text) {
   box.focus();
   document.execCommand("selectAll", false, null);
-  document.execCommand("insertText", false, text);
+  const inserted=document.execCommand("insertText", false, text);
+  if(!inserted||editableText(box)!==text.trim())if(box.replaceChildren&&document.createTextNode)box.replaceChildren(document.createTextNode(text));else box.textContent=text;
   box.dispatchEvent(new InputEvent("input", {bubbles: true, inputType: "insertText", data: text}));
+  box.dispatchEvent(new Event("change", {bubbles:true}));
 }
 
 const composerControls = new WeakMap();
@@ -255,19 +263,19 @@ function installComposerButton() {
     const button = document.createElement("button");
     button.className = "jtl-compose";
     button.type = "button";
-    button.textContent = "CH/JP";
-    button.setAttribute("aria-label", "將這則中文留言翻成日文草稿");
+    button.textContent = `${langLabel(languageSettings.typeSource)}/${langLabel(languageSettings.typeTarget)}`;
+    button.setAttribute('aria-label', `將留言從${langLabel(languageSettings.typeSource)}翻成${langLabel(languageSettings.typeTarget)}`);
     const status = document.createElement("span");
     status.className = "jtl-status";
     status.setAttribute("role", "status");
     button.addEventListener("click", async () => {
       const text = editableText(box), epoch = textEpoch;
       if (!text) { status.textContent = "請先輸入中文"; return; }
-      if (!hasChinese(text)) { status.textContent = "請先輸入中文"; return; }
+      if (!matchesLanguage(text,languageSettings.typeSource)) { status.textContent = `請先輸入${langLabel(languageSettings.typeSource)}文`; return; }
       button.disabled = true;
       status.textContent = "翻譯中…";
       try {
-        const result = await runtimeMessage({type:'make-draft',text});
+        const result = await runtimeMessage({type:'make-draft',text,direction:direction('type')});
         if (!websiteTextEnabled || epoch !== textEpoch || !box.isConnected || !controls.isConnected) return;
         if(editableText(box)!==text){status.textContent='原文已修改，請重新翻譯';return;}
         if (!result.draft?.trim()) throw new Error("沒有收到日文草稿");
@@ -290,7 +298,7 @@ function setWebsiteText(enabled){
  if(!enabled)document.querySelectorAll('.jtl-title,.jtl-translation,.jtl-comment-action,.jtl-compose,.jtl-status').forEach(el=>el.remove());
  else scan();
 }
-chrome.storage.local.get('websiteTextEnabled').then(s=>setWebsiteText(s.websiteTextEnabled!==false));
+chrome.storage.local.get(['websiteTextEnabled','languageSettings']).then(s=>{languageSettings={...languageSettings,...(s.languageSettings||{})};setWebsiteText(s.websiteTextEnabled!==false);});
 let timer;
 new MutationObserver(() => {
   if (!timer) timer = setTimeout(() => { timer = null; scan(); }, 250);
